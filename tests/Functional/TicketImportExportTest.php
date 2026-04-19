@@ -1,0 +1,72 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Functional;
+
+use App\Module\Identity\Entity\User;
+use App\Module\Identity\Enum\UserType;
+use App\Module\Ticket\Entity\Ticket;
+use App\Module\Ticket\Enum\TicketImpactLevel;
+use App\Module\Ticket\Enum\TicketPriority;
+use App\Module\Ticket\Enum\TicketRequestType;
+use App\Module\Ticket\Enum\TicketStatus;
+use App\Module\Ticket\Enum\TicketVisibility;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Tools\SchemaTool;
+use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+
+final class TicketImportExportTest extends WebTestCase
+{
+    private \Symfony\Bundle\FrameworkBundle\KernelBrowser $client;
+    private EntityManagerInterface $entityManager;
+    private UserPasswordHasherInterface $passwordHasher;
+
+    protected function setUp(): void
+    {
+        self::ensureKernelShutdown();
+        $this->client = static::createClient();
+        $container = static::getContainer();
+
+        $this->entityManager = $container->get(EntityManagerInterface::class);
+        $this->passwordHasher = $container->get(UserPasswordHasherInterface::class);
+
+        $metadata = $this->entityManager->getMetadataFactory()->getAllMetadata();
+        $schemaTool = new SchemaTool($this->entityManager);
+        $schemaTool->dropSchema($metadata);
+        $schemaTool->createSchema($metadata);
+
+        $this->client->disableReboot();
+    }
+
+    public function testAdminCsvExportContainsClosedAtColumnAndValue(): void
+    {
+        $admin = new User('admin@example.test', 'Ada', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'AdminPassword123'));
+
+        $ticket = new Ticket(
+            'DP-9001',
+            'Stängt ärende',
+            'Test för export',
+            TicketStatus::CLOSED,
+            TicketVisibility::PRIVATE,
+            TicketPriority::NORMAL,
+            TicketRequestType::INCIDENT,
+            TicketImpactLevel::SINGLE_USER,
+        );
+        $ticket->setClosedAt(new \DateTimeImmutable('2026-04-18 12:34:00'));
+
+        $this->entityManager->persist($admin);
+        $this->entityManager->persist($ticket);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/portal/admin/import-export/arendeexport/csv');
+
+        self::assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('Stängd', $content);
+        self::assertStringContainsString('2026-04-18 12:34', $content);
+    }
+}

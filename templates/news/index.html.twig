@@ -1,0 +1,1024 @@
+{% extends 'base.html.twig' %}
+{% set authMaintenanceNotice = maintenance_notice() %}
+
+{% block title %}Driftpunkt | Nyheter{% endblock %}
+{% block page_shell_class %}news-shell{% endblock %}
+{% block body_class %}news-landing{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        body.news-landing {
+            background:
+                radial-gradient(circle at 18% 10%, rgba(148, 162, 255, 0.46), transparent 28%),
+                radial-gradient(circle at 84% 14%, rgba(255, 222, 212, 0.56), transparent 22%),
+                linear-gradient(180deg, #7d89db 0%, #b3b8f2 16%, #d4cdf7 44%, #c9caf7 68%, #a6aff0 100%);
+        }
+
+        body.news-landing::before {
+            background:
+                radial-gradient(ellipse at 22% 30%, rgba(255, 255, 255, 0.3), transparent 28%),
+                radial-gradient(ellipse at 68% 44%, rgba(255, 255, 255, 0.34), transparent 36%);
+            mask-image: none;
+            opacity: 1;
+        }
+
+        .news-shell {
+            width: calc(100% - 2rem);
+            padding-top: 1.4rem;
+        }
+
+        .news-topbar {
+            margin: 0 calc(50% - 50vw);
+            background:
+                linear-gradient(180deg, rgba(79, 88, 170, 0.92), rgba(71, 80, 156, 0.88)),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
+            border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+            box-shadow: 0 14px 36px rgba(56, 63, 125, 0.18);
+            backdrop-filter: blur(12px);
+        }
+
+        .news-topbar-inner {
+            width: calc(100% - 2rem);
+            min-height: 68px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.25rem;
+        }
+
+        .news-brand {
+            display: inline-flex;
+            align-items: center;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .news-brand-logo {
+            height: 2.55rem;
+            width: auto;
+            display: block;
+            filter: drop-shadow(0 12px 20px rgba(14, 39, 119, 0.24));
+        }
+
+        .news-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.1rem;
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        .news-nav-link {
+            color: inherit;
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .news-top-search-form {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            min-width: min(360px, 42vw);
+            margin-left: 0.35rem;
+            padding-left: 1rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .news-top-search-input {
+            width: 100%;
+            min-width: 0;
+            border: 0;
+            outline: none;
+            background: transparent;
+            color: #fff;
+            font: inherit;
+        }
+
+        .news-top-search-input::placeholder {
+            color: rgba(255, 255, 255, 0.72);
+        }
+
+        .news-top-search-button {
+            width: 2.25rem;
+            height: 2.25rem;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .news-login-button {
+            min-width: 104px;
+            padding: 0.74rem 1.28rem;
+            border-radius: 11px;
+            background: linear-gradient(180deg, #ffbf61 0%, #f49b3c 100%);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 22px rgba(228, 142, 48, 0.32);
+            text-decoration: none;
+        }
+
+        .news-statusbar,
+        .news-footer {
+            margin: 0 calc(50% - 50vw);
+        }
+
+        .news-statusbar {
+            background: rgba(236, 226, 255, 0.28);
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            border-bottom: 1px solid rgba(113, 117, 195, 0.16);
+        }
+
+        .news-statusbar-inner,
+        .news-footer-inner {
+            width: calc(100% - 2rem);
+            margin: 0 auto;
+        }
+
+        .news-statusbar-inner {
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.7rem;
+            color: #56628f;
+            font-size: 0.93rem;
+            text-align: center;
+        }
+
+        .status-ok-dot {
+            width: 1rem;
+            height: 1rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: rgba(92, 118, 230, 0.16);
+            color: #4e63c7;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .status-sep {
+            opacity: 0.55;
+        }
+
+        .news-page {
+            display: grid;
+            gap: 1.25rem;
+        }
+
+        .news-hero,
+        .news-filters,
+        .maintenance-band,
+        .news-featured,
+        .news-grid-card,
+        .news-empty {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.84) 0%, rgba(249, 247, 255, 0.76) 100%);
+            border: 1px solid rgba(181, 190, 241, 0.38);
+            border-radius: 24px;
+            box-shadow: 0 24px 60px rgba(87, 101, 177, 0.14);
+            backdrop-filter: blur(16px);
+        }
+
+        .news-hero {
+            position: relative;
+            overflow: hidden;
+            padding: 2rem 2rem 1.8rem;
+        }
+
+        .news-hero::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 0.75rem;
+            transform: translateX(-50%);
+            width: min(1040px, 96vw);
+            height: 180px;
+            border-radius: 50%;
+            background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0) 72%);
+            pointer-events: none;
+        }
+
+        .news-hero::after {
+            content: "";
+            position: absolute;
+            inset: auto -3rem -4rem auto;
+            width: 13rem;
+            height: 13rem;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(115, 124, 245, 0.22), transparent 68%);
+            pointer-events: none;
+        }
+
+        .news-hero-grid {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+            align-items: start;
+        }
+
+        .news-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.48rem 0.82rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.66);
+            color: #39498c;
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .news-page-title {
+            margin: 0.85rem 0 0.7rem;
+            font-size: clamp(2.5rem, 4.8vw, 4.2rem);
+            line-height: 1.02;
+            letter-spacing: -0.04em;
+            color: #243174;
+        }
+
+        .news-page-intro {
+            margin: 0;
+            max-width: 58ch;
+            color: #4e5a86;
+            font-size: 1.06rem;
+            line-height: 1.7;
+        }
+
+        .news-hero-stats {
+            display: grid;
+            gap: 0.85rem;
+        }
+
+        .news-stat-card {
+            padding: 1rem 1.05rem;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(188, 197, 241, 0.48);
+        }
+
+        .news-stat-card strong {
+            display: block;
+            margin-bottom: 0.28rem;
+            color: #2d397a;
+        }
+
+        .news-stat-card span {
+            color: #60708d;
+        }
+
+        .news-filters {
+            padding: 1rem 1.15rem;
+        }
+
+        .news-search-row {
+            display: grid;
+            gap: 0.85rem;
+            grid-template-columns: minmax(0, 1fr) auto;
+            margin-top: 1rem;
+        }
+
+        .news-search-row input {
+            width: 100%;
+            padding: 0.9rem 1rem;
+            border-radius: 14px;
+            border: 1px solid rgba(185, 193, 240, 0.65);
+            background: rgba(255, 255, 255, 0.84);
+            font: inherit;
+            color: #33417c;
+        }
+
+        .news-filter-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .news-filter-title {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #2c3774;
+        }
+
+        .news-filter-chips {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .news-filter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.72rem 0.95rem;
+            border-radius: 999px;
+            border: 1px solid rgba(185, 193, 240, 0.65);
+            background: rgba(255, 255, 255, 0.76);
+            color: #46558a;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .news-filter-chip.active {
+            color: #fff;
+            border-color: transparent;
+            background: linear-gradient(180deg, #597ef4, #3558ca);
+        }
+
+        .news-filter-chip.maintenance.active {
+            background: linear-gradient(180deg, #f2b764, #df8d2d);
+        }
+
+        .chip-count {
+            font-size: 0.86rem;
+            opacity: 0.88;
+        }
+
+        .maintenance-band {
+            padding: 1.2rem;
+            border-color: rgba(236, 190, 120, 0.52);
+            background: linear-gradient(180deg, rgba(255, 248, 235, 0.92), rgba(255, 243, 221, 0.86));
+        }
+
+        .news-results-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .news-results-head h2 {
+            margin: 0;
+            color: #273372;
+            font-size: 1.35rem;
+        }
+
+        .news-results-head p {
+            margin: 0;
+            color: #60708d;
+        }
+
+        .maintenance-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.9rem;
+        }
+
+        .maintenance-head h2 {
+            margin: 0;
+            color: #7e4c12;
+            font-size: 1.45rem;
+        }
+
+        .maintenance-head p {
+            margin: 0;
+            color: #96692a;
+        }
+
+        .maintenance-list {
+            display: grid;
+            gap: 0.8rem;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        }
+
+        .maintenance-item {
+            position: relative;
+            display: grid;
+            gap: 0.55rem;
+            padding: 1rem 1rem 1rem 5.4rem;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(235, 196, 126, 0.55);
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .maintenance-item::before {
+            content: "";
+            position: absolute;
+            left: 1rem;
+            top: 1rem;
+            bottom: 1rem;
+            width: 0.28rem;
+            border-radius: 999px;
+            background: linear-gradient(180deg, #f2bf69, #d98624);
+        }
+
+        .maintenance-date-badge {
+            position: absolute;
+            top: 1rem;
+            left: 1.55rem;
+            width: 2.9rem;
+            padding: 0.42rem 0.25rem;
+            border-radius: 14px;
+            background: linear-gradient(180deg, #fff5db, #f8df9d);
+            color: #885114;
+            text-align: center;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+        }
+
+        .maintenance-date-badge strong {
+            display: block;
+            font-size: 1rem;
+            line-height: 1;
+            color: inherit;
+        }
+
+        .maintenance-date-badge span {
+            display: block;
+            margin-top: 0.15rem;
+            font-size: 0.7rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: inherit;
+        }
+
+        .maintenance-item strong {
+            color: #6d4314;
+            font-size: 1.02rem;
+        }
+
+        .maintenance-item span {
+            color: #8f6937;
+            line-height: 1.55;
+        }
+
+        .maintenance-status {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            padding: 0.26rem 0.58rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .maintenance-status.upcoming {
+            background: rgba(217, 134, 36, 0.14);
+            color: #9a5c16;
+        }
+
+        .maintenance-status.active {
+            background: rgba(214, 70, 70, 0.14);
+            color: #a73b2f;
+        }
+
+        .maintenance-status.completed {
+            background: rgba(89, 107, 156, 0.12);
+            color: #5c6995;
+        }
+
+        .maintenance-status.scheduled {
+            background: rgba(217, 134, 36, 0.14);
+            color: #9a5c16;
+        }
+
+        .news-featured {
+            overflow: hidden;
+        }
+
+        .news-featured-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.08fr) minmax(240px, 0.68fr);
+            align-items: stretch;
+        }
+
+        .news-featured-media {
+            min-height: 220px;
+            background-size: cover;
+            background-position: center;
+            border-bottom: 1px solid rgba(193, 201, 239, 0.42);
+        }
+
+        .news-featured-main {
+            padding: 1.5rem;
+        }
+
+        .news-featured-side {
+            padding: 1.35rem;
+            border-left: 1px solid rgba(193, 201, 239, 0.42);
+            background: rgba(247, 248, 255, 0.72);
+        }
+
+        .news-kicker,
+        .news-card-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.34rem 0.7rem;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .news-kicker.general,
+        .news-card-tag.general {
+            color: #3e56a3;
+            background: rgba(81, 111, 235, 0.12);
+        }
+
+        .news-kicker.planned_maintenance,
+        .news-card-tag.planned_maintenance {
+            color: #8a5415;
+            background: rgba(237, 183, 94, 0.2);
+        }
+
+        .featured-title {
+            margin: 0.8rem 0 0.65rem;
+            font-size: clamp(2rem, 3.1vw, 3rem);
+            line-height: 1.05;
+            letter-spacing: -0.04em;
+            color: #273372;
+        }
+
+        .featured-copy {
+            margin: 0 0 1rem;
+            color: #586789;
+            line-height: 1.72;
+        }
+
+        .featured-meta,
+        .news-card-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            color: #657392;
+            font-size: 0.92rem;
+        }
+
+        .featured-author {
+            display: grid;
+            gap: 0.45rem;
+            color: #33417c;
+        }
+
+        .featured-author strong {
+            font-size: 1.02rem;
+        }
+
+        .news-grid {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        }
+
+        .news-grid-card {
+            overflow: hidden;
+            display: grid;
+        }
+
+        .news-card-media {
+            min-height: 180px;
+            background-size: cover;
+            background-position: center;
+            border-bottom: 1px solid rgba(193, 201, 239, 0.42);
+        }
+
+        .news-grid-card.maintenance {
+            border-color: rgba(234, 191, 121, 0.56);
+            background: linear-gradient(180deg, rgba(255, 250, 241, 0.94), rgba(252, 245, 231, 0.88));
+        }
+
+        .news-grid-card.maintenance .news-card-inner {
+            position: relative;
+            padding-top: 1.55rem;
+        }
+
+        .news-grid-card.maintenance .news-card-inner::before {
+            content: "Planerat arbete";
+            position: absolute;
+            top: 1rem;
+            right: 1.2rem;
+            padding: 0.28rem 0.6rem;
+            border-radius: 999px;
+            background: rgba(239, 186, 97, 0.2);
+            color: #8b5413;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .news-card-date {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            color: #6a7696;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .news-card-date .dot {
+            width: 0.42rem;
+            height: 0.42rem;
+            border-radius: 999px;
+            background: currentColor;
+            opacity: 0.55;
+        }
+
+        .news-card-inner {
+            padding: 1.2rem 1.2rem 1rem;
+            display: grid;
+            gap: 0.8rem;
+        }
+
+        .news-card-title {
+            margin: 0;
+            font-size: 1.3rem;
+            line-height: 1.2;
+        }
+
+        .news-card-title a {
+            color: #273372;
+            text-decoration: none;
+        }
+
+        .news-card-copy {
+            margin: 0;
+            color: #586789;
+            line-height: 1.65;
+        }
+
+        .news-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.9rem 1.2rem;
+            border-top: 1px solid rgba(193, 201, 239, 0.42);
+            background: rgba(247, 248, 255, 0.72);
+        }
+
+        .news-read-link {
+            color: #3558ca;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .news-empty {
+            padding: 1.35rem;
+            text-align: center;
+            color: #57688b;
+        }
+
+        .news-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .news-page-link,
+        .news-page-current {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.6rem;
+            height: 2.6rem;
+            padding: 0 0.9rem;
+            border-radius: 999px;
+            border: 1px solid rgba(185, 193, 240, 0.65);
+            background: rgba(255, 255, 255, 0.76);
+            color: #46558a;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .news-page-current {
+            color: #fff;
+            border-color: transparent;
+            background: linear-gradient(180deg, #597ef4, #3558ca);
+        }
+
+        .news-footer {
+            margin-top: 1.2rem;
+            padding: 1.15rem 0 0.35rem;
+        }
+
+        .news-footer-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            color: #56628f;
+        }
+
+        .news-footer-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .news-footer-links a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        @media (max-width: 900px) {
+            .news-hero-grid,
+            .news-featured-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .news-featured-side {
+                border-left: 0;
+                border-top: 1px solid rgba(193, 201, 239, 0.42);
+            }
+        }
+
+        @media (max-width: 720px) {
+            .news-topbar-inner,
+            .news-nav {
+                flex-wrap: wrap;
+            }
+
+            .news-nav {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .news-statusbar-inner,
+            .news-footer-inner {
+                width: calc(100% - 1rem);
+            }
+
+            .news-top-search-form {
+                width: 100%;
+                min-width: 0;
+                margin-left: 0;
+                padding-left: 0;
+                border-left: 0;
+            }
+
+            .news-shell {
+                width: calc(100% - 1rem);
+            }
+
+            .news-hero,
+            .news-filters,
+            .maintenance-band,
+            .news-featured,
+            .news-grid-card,
+            .news-empty {
+                border-radius: 18px;
+            }
+
+            .news-page-title {
+                font-size: clamp(2.2rem, 11vw, 3rem);
+            }
+
+            .news-search-row {
+                grid-template-columns: 1fr;
+            }
+
+            .news-statusbar-inner {
+                padding: 0.7rem 0;
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block topbar %}
+    <header class="news-topbar">
+        <div class="news-topbar-inner">
+            <a class="news-brand" href="{{ path('app_home') }}">
+                <img class="news-brand-logo" src="/assets/branding/driftpunkt-logo-full.png" alt="Driftpunkt">
+            </a>
+            <nav class="news-nav" aria-label="Huvudnavigering">
+                <a class="news-nav-link" href="{{ path('app_home') }}">Startsida</a>
+                <a class="news-nav-link" href="{{ path('app_news_index') }}">Nyheter</a>
+                <a class="news-nav-link" href="{{ path('app_status_page') }}">Driftstatus</a>
+                <a class="news-nav-link" href="{{ path('app_contact') }}">Kontakta oss</a>
+                <form class="news-top-search-form" method="get" action="{{ path('app_public_search') }}">
+                    <input class="news-top-search-input" type="search" name="q" value="{{ app.request.query.get('q') }}" placeholder="Sök på hela sajten">
+                    <button class="news-top-search-button" type="submit" aria-label="Sök">⌕</button>
+                </form>
+                <a class="news-login-button" href="{{ app.user ? path('app_portal_entry') : path('app_login') }}">Logga in</a>
+            </nav>
+        </div>
+    </header>
+    <div class="news-statusbar">
+        <div class="news-statusbar-inner">
+            <span class="status-ok-dot" aria-hidden="true">{{ authMaintenanceNotice ? '!' : '✓' }}</span>
+            {% if authMaintenanceNotice %}
+                <span>{{ authMaintenanceNotice.title }}</span>
+                <span class="status-sep">•</span>
+                <a href="{{ authMaintenanceNotice.href ?: path('app_status_page') }}" style="color: inherit; text-decoration: none;">{{ authMaintenanceNotice.linkLabel|default('Visa driftstatus') }}</a>
+            {% else %}
+                <span>Senaste nytt och planerad drift samlat på ett ställe</span>
+                <span class="status-sep">•</span>
+                <span>Följ releaser, underhåll och viktiga uppdateringar</span>
+                <span class="status-sep">•</span>
+                <a href="{{ path('app_contact') }}" style="color: inherit; text-decoration: none;">Kontakta support</a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block body %}
+    <div class="news-page">
+        <section class="news-hero">
+            <div class="news-hero-grid">
+                <div>
+                    <span class="news-eyebrow">Nyhetsrum</span>
+                    <h1 class="news-page-title">Senaste nytt från Driftpunkt</h1>
+                    <p class="news-page-intro">Nyheter, releaser och driftkommunikation samlade i samma lugna uttryck som resten av sajten, så det blir enkelt att hitta både information och nästa steg.</p>
+                </div>
+                <div class="news-hero-stats">
+                    <div class="news-stat-card">
+                        <strong>Publicerade artiklar</strong>
+                        <span>{{ articles|length }} i vald vy</span>
+                    </div>
+                    <div class="news-stat-card">
+                        <strong>Planerade underhåll</strong>
+                        <span>{{ maintenanceArticles|length }} markerade artiklar</span>
+                    </div>
+                    <a class="button" href="{{ path('app_status_page') }}">Öppna driftstatus</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="news-filters">
+            <div class="news-filter-row">
+                <h2 class="news-filter-title">Filtrera efter kategori</h2>
+                <div class="news-filter-chips">
+                    {% for option in categoryOptions %}
+                        {% set isMaintenance = option.value == 'planned_maintenance' %}
+                        <a class="news-filter-chip {{ selectedCategory == option.value ? 'active' : '' }} {{ isMaintenance ? 'maintenance' : '' }}" href="{{ path('app_news_index', option.value == 'alla' ? {} : {kategori: option.value}) }}">
+                            <span>{{ option.label }}</span>
+                            <span class="chip-count">{{ option.count }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+            <form method="get" action="{{ path('app_news_index') }}" class="news-search-row">
+                {% if selectedCategory != 'alla' %}
+                    <input type="hidden" name="kategori" value="{{ selectedCategory }}">
+                {% endif %}
+                <input type="text" name="q" value="{{ searchQuery }}" placeholder="Sök efter titel, innehåll eller sammanfattning">
+                <button class="button" type="submit">Sök</button>
+            </form>
+        </section>
+
+        {% if maintenanceArticles is not empty %}
+            <section class="maintenance-band">
+                <div class="maintenance-head">
+                    <div>
+                        <h2>Planerat underhåll</h2>
+                        <p>De här inläggen lyfts extra tydligt för att driftfönster och planerade arbeten ska vara lätta att upptäcka.</p>
+                    </div>
+                </div>
+                <div class="maintenance-list">
+                    {% for article in maintenanceArticles %}
+                        <a class="maintenance-item" href="{{ path('app_news_show', {id: article.id}) }}">
+                            <span class="maintenance-date-badge">
+                                <strong>{{ article.publishedAt|date('d') }}</strong>
+                                <span>{{ article.publishedAt|date('M') }}</span>
+                            </span>
+                            {% set maintenance = maintenanceStatuses[article.id] ?? null %}
+                            {% if maintenance %}
+                                <span class="maintenance-status {{ maintenance.status }}">{{ maintenance.label }}</span>
+                            {% endif %}
+                            <strong>{{ article.title }}</strong>
+                            <span>{{ article.summary }}</span>
+                            <span>{{ maintenance and maintenance.schedule ? maintenance.schedule : article.publishedAt|date('Y-m-d H:i') }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        {% if featuredArticle %}
+            <section class="news-featured">
+                {% if featuredArticle.imageUrl %}
+                    <div class="news-featured-media" style="background-image: linear-gradient(180deg, rgba(33, 45, 99, 0.12), rgba(33, 45, 99, 0.28)), url('{{ featuredArticle.imageUrl|e('html_attr') }}');"></div>
+                {% endif %}
+                <div class="news-results-head" style="padding: 1.2rem 1.5rem 0;">
+                    <div>
+                        <h2>{{ searchQuery ? 'Sökresultat' : 'Utvald artikel' }}</h2>
+                        <p>
+                            {{ totalArticles }} artikel{{ totalArticles == 1 ? '' : 'r' }}
+                            {% if selectedCategory != 'alla' %} i kategorin {{ selectedCategoryLabel }}{% endif %}
+                            {% if searchQuery %} som matchar "{{ searchQuery }}"{% endif %}
+                        </p>
+                    </div>
+                </div>
+                <div class="news-featured-grid">
+                    <div class="news-featured-main">
+                        <span class="news-kicker {{ featuredArticle.category.value }}">{{ featuredArticle.category.label }}</span>
+                        {% if featuredMaintenanceStatus and featuredMaintenanceStatus.status != 'standard' %}
+                            <div style="margin-top: 0.75rem;">
+                                <span class="maintenance-status {{ featuredMaintenanceStatus.status }}">{{ featuredMaintenanceStatus.label }}</span>
+                            </div>
+                        {% endif %}
+                        <h2 class="featured-title">{{ featuredArticle.title }}</h2>
+                        <p class="featured-copy">{{ featuredArticle.summary }}</p>
+                        <div class="featured-meta">
+                            <span>{{ featuredArticle.publishedAt|date('Y-m-d H:i') }}</span>
+                            <span>{{ featuredArticle.author ? featuredArticle.author.displayName : 'Driftpunkt' }}</span>
+                            {% if featuredArticle.isPinned %}
+                                <span>Viktig nyhet</span>
+                            {% endif %}
+                            {% if featuredMaintenanceStatus and featuredMaintenanceStatus.schedule %}
+                                <span>{{ featuredMaintenanceStatus.schedule }}</span>
+                            {% endif %}
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <a class="button" href="{{ path('app_news_show', {id: featuredArticle.id}) }}">Läs artikeln</a>
+                        </div>
+                    </div>
+                    <aside class="news-featured-side">
+                        <div class="featured-author">
+                            <strong>Utvald artikel</strong>
+                            <span>{{ featuredArticle.category.label }} lyfts överst i den här vyn{% if selectedCategory != 'alla' %} för vald kategori{% endif %}.</span>
+                            <span>Sortering: viktiga nyheter först, därefter senaste publiceringsdatum.</span>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+        {% endif %}
+
+        {% if remainingArticles is not empty %}
+            <section class="news-grid">
+                {% for article in remainingArticles %}
+                    <article class="news-grid-card {{ article.category.value == 'planned_maintenance' ? 'maintenance' }}">
+                        {% if article.imageUrl %}
+                            <div class="news-card-media" style="background-image: linear-gradient(180deg, rgba(33, 45, 99, 0.08), rgba(33, 45, 99, 0.18)), url('{{ article.imageUrl|e('html_attr') }}');"></div>
+                        {% endif %}
+                        <div class="news-card-inner">
+                            <span class="news-card-tag {{ article.category.value }}">{{ article.category.label }}</span>
+                            {% set maintenance = articleMaintenanceStatuses[article.id] ?? null %}
+                            {% if maintenance and maintenance.status != 'standard' %}
+                                <span class="maintenance-status {{ maintenance.status }}">{{ maintenance.label }}</span>
+                            {% endif %}
+                            <h3 class="news-card-title"><a href="{{ path('app_news_show', {id: article.id}) }}">{{ article.title }}</a></h3>
+                            <div class="news-card-meta">
+                                <span class="news-card-date"><span class="dot"></span>{{ article.publishedAt|date('Y-m-d H:i') }}</span>
+                                <span>{{ article.author ? article.author.displayName : 'Driftpunkt' }}</span>
+                                {% if maintenance and maintenance.schedule %}
+                                    <span>{{ maintenance.schedule }}</span>
+                                {% endif %}
+                            </div>
+                            <p class="news-card-copy">{{ article.summary }}</p>
+                        </div>
+                        <div class="news-card-footer">
+                            <a class="news-read-link" href="{{ path('app_news_show', {id: article.id}) }}">Läs nyheten</a>
+                            <span class="chevron" aria-hidden="true">›</span>
+                        </div>
+                    </article>
+                {% endfor %}
+            </section>
+        {% elseif featuredArticle is null %}
+            <section class="news-empty">
+                <strong>Det finns inga publicerade nyheter i den här kategorin ännu.</strong>
+            </section>
+        {% endif %}
+
+        {% if totalPages > 1 %}
+            <nav class="news-pagination" aria-label="Paginering för nyheter">
+                {% if page > 1 %}
+                    <a class="news-page-link" href="{{ path('app_news_index', {kategori: selectedCategory != 'alla' ? selectedCategory : null, q: searchQuery ?: null, sida: page - 1}) }}">‹</a>
+                {% endif %}
+                {% for pageNumber in 1..totalPages %}
+                    {% if pageNumber == page %}
+                        <span class="news-page-current">{{ pageNumber }}</span>
+                    {% elseif pageNumber >= page - 2 and pageNumber <= page + 2 %}
+                        <a class="news-page-link" href="{{ path('app_news_index', {kategori: selectedCategory != 'alla' ? selectedCategory : null, q: searchQuery ?: null, sida: pageNumber}) }}">{{ pageNumber }}</a>
+                    {% endif %}
+                {% endfor %}
+                {% if page < totalPages %}
+                    <a class="news-page-link" href="{{ path('app_news_index', {kategori: selectedCategory != 'alla' ? selectedCategory : null, q: searchQuery ?: null, sida: page + 1}) }}">›</a>
+                {% endif %}
+            </nav>
+        {% endif %}
+    </div>
+
+    <footer class="news-footer">
+        <div class="news-footer-inner">
+            <div class="news-footer-links">
+                <a href="{{ path('app_home') }}">Startsida</a>
+                <a href="{{ path('app_news_index') }}">Nyheter</a>
+                <a href="{{ path('app_status_page') }}">Driftstatus</a>
+                <a href="{{ path('app_contact') }}">Kontakta oss</a>
+            </div>
+            <span>© 2026 Driftpunkt</span>
+        </div>
+    </footer>
+{% endblock %}

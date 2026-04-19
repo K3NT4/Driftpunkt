@@ -1,0 +1,373 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Driftpunkt | Sök{% endblock %}
+{% block page_shell_class %}home-shell search-shell{% endblock %}
+{% block body_class %}home-landing search-page{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        :root {
+            --home-text: #283474;
+            --home-text-soft: #54618e;
+            --home-line: rgba(177, 186, 241, 0.42);
+            --home-surface: rgba(255, 255, 255, 0.78);
+            --home-surface-strong: rgba(255, 255, 255, 0.9);
+            --home-shadow: 0 24px 60px rgba(87, 101, 177, 0.16);
+        }
+
+        body.search-page {
+            background:
+                radial-gradient(circle at 18% 14%, rgba(148, 162, 255, 0.48), transparent 28%),
+                radial-gradient(circle at 86% 12%, rgba(255, 222, 212, 0.66), transparent 24%),
+                radial-gradient(circle at 50% 100%, rgba(103, 110, 255, 0.3), transparent 24%),
+                linear-gradient(180deg, #7785d6 0%, #a9aff0 16%, #cbc7f5 38%, #d8d0f7 52%, #c7c8f8 67%, #a4aff0 100%);
+            color: var(--home-text);
+        }
+
+        body.search-page::before {
+            background:
+                radial-gradient(ellipse at 18% 32%, rgba(255, 255, 255, 0.36), transparent 26%),
+                radial-gradient(ellipse at 55% 46%, rgba(255, 255, 255, 0.4), transparent 34%),
+                radial-gradient(ellipse at 82% 68%, rgba(255, 255, 255, 0.28), transparent 24%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+            mask-image: none;
+            opacity: 1;
+        }
+
+        .search-shell {
+            width: calc(100% - 2rem);
+            padding: 0 0 2.5rem;
+        }
+
+        .home-topbar {
+            margin: 0 calc(50% - 50vw);
+            background:
+                linear-gradient(180deg, rgba(79, 88, 170, 0.92), rgba(71, 80, 156, 0.88)),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
+            border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+            box-shadow: 0 14px 36px rgba(56, 63, 125, 0.18);
+            backdrop-filter: blur(12px);
+        }
+
+        .home-topbar-inner {
+            width: calc(100% - 2rem);
+            min-height: 68px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.25rem;
+        }
+
+        .home-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.85rem;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .home-brand-logo {
+            height: 2.55rem;
+            width: auto;
+            display: block;
+            filter: drop-shadow(0 12px 20px rgba(14, 39, 119, 0.24));
+        }
+
+        .home-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.1rem;
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        .home-nav-link {
+            color: inherit;
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .home-search-form {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            min-width: min(360px, 42vw);
+            margin-left: 0.35rem;
+            padding-left: 1rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .home-search-input {
+            width: 100%;
+            min-width: 0;
+            border: 0;
+            outline: none;
+            background: transparent;
+            color: #fff;
+            font: inherit;
+        }
+
+        .home-search-input::placeholder {
+            color: rgba(255, 255, 255, 0.72);
+        }
+
+        .home-search {
+            width: 2.25rem;
+            height: 2.25rem;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .home-login-button {
+            min-width: 104px;
+            padding: 0.74rem 1.28rem;
+            border-radius: 11px;
+            background: linear-gradient(180deg, #ffbf61 0%, #f49b3c 100%);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 22px rgba(228, 142, 48, 0.32);
+            text-decoration: none;
+        }
+
+        .search-hero,
+        .search-results,
+        .search-empty {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.84) 0%, rgba(249, 247, 255, 0.76) 100%);
+            border: 1px solid rgba(181, 190, 241, 0.38);
+            border-radius: 24px;
+            box-shadow: var(--home-shadow);
+            backdrop-filter: blur(16px);
+        }
+
+        .search-hero {
+            margin-top: 1.6rem;
+            padding: 2rem;
+        }
+
+        .search-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.48rem 0.82rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.66);
+            color: #39498c;
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .search-title {
+            margin: 0.9rem 0 0.7rem;
+            font-size: clamp(2.4rem, 4.6vw, 4rem);
+            line-height: 1.03;
+            letter-spacing: -0.04em;
+            color: #243174;
+        }
+
+        .search-subtitle {
+            margin: 0;
+            max-width: 62ch;
+            color: var(--home-text-soft);
+            font-size: 1.05rem;
+            line-height: 1.7;
+        }
+
+        .search-results,
+        .search-empty {
+            margin-top: 1rem;
+            padding: 1.25rem;
+        }
+
+        .search-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .search-filter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.72rem 0.95rem;
+            border-radius: 999px;
+            border: 1px solid rgba(185, 193, 240, 0.65);
+            background: rgba(255, 255, 255, 0.76);
+            color: #46558a;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .search-filter-chip.active {
+            color: #fff;
+            border-color: transparent;
+            background: linear-gradient(180deg, #597ef4, #3558ca);
+        }
+
+        .search-filter-count {
+            font-size: 0.86rem;
+            opacity: 0.88;
+        }
+
+        .search-results-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .search-results-head h2,
+        .search-results-head p {
+            margin: 0;
+        }
+
+        .search-results-head h2 {
+            color: #273372;
+            font-size: 1.35rem;
+        }
+
+        .search-results-head p {
+            color: #60708d;
+        }
+
+        .search-results-grid {
+            display: grid;
+            gap: 0.9rem;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
+        .search-result-card {
+            display: grid;
+            gap: 0.45rem;
+            padding: 1rem;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(188, 197, 241, 0.48);
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .search-result-section {
+            display: inline-flex;
+            width: fit-content;
+            padding: 0.3rem 0.6rem;
+            border-radius: 999px;
+            background: rgba(89, 126, 244, 0.12);
+            color: #3a52a1;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .search-result-card strong {
+            color: #273372;
+            font-size: 1.02rem;
+        }
+
+        .search-result-card span:last-child,
+        .search-empty {
+            color: #60708d;
+            line-height: 1.65;
+        }
+
+        @media (max-width: 820px) {
+            .home-topbar-inner,
+            .home-nav {
+                flex-wrap: wrap;
+            }
+
+            .home-nav {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .home-search-form {
+                width: 100%;
+                min-width: 0;
+                margin-left: 0;
+                padding-left: 0;
+                border-left: 0;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block topbar %}
+    <header class="home-topbar">
+        <div class="home-topbar-inner">
+            <a class="home-brand" href="{{ path('app_home') }}">
+                <img class="home-brand-logo" src="/assets/branding/driftpunkt-logo-full.png" alt="Driftpunkt">
+            </a>
+            <nav class="home-nav" aria-label="Huvudnavigering">
+                <a class="home-nav-link" href="{{ path('app_home') }}">Startsida</a>
+                <a class="home-nav-link" href="{{ path('app_news_index') }}">Nyheter</a>
+                <a class="home-nav-link" href="{{ path('app_contact') }}">Support</a>
+                <form class="home-search-form" method="get" action="{{ path('app_public_search') }}">
+                    <input class="home-search-input" type="search" name="q" value="{{ searchQuery }}" placeholder="Sök på hela sajten">
+                    <button class="home-search" type="submit" aria-label="Sök">⌕</button>
+                </form>
+                <a class="home-login-button" href="{{ app.user ? path('app_portal_entry') : path('app_login') }}">Logga in</a>
+            </nav>
+        </div>
+    </header>
+{% endblock %}
+
+{% block body %}
+    <section class="search-hero">
+        <span class="search-eyebrow">Publik sökning</span>
+        <h1 class="search-title">Sök på hela Driftpunkt</h1>
+        <p class="search-subtitle">Här visas träffar från publika sidor och undersidor som faktiskt är tillgängliga online just nu, som nyheter, kunskapsbas, kontaktvägar och öppna funktioner.</p>
+    </section>
+
+    {% if searchQuery is not empty %}
+        <section class="search-results" aria-label="Sökresultat">
+            <div class="search-results-head">
+                <div>
+                    <h2>Sökresultat</h2>
+                    <p>
+                        Publika träffar för "{{ searchQuery }}"
+                        {% if selectedFilter != 'alla' %}
+                            i {{ selectedFilterLabel|lower }}
+                        {% endif %}
+                    </p>
+                </div>
+                <p>{{ searchResults|length }} av {{ allResultsCount }} träff{{ allResultsCount == 1 ? '' : 'ar' }}</p>
+            </div>
+
+            <nav class="search-filters" aria-label="Filtrera sökresultat">
+                {% for option in filterOptions %}
+                    <a class="search-filter-chip {{ selectedFilter == option.value ? 'active' : '' }}" href="{{ path('app_public_search', {q: searchQuery, filter: option.value != 'alla' ? option.value : null}) }}">
+                        <span>{{ option.label }}</span>
+                        <span class="search-filter-count">{{ filterCounts[option.value]|default(0) }}</span>
+                    </a>
+                {% endfor %}
+            </nav>
+
+            {% if searchResults %}
+                <div class="search-results-grid">
+                    {% for result in searchResults %}
+                        <a class="search-result-card" {% if result.href %}href="{{ result.href }}"{% endif %}>
+                            <span class="search-result-section">{{ result.section }}</span>
+                            <strong>{{ result.title }}</strong>
+                            <span>{{ result.summary }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="search-empty">Inga publika träffar hittades. Prova ett annat ord eller öppna sektionerna ovan.</div>
+            {% endif %}
+        </section>
+    {% else %}
+        <section class="search-empty">Skriv ett ord eller en fras i sökfältet ovan för att hitta publika sidor, artiklar och funktioner.</section>
+    {% endif %}
+{% endblock %}

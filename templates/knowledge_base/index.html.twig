@@ -1,0 +1,943 @@
+{% extends 'base.html.twig' %}
+
+{% set searchRoute = pageMode == 'customer' ? 'app_portal_customer_knowledge_base' : 'app_knowledge_base_public' %}
+{% set backRoute = pageMode == 'customer' ? path('app_portal_customer') : path('app_home') %}
+{% set backLabel = pageMode == 'customer' ? 'Till kundportalen' : 'Till startsidan' %}
+
+{% block title %}Driftpunkt | {{ pageTitle }}{% endblock %}
+{% block page_shell_class %}knowledge-shell{% endblock %}
+{% block body_class %}home-landing knowledge-base-page{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        :root {
+            --knowledge-text: #283474;
+            --knowledge-text-soft: #54618e;
+            --knowledge-line: rgba(177, 186, 241, 0.42);
+            --knowledge-surface: rgba(255, 255, 255, 0.8);
+            --knowledge-surface-strong: rgba(255, 255, 255, 0.9);
+            --knowledge-shadow: 0 24px 60px rgba(87, 101, 177, 0.16);
+            --knowledge-blue: #2f59df;
+            --knowledge-purple: #7f42df;
+            --knowledge-green: #3aa16b;
+            --knowledge-orange: #f59b41;
+        }
+
+        body.knowledge-base-page {
+            background:
+                radial-gradient(circle at 18% 14%, rgba(148, 162, 255, 0.48), transparent 28%),
+                radial-gradient(circle at 86% 12%, rgba(255, 222, 212, 0.66), transparent 24%),
+                radial-gradient(circle at 50% 100%, rgba(103, 110, 255, 0.3), transparent 24%),
+                linear-gradient(180deg, #7785d6 0%, #a9aff0 16%, #cbc7f5 38%, #d8d0f7 52%, #c7c8f8 67%, #a4aff0 100%);
+            color: var(--knowledge-text);
+        }
+
+        body.knowledge-base-page::before {
+            background:
+                radial-gradient(ellipse at 18% 32%, rgba(255, 255, 255, 0.36), transparent 26%),
+                radial-gradient(ellipse at 55% 46%, rgba(255, 255, 255, 0.4), transparent 34%),
+                radial-gradient(ellipse at 82% 68%, rgba(255, 255, 255, 0.28), transparent 24%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+            mask-image: none;
+            opacity: 1;
+        }
+
+        body.knowledge-base-page::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.95) 0 2px, transparent 3px),
+                radial-gradient(circle at 82% 26%, rgba(255, 255, 255, 0.88) 0 2px, transparent 3px),
+                radial-gradient(circle at 14% 74%, rgba(255, 255, 255, 0.7) 0 2px, transparent 3px),
+                radial-gradient(circle at 74% 86%, rgba(255, 255, 255, 0.78) 0 2px, transparent 3px);
+            opacity: 0.9;
+        }
+
+        .knowledge-shell {
+            width: calc(100% - 2rem);
+            padding: 0 0 2.5rem;
+        }
+
+        .knowledge-page-wrap {
+            margin: 0 auto;
+            padding: 0 0 1rem;
+        }
+
+        .knowledge-customer-layout {
+            width: calc(100% - 2rem);
+            margin: 1rem auto 0;
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: clamp(210px, 16vw, 280px) minmax(0, 1fr);
+            align-items: start;
+        }
+
+        .knowledge-customer-main {
+            min-width: 0;
+        }
+
+        .customer-portal-sidebar {
+            display: grid;
+            gap: 1rem;
+            position: sticky;
+            top: 1rem;
+        }
+
+        .customer-nav-card,
+        .customer-sidepanel-card {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(248, 247, 255, 0.8) 100%);
+            border: 1px solid var(--knowledge-line);
+            border-radius: 22px;
+            box-shadow: var(--knowledge-shadow);
+            backdrop-filter: blur(16px);
+        }
+
+        .customer-nav-card {
+            padding: 1rem;
+        }
+
+        .customer-account-card {
+            position: relative;
+            overflow: hidden;
+            padding: 1.05rem;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 247, 255, 0.84)),
+                radial-gradient(circle at top right, rgba(97, 118, 238, 0.12), transparent 38%);
+        }
+
+        .customer-nav-title {
+            margin-bottom: 0.85rem;
+            color: #2a3777;
+            font-weight: 800;
+            font-size: 1rem;
+        }
+
+        .customer-nav-list,
+        .customer-focus-list,
+        .customer-sidepanel-list {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .customer-nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.72rem 0.82rem;
+            border-radius: 14px;
+            color: var(--knowledge-text);
+            text-decoration: none;
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(177, 186, 241, 0.28);
+            font-weight: 700;
+            font-size: 0.93rem;
+        }
+
+        .customer-nav-item.active {
+            background: linear-gradient(180deg, rgba(79, 115, 255, 0.16), rgba(79, 115, 255, 0.08));
+            color: #3047af;
+            border-color: rgba(79, 115, 255, 0.34);
+        }
+
+        .customer-account-eyebrow,
+        .customer-eyebrow {
+            display: inline-flex;
+            width: fit-content;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.34rem 0.66rem;
+            border-radius: 999px;
+            background: rgba(89, 107, 227, 0.1);
+            color: #4253b8;
+            font-size: 0.73rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .customer-account-name,
+        .customer-sidepanel-title {
+            color: #253173;
+            font-weight: 800;
+        }
+
+        .customer-account-name {
+            margin-top: 0.8rem;
+            font-size: 1.05rem;
+            line-height: 1.2;
+        }
+
+        .customer-account-email,
+        .customer-nav-note,
+        .customer-account-note,
+        .customer-sidepanel-text,
+        .customer-focus-item-text,
+        .customer-focus-meta,
+        .customer-sidepanel-item p,
+        .customer-sidepanel-item span {
+            color: var(--knowledge-text-soft);
+            line-height: 1.55;
+        }
+
+        .customer-account-summary {
+            display: grid;
+            gap: 0.65rem;
+            margin-top: 0.85rem;
+            padding-top: 0.95rem;
+            border-top: 1px solid rgba(177, 186, 241, 0.34);
+        }
+
+        .customer-account-summary-row,
+        .customer-focus-item-header,
+        .customer-focus-meta {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .customer-account-summary-label {
+            color: var(--knowledge-text-soft);
+            font-size: 0.82rem;
+        }
+
+        .customer-account-summary-value {
+            color: #243174;
+            font-size: 0.88rem;
+            font-weight: 800;
+            text-align: right;
+        }
+
+        .customer-sidepanel-card {
+            padding: 1rem 1rem 1.05rem;
+        }
+
+        .customer-focus-item,
+        .customer-sidepanel-item {
+            padding: 0.85rem 0.9rem;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.66);
+            border: 1px solid rgba(177, 186, 241, 0.35);
+        }
+
+        .customer-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.28rem 0.58rem;
+            border-radius: 999px;
+            font-size: 0.76rem;
+            font-weight: 800;
+        }
+
+        .customer-sidebar-link {
+            color: var(--knowledge-blue);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .knowledge-topbar {
+            margin: 0 calc(50% - 50vw) 1.4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.25rem;
+            min-height: 68px;
+            padding: 0.8rem 0;
+            background:
+                linear-gradient(180deg, rgba(79, 88, 170, 0.92), rgba(71, 80, 156, 0.88)),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
+            color: #fff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+            box-shadow: 0 14px 36px rgba(56, 63, 125, 0.18);
+            backdrop-filter: blur(12px);
+        }
+
+        .knowledge-topbar-inner,
+        .knowledge-statusbar-inner {
+            width: calc(100% - 2rem);
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.25rem;
+        }
+
+        .knowledge-topbar a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .knowledge-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.85rem;
+            color: #fff;
+            font-family: "Space Grotesk", "Manrope", sans-serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .knowledge-brand-mark {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .knowledge-brand-logo {
+            height: 2.55rem;
+            width: auto;
+            display: block;
+            filter: drop-shadow(0 12px 20px rgba(14, 39, 119, 0.24));
+        }
+
+        .knowledge-topbar-nav {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            flex-wrap: wrap;
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 0.98rem;
+            font-weight: 500;
+        }
+
+        .knowledge-pill-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 2.25rem;
+            padding: 0.55rem 1rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            cursor: pointer;
+            position: relative;
+            z-index: 1;
+        }
+
+        .knowledge-login-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 104px;
+            padding: 0.74rem 1.28rem;
+            border-radius: 11px;
+            background: linear-gradient(180deg, #ffbf61 0%, #f49b3c 100%);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 22px rgba(228, 142, 48, 0.32);
+            cursor: pointer;
+            position: relative;
+            z-index: 1;
+        }
+
+        .knowledge-statusbar {
+            margin: 0 calc(50% - 50vw);
+            background: rgba(236, 226, 255, 0.28);
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            border-bottom: 1px solid rgba(113, 117, 195, 0.16);
+        }
+
+        .knowledge-statusbar-inner {
+            min-height: 38px;
+            justify-content: center;
+            color: #56628f;
+            font-size: 0.93rem;
+            text-align: center;
+        }
+
+        .knowledge-status-dot {
+            width: 1rem;
+            height: 1rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: rgba(92, 118, 230, 0.16);
+            color: #4e63c7;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .knowledge-status-sep {
+            opacity: 0.55;
+        }
+
+        .knowledge-hero {
+            position: relative;
+            padding: 5.7rem 0 2rem;
+            text-align: center;
+        }
+
+        .knowledge-hero::before,
+        .knowledge-hero::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100vw;
+            pointer-events: none;
+            border-radius: 50%;
+            filter: blur(2px);
+        }
+
+        .knowledge-hero::before {
+            top: 1rem;
+            height: 196px;
+            background:
+                radial-gradient(ellipse at center, rgba(255, 255, 255, 0.64) 0%, rgba(255, 255, 255, 0.18) 58%, transparent 78%);
+            opacity: 0.95;
+        }
+
+        .knowledge-hero::after {
+            top: 2.4rem;
+            height: 138px;
+            background:
+                radial-gradient(ellipse at center, rgba(255, 255, 255, 0.46) 0%, rgba(255, 255, 255, 0.1) 60%, transparent 80%);
+        }
+
+        .knowledge-hero-wave {
+            position: absolute;
+            inset: 2.9rem 0 auto;
+            height: 166px;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .knowledge-hero-wave::before,
+        .knowledge-hero-wave::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            width: min(1100px, 120vw);
+            transform: translateX(-50%);
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.24);
+        }
+
+        .knowledge-hero-wave::before {
+            top: 0;
+            height: 124px;
+            clip-path: polygon(0 58%, 10% 45%, 21% 50%, 33% 34%, 47% 44%, 62% 26%, 76% 38%, 100% 20%, 100% 100%, 0 100%);
+        }
+
+        .knowledge-hero-wave::after {
+            top: 20px;
+            height: 114px;
+            background: rgba(255, 255, 255, 0.18);
+            clip-path: polygon(0 64%, 14% 48%, 27% 58%, 40% 40%, 58% 54%, 72% 34%, 87% 45%, 100% 30%, 100% 100%, 0 100%);
+        }
+
+        .knowledge-hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .knowledge-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            margin-bottom: 1rem;
+            padding: 0.52rem 0.9rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.58);
+            color: #4658ac;
+            font-weight: 700;
+            box-shadow: 0 12px 28px rgba(103, 116, 197, 0.14);
+        }
+
+        .knowledge-title {
+            position: relative;
+            margin: 0 0 0.75rem;
+            color: #243174;
+            font-size: clamp(2.95rem, 5.1vw, 4.4rem);
+            line-height: 1.02;
+            letter-spacing: -0.04em;
+        }
+
+        .knowledge-subtitle {
+            position: relative;
+            max-width: 50rem;
+            margin: 0 auto;
+            color: #44517e;
+            font-size: clamp(1.08rem, 1.8vw, 1.45rem);
+            line-height: 1.65;
+        }
+
+        .knowledge-search-card,
+        .knowledge-section,
+        .knowledge-empty {
+            margin-top: 1rem;
+            padding: 1.4rem;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.84) 0%, rgba(249, 247, 255, 0.76) 100%);
+            border: 1px solid var(--knowledge-line);
+            border-radius: 20px;
+            box-shadow: var(--knowledge-shadow);
+            backdrop-filter: blur(16px);
+        }
+
+        .knowledge-search-card {
+            padding: 1.25rem;
+        }
+
+        .knowledge-search-card-head,
+        .knowledge-section-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .knowledge-heading {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            margin-bottom: 0.95rem;
+        }
+
+        .knowledge-heading h2 {
+            margin: 0;
+            font-size: clamp(1.75rem, 2.3vw, 2.15rem);
+            letter-spacing: -0.03em;
+            color: #2b3778;
+        }
+
+        .knowledge-heading-icon {
+            width: 1.65rem;
+            height: 1.65rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            font-size: 0.84rem;
+            color: #fff;
+            background: linear-gradient(180deg, #69a8ff, #4172e0);
+        }
+
+        .knowledge-search-form {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.8rem;
+            align-items: center;
+        }
+
+        .knowledge-search-input {
+            width: 100%;
+            min-height: 3.05rem;
+            padding: 0.82rem 1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(136, 147, 214, 0.32);
+            background: rgba(255, 255, 255, 0.72);
+            color: #243174;
+            font: inherit;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+        }
+
+        .knowledge-search-input::placeholder {
+            color: #7380aa;
+        }
+
+        .knowledge-search-button {
+            min-width: 110px;
+            min-height: 3.05rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: linear-gradient(180deg, #5782ff 0%, #355fdb 100%);
+            color: #fff;
+            box-shadow: 0 12px 24px rgba(66, 99, 211, 0.26);
+        }
+
+        .knowledge-grid {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .knowledge-card-list,
+        .knowledge-faq-list,
+        .knowledge-article-list {
+            display: grid;
+            gap: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .knowledge-tip-card,
+        .knowledge-article-card,
+        .knowledge-faq-list details {
+            padding: 1rem 1.05rem;
+            border-radius: 16px;
+            border: 1px solid rgba(191, 198, 239, 0.42);
+            background: rgba(255, 255, 255, 0.66);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+
+        .knowledge-tip-card {
+            display: flex;
+            gap: 0.8rem;
+            align-items: flex-start;
+        }
+
+        .knowledge-tip-icon,
+        .knowledge-faq-icon {
+            flex: 0 0 auto;
+            width: 1.95rem;
+            height: 1.95rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            font-size: 0.94rem;
+            font-weight: 800;
+        }
+
+        .knowledge-tip-icon {
+            background: linear-gradient(180deg, rgba(107, 198, 139, 0.22), rgba(76, 168, 109, 0.16));
+            color: var(--knowledge-green);
+        }
+
+        .knowledge-faq-icon {
+            background: linear-gradient(180deg, rgba(132, 155, 255, 0.22), rgba(74, 104, 221, 0.16));
+            color: #5168c9;
+        }
+
+        .knowledge-faq-list summary {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            cursor: pointer;
+            list-style: none;
+        }
+
+        .knowledge-faq-list summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .knowledge-faq-question {
+            display: flex;
+            gap: 0.75rem;
+            padding-right: 1rem;
+            color: #273c86;
+            font-weight: 600;
+        }
+
+        .knowledge-faq-arrow {
+            color: #3153ba;
+            font-weight: 800;
+            transition: transform 140ms ease;
+        }
+
+        .knowledge-faq-list details[open] .knowledge-faq-arrow {
+            transform: rotate(90deg);
+        }
+
+        .knowledge-faq-answer {
+            padding-top: 0.9rem;
+            padding-left: 2.45rem;
+            color: #57637f;
+            line-height: 1.7;
+        }
+
+        .knowledge-article-card h3,
+        .knowledge-section h2,
+        .knowledge-search-card h2 {
+            margin: 0;
+            color: #232b57;
+        }
+
+        .knowledge-meta {
+            color: #6a7697;
+            font-size: 0.92rem;
+        }
+
+        .knowledge-article-card p,
+        .knowledge-section p,
+        .knowledge-empty p,
+        .knowledge-search-card p {
+            color: #4a516d;
+            line-height: 1.7;
+        }
+
+        .knowledge-article-card h3 {
+            margin-bottom: 0.55rem;
+        }
+
+        .knowledge-meta-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.26rem 0.62rem;
+            border-radius: 999px;
+            background: #f7ecc6;
+            color: #917137;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .knowledge-footer {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+            padding: 1.35rem 0 0;
+            border-top: 1px solid rgba(211, 216, 237, 0.72);
+            color: #eef2ff;
+        }
+
+        .knowledge-footer a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .knowledge-footer-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 2.6rem;
+            padding: 0.65rem 1rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            cursor: pointer;
+            position: relative;
+            z-index: 1;
+        }
+
+        @media (max-width: 900px) {
+            .knowledge-customer-layout {
+                width: calc(100% - 1rem);
+                grid-template-columns: 1fr;
+            }
+
+            .customer-portal-sidebar {
+                position: static;
+            }
+
+            .knowledge-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .knowledge-search-form {
+                grid-template-columns: 1fr;
+            }
+
+            .knowledge-topbar-inner {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .knowledge-topbar {
+                padding-block: 0.95rem;
+            }
+
+            .knowledge-topbar-nav,
+            .knowledge-statusbar-inner,
+            .knowledge-search-card-head,
+            .knowledge-section-head {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .knowledge-hero {
+                padding-top: 4.8rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block topbar %}
+    <div class="topbar">
+        <div class="brand brand-mark">
+            <img class="brand-logo" src="/assets/branding/driftpunkt-logo-icon.png" alt="Driftpunkt logo">
+            <span>Driftpunkt</span>
+        </div>
+        <div class="nav-links">
+            {% if pageMode != 'customer' %}
+                <a class="button secondary" href="{{ path('app_home') }}">Startsida</a>
+            {% endif %}
+            {% if app.user %}
+                <a class="button secondary" href="{{ path('app_portal_entry') }}">Min portal</a>
+                <a class="button secondary" href="{{ path('app_logout') }}">Logga ut</a>
+            {% else %}
+                <a class="button secondary" href="{{ path('app_login') }}">Logga in</a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block body %}
+    <div class="knowledge-page-wrap">
+        <div class="knowledge-topbar">
+            <div class="knowledge-topbar-inner">
+                <a class="knowledge-brand" href="{{ pageMode == 'customer' ? path('app_portal_customer') : path('app_home') }}">
+                    <span class="knowledge-brand-mark">
+                        <img class="knowledge-brand-logo" src="/assets/branding/driftpunkt-logo-full.png" alt="Driftpunkt">
+                    </span>
+                    <span>Kunskapsbas</span>
+                </a>
+                <div class="knowledge-topbar-nav">
+                    <a class="knowledge-pill-link" href="#knowledge-search">Sök svar</a>
+                    <a class="{{ pageMode == 'customer' ? 'knowledge-pill-link' : 'knowledge-login-button' }}" href="{{ backRoute }}">{{ backLabel }}</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="knowledge-statusbar">
+            <div class="knowledge-statusbar-inner">
+                <span class="knowledge-status-dot">●</span>
+                <span>{{ pageMode == 'customer' ? 'Inloggat kunskapsläge för kunder' : 'Publika guider och svar tillgängliga just nu' }}</span>
+                <span class="knowledge-status-sep">•</span>
+                <span>{{ searchQuery is not empty ? 'Filtrerat på: ' ~ searchQuery : 'Sök i tips, FAQ och guider' }}</span>
+            </div>
+        </div>
+
+        {% if pageMode == 'customer' %}
+        <div class="knowledge-customer-layout">
+            {% include 'portal/_customer_portal_sidebar.html.twig' %}
+            <div class="knowledge-customer-main">
+        {% endif %}
+
+        <section class="knowledge-hero">
+            <div class="knowledge-hero-wave" aria-hidden="true"></div>
+            <div class="knowledge-hero-content">
+                <div class="knowledge-eyebrow">{{ pageMode == 'customer' ? 'Inloggat läge' : 'Öppet läge' }}</div>
+                <h1 class="knowledge-title">{{ pageTitle }}</h1>
+                <p class="knowledge-subtitle">{{ pageSubtitle }}</p>
+            </div>
+        </section>
+
+        <section id="knowledge-search" class="knowledge-search-card">
+            <div class="knowledge-search-card-head">
+                <div>
+                    <div class="knowledge-heading">
+                        <span class="knowledge-heading-icon">⌕</span>
+                        <h2>Sök i kunskapsbasen</h2>
+                    </div>
+                    <p style="margin: 0.2rem 0 0;">{{ pageMode == 'customer' ? 'Här söker du bara i material som är avsett för inloggade kunder.' : 'Här söker du i publika guider, smarta tips och vanliga frågor.' }}</p>
+                </div>
+                <span class="knowledge-meta-pill">{{ entries.tips|length + entries.faq|length + entries.articles|length }} träffar</span>
+            </div>
+            <form method="get" action="{{ path(searchRoute) }}" class="knowledge-search-form">
+                <input class="knowledge-search-input" type="text" name="q" value="{{ searchQuery }}" placeholder="Exempel: återställ lösenord, e-postnotiser eller VPN">
+                <button class="button knowledge-search-button" type="submit">Sök</button>
+            </form>
+        </section>
+
+        {% if entries.tips is not empty or entries.faq is not empty %}
+            <div class="knowledge-grid">
+                {% if entries.tips is not empty %}
+                    <section class="knowledge-section">
+                        <div class="knowledge-section-head">
+                            <div>
+                                <div class="knowledge-heading">
+                                    <span class="knowledge-heading-icon">✓</span>
+                                    <h2>Smarta Tips</h2>
+                                </div>
+                                <p style="margin: 0.45rem 0 0;">Snabba råd som hjälper dig att komma vidare direkt.</p>
+                            </div>
+                            <span class="knowledge-meta">{{ entries.tips|length }} tips</span>
+                        </div>
+                        <div class="knowledge-card-list">
+                            {% for entry in entries.tips %}
+                                <article class="knowledge-tip-card">
+                                    <span class="knowledge-tip-icon">✓</span>
+                                    <div>
+                                        <strong style="display: block; color: #25305b;">{{ entry.title }}</strong>
+                                        <p style="margin: 0.35rem 0 0;">{{ entry.body|nl2br }}</p>
+                                    </div>
+                                </article>
+                            {% endfor %}
+                        </div>
+                    </section>
+                {% endif %}
+
+                {% if entries.faq is not empty %}
+                    <section class="knowledge-section">
+                        <div class="knowledge-section-head">
+                            <div>
+                                <div class="knowledge-heading">
+                                    <span class="knowledge-heading-icon">?</span>
+                                    <h2>Vanliga Frågor</h2>
+                                </div>
+                                <p style="margin: 0.45rem 0 0;">Frågor och svar som ofta löser det vanligaste först.</p>
+                            </div>
+                            <span class="knowledge-meta">{{ entries.faq|length }} frågor</span>
+                        </div>
+                        <div class="knowledge-faq-list">
+                            {% for entry in entries.faq %}
+                                <details {{ loop.first ? 'open' }}>
+                                    <summary>
+                                        <span class="knowledge-faq-question">
+                                            <span class="knowledge-faq-icon">?</span>
+                                            <span>{{ entry.title }}</span>
+                                        </span>
+                                        <span class="knowledge-faq-arrow">›</span>
+                                    </summary>
+                                    <div class="knowledge-faq-answer">{{ entry.body|nl2br }}</div>
+                                </details>
+                            {% endfor %}
+                        </div>
+                    </section>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% if entries.articles is not empty %}
+            <section class="knowledge-section">
+                <div class="knowledge-section-head">
+                    <div>
+                        <div class="knowledge-heading">
+                            <span class="knowledge-heading-icon">✦</span>
+                            <h2>Guider och artiklar</h2>
+                        </div>
+                        <p style="margin: 0.45rem 0 0;">Fördjupade instruktioner som går steg för steg.</p>
+                    </div>
+                    <span class="knowledge-meta">{{ entries.articles|length }} artiklar</span>
+                </div>
+                <div class="knowledge-article-list">
+                    {% for entry in entries.articles %}
+                        <article class="knowledge-article-card">
+                            <h3>{{ entry.title }}</h3>
+                            <div class="knowledge-meta" style="margin-bottom: 0.7rem;">
+                                Målgrupp:
+                                {% if entry.audience.value == 'public' %}
+                                    Publik
+                                {% elseif entry.audience.value == 'customer' %}
+                                    Inloggade kunder
+                                {% else %}
+                                    Publik och kund
+                                {% endif %}
+                            </div>
+                            <p style="margin: 0;">{{ entry.body|nl2br }}</p>
+                        </article>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        {% if entries.tips is empty and entries.faq is empty and entries.articles is empty %}
+            <section class="knowledge-empty">
+                <div class="knowledge-heading">
+                    <span class="knowledge-heading-icon">!</span>
+                    <h2 style="margin: 0; color: #232b57;">Ingen träff just nu</h2>
+                </div>
+                <p style="margin: 0;">Vi hittade inget i kunskapsbasen för din sökning. Prova gärna ett enklare ord eller gå tillbaka och försök igen senare.</p>
+            </section>
+        {% endif %}
+
+        <div class="knowledge-footer">
+            <a class="knowledge-footer-link" href="{{ pageMode == 'customer' ? path('app_portal_customer') : path('app_home') }}">{{ pageMode == 'customer' ? 'Kundportal' : 'Startsida' }}</a>
+            <a class="knowledge-footer-link" href="{{ pageMode == 'customer' ? path('app_portal_customer') : path('app_login', {role: 'customer'}) }}">{{ pageMode == 'customer' ? 'Kundportal' : 'Kundinloggning' }}</a>
+            <a class="knowledge-footer-link" href="#knowledge-search">Sök igen</a>
+            <span>© 2024 Driftpunkt</span>
+        </div>
+
+        {% if pageMode == 'customer' %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+{% endblock %}

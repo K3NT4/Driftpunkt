@@ -1,0 +1,382 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Functional;
+
+use App\Module\Identity\Entity\User;
+use App\Module\Identity\Enum\UserType;
+use App\Module\News\Entity\NewsArticle;
+use App\Module\News\Enum\NewsCategory;
+use App\Module\System\Service\SystemSettings;
+use App\Module\Ticket\Entity\Ticket;
+use App\Module\Ticket\Enum\TicketImpactLevel;
+use App\Module\Ticket\Enum\TicketPriority;
+use App\Module\Ticket\Enum\TicketRequestType;
+use App\Module\Ticket\Enum\TicketStatus;
+use App\Module\Ticket\Enum\TicketVisibility;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Tools\SchemaTool;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+
+final class HomepageNewsAndSettingsTest extends WebTestCase
+{
+    private KernelBrowser $client;
+    private EntityManagerInterface $entityManager;
+    private UserPasswordHasherInterface $passwordHasher;
+
+    protected function setUp(): void
+    {
+        self::ensureKernelShutdown();
+        $this->cleanupSqliteSidecars();
+        $this->client = static::createClient();
+        $container = static::getContainer();
+
+        $this->entityManager = $container->get(EntityManagerInterface::class);
+        $this->passwordHasher = $container->get(UserPasswordHasherInterface::class);
+
+        $metadata = $this->entityManager->getMetadataFactory()->getAllMetadata();
+        $schemaTool = new SchemaTool($this->entityManager);
+        $schemaTool->dropSchema($metadata);
+        $schemaTool->createSchema($metadata);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->entityManager->clear();
+        $this->entityManager->getConnection()->close();
+
+        parent::tearDown();
+        self::ensureKernelShutdown();
+    }
+
+    private function cleanupSqliteSidecars(): void
+    {
+        $dbPath = dirname(__DIR__, 2).'/var/driftpunkt_test.db';
+        @unlink($dbPath.'-wal');
+        @unlink($dbPath.'-shm');
+    }
+
+    public function testHomepageRendersPublishedNewsAndConfigurableSupportWidget(): void
+    {
+        $settings = static::getContainer()->get(SystemSettings::class);
+        $settings->setString(SystemSettings::HOME_SUPPORT_WIDGET_TITLE, 'Snabb hjälp');
+        $settings->setString(SystemSettings::HOME_SUPPORT_WIDGET_INTRO, 'Välj snabbaste vägen till svar.');
+        $settings->setString(SystemSettings::HOME_SUPPORT_WIDGET_LINKS, "book | Guider | /kunskapsbas\ncheck | Kontakta teamet | /portal");
+        $settings->setString(SystemSettings::HOME_STATUS_SECTION_TITLE, 'Viktiga tjänster');
+        $settings->setString(SystemSettings::HOME_STATUS_SECTION_INTRO, 'Bara utvalda tjänster ska synas här.');
+        $settings->setInt(SystemSettings::HOME_STATUS_SECTION_MAX_ITEMS, 2);
+        $settings->setString(SystemSettings::STATUS_MONITORS, "manual | Intern tjänst | https://status.example.org | Manuell kontroll | Läs mer | https://status.example.org | check | 0\nmanual | Kundportal | https://portal.example.org | Viktig tjänst på startsidan | Öppna portal | https://portal.example.org | display | 1");
+
+        $author = new User('news-author@example.test', 'Nina', 'Nyhet', UserType::ADMIN);
+        $author->setPassword($this->passwordHasher->hashPassword($author, 'Supersakert123'));
+
+        $article = new NewsArticle('Ny release ute', 'Kort sammanfattning av releasen.', "Första raden.\nAndra raden.");
+        $article->setAuthor($author);
+        $article->publish();
+        $article->pin();
+
+        $this->entityManager->persist($author);
+        $this->entityManager->persist($article);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Driftpunkt', $crawler->html());
+        self::assertStringContainsString('Ny release ute', $crawler->html());
+        self::assertStringContainsString('Snabb hjälp', $crawler->html());
+        self::assertStringContainsString('Kontakta teamet', $crawler->html());
+        self::assertStringContainsString('Viktiga tjänster', $crawler->html());
+        self::assertStringContainsString('Bara utvalda tjänster ska synas här.', $crawler->html());
+        self::assertStringContainsString('Kundportal', $crawler->html());
+        self::assertStringNotContainsString('Intern tjänst', $crawler->html());
+
+        $newsCrawler = $this->client->request('GET', '/nyheter');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Ny release ute', $newsCrawler->html());
+
+        $detailsCrawler = $this->client->request('GET', '/nyheter/'.$article->getId());
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Första raden.', $detailsCrawler->html());
+    }
+
+    public function testNewsArticleBodySupportsRichArticleFormatting(): void
+    {
+        $author = new User('news-format@example.test', 'Nina', 'Nyhet', UserType::ADMIN);
+        $author->setPassword($this->passwordHasher->hashPassword($author, 'Supersakert123'));
+
+        $article = new NewsArticle(
+            'Formatterad artikel',
+            'Kort intro.',
+            "## Delrubrik\nLite **viktig** text med [länk](https://example.test)\n\n- Punkt ett\n- Punkt två",
+        );
+        $article->setAuthor($author);
+        $article->publish();
+
+        $this->entityManager->persist($author);
+        $this->entityManager->persist($article);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/nyheter/'.$article->getId());
+
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('<h2>Delrubrik</h2>', $crawler->html());
+        self::assertStringContainsString('<strong>viktig</strong>', $crawler->html());
+        self::assertStringContainsString('<ul><li>Punkt ett</li><li>Punkt två</li></ul>', $crawler->html());
+    }
+
+    public function testAdminCanUpdateHomepageSettingsAndTechnicianNewsPermission(): void
+    {
+        $admin = new User('admin-home@example.test', 'Ada', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'Supersakert123'));
+        $admin->enableMfa();
+        $this->entityManager->persist($admin);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/settings-content');
+        self::assertResponseIsSuccessful();
+
+        $form = $crawler->selectButton('Spara startsida')->form([
+            'news_technician_contributions_enabled' => '1',
+            'home_support_widget_title' => 'Behöver du snabb hjälp?',
+            'home_support_widget_intro' => 'Admin styr nu innehållet här.',
+            'home_support_widget_links' => "spark | FAQ | /kunskapsbas\ncheck | Support | /portal",
+            'home_status_section_title' => 'Viktiga driftstjänster',
+            'home_status_section_intro' => 'Visa bara de viktigaste korten på startsidan.',
+            'home_status_section_max_items' => '3',
+            'maintenance_notice_lookahead_days' => '5',
+        ]);
+        $this->client->submit($form);
+
+        self::assertResponseRedirects('/portal/admin/settings-content');
+        $this->client->followRedirect();
+
+        $settings = static::getContainer()->get(SystemSettings::class);
+        self::assertTrue($settings->getNewsSettings()['technicianContributionsEnabled']);
+        self::assertSame('Behöver du snabb hjälp?', $settings->getHomeSupportWidgetSettings()['title']);
+        self::assertSame('Viktiga driftstjänster', $settings->getHomepageStatusSectionSettings()['title']);
+        self::assertSame('Visa bara de viktigaste korten på startsidan.', $settings->getHomepageStatusSectionSettings()['intro']);
+        self::assertSame(3, $settings->getHomepageStatusSectionSettings()['maxItems']);
+        self::assertSame(5, $settings->getMaintenanceNoticeSettings()['lookaheadDays']);
+    }
+
+    public function testAdminNewsPageShowsTechnicianNewsPermissionToggle(): void
+    {
+        $admin = new User('admin-news-toggle@example.test', 'Ada', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'Supersakert123'));
+        $admin->enableMfa();
+        $this->entityManager->persist($admin);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/nyheter');
+
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Låt tekniker skapa nyheter', $crawler->html());
+        self::assertStringContainsString('Spara behörighet', $crawler->html());
+        self::assertStringContainsString('Förhandsvisning', $crawler->html());
+    }
+
+    public function testTechnicianNewsPageRequiresAdminPermissionFlag(): void
+    {
+        $technician = new User('tech-news@example.test', 'Ture', 'Tekniker', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'Supersakert123'));
+        $technician->enableMfa();
+        $this->entityManager->persist($technician);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $this->client->request('GET', '/portal/technician/nyheter');
+        self::assertResponseRedirects('/portal/technician');
+
+        static::getContainer()->get(SystemSettings::class)->setBool(
+            SystemSettings::FEATURE_NEWS_TECHNICIAN_CONTRIBUTIONS_ENABLED,
+            true,
+        );
+
+        $crawler = $this->client->request('GET', '/portal/technician/nyheter');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Publicera nyheter och uppdateringar till startsidan.', $crawler->html());
+        self::assertStringContainsString('>Nyheter</span>', $crawler->html());
+        self::assertStringNotContainsString('Planerat underhåll', $crawler->html());
+        self::assertStringNotContainsString('Underhåll start', $crawler->html());
+    }
+
+    public function testTechnicianCanScheduleNewsWithoutMakingItPublicImmediately(): void
+    {
+        $technician = new User('tech-scheduled@example.test', 'Ture', 'Tekniker', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'Supersakert123'));
+        $technician->enableMfa();
+        $this->entityManager->persist($technician);
+        $this->entityManager->flush();
+
+        static::getContainer()->get(SystemSettings::class)->setBool(
+            SystemSettings::FEATURE_NEWS_TECHNICIAN_CONTRIBUTIONS_ENABLED,
+            true,
+        );
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/nyheter');
+        self::assertResponseIsSuccessful();
+
+        $token = (string) $crawler->filter('input[name="_token"]')->first()->attr('value');
+        $publishAt = (new \DateTimeImmutable('+2 days'))->format('Y-m-d\TH:i');
+
+        $this->client->request('POST', '/portal/technician/nyheter', [
+            '_token' => $token,
+            'title' => 'Schemalagd teknikernyhet',
+            'summary' => 'Ska publiceras senare.',
+            'body' => 'Denna nyhet ska inte synas publikt an.',
+            'category' => 'general',
+            'publish_at' => $publishAt,
+            'is_published' => '1',
+        ]);
+
+        self::assertResponseRedirects('/portal/technician/nyheter');
+        $this->client->followRedirect();
+        self::assertStringContainsString('Schemalagd publicering', (string) $this->client->getResponse()->getContent());
+
+        $publicCrawler = $this->client->request('GET', '/nyheter');
+        self::assertResponseIsSuccessful();
+        self::assertStringNotContainsString('Schemalagd teknikernyhet', $publicCrawler->html());
+    }
+
+    public function testTechnicianCannotCreatePlannedMaintenanceNews(): void
+    {
+        $technician = new User('tech-maintenance@example.test', 'Ture', 'Tekniker', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'Supersakert123'));
+        $technician->enableMfa();
+        $this->entityManager->persist($technician);
+        $this->entityManager->flush();
+
+        static::getContainer()->get(SystemSettings::class)->setBool(
+            SystemSettings::FEATURE_NEWS_TECHNICIAN_CONTRIBUTIONS_ENABLED,
+            true,
+        );
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/nyheter');
+        self::assertResponseIsSuccessful();
+
+        $token = (string) $crawler->filter('input[name="_token"]')->first()->attr('value');
+        $this->client->request('POST', '/portal/technician/nyheter', [
+            '_token' => $token,
+            'title' => 'Teknikerforsok',
+            'summary' => 'Ska stoppas.',
+            'body' => 'Detta ar ett manipulerat formular.',
+            'category' => 'planned_maintenance',
+            'is_published' => '1',
+        ]);
+
+        self::assertResponseRedirects('/portal/technician/nyheter');
+        $this->client->followRedirect();
+        self::assertStringContainsString('Tekniker kan bara skapa vanliga sajt-nyheter.', (string) $this->client->getResponse()->getContent());
+        self::assertSame(0, $this->entityManager->getRepository(NewsArticle::class)->count([
+            'title' => 'Teknikerforsok',
+        ]));
+    }
+
+    public function testTechnicianCannotUpdatePlannedMaintenanceNews(): void
+    {
+        $technician = new User('tech-maintenance-update@example.test', 'Ture', 'Tekniker', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'Supersakert123'));
+        $technician->enableMfa();
+
+        $article = new NewsArticle('Planerat arbete', 'Underhall', 'Bakgrundstext');
+        $article->setAuthor($technician);
+        $article->setCategory(NewsCategory::PLANNED_MAINTENANCE);
+        $article->publish();
+
+        $this->entityManager->persist($technician);
+        $this->entityManager->persist($article);
+        $this->entityManager->flush();
+
+        static::getContainer()->get(SystemSettings::class)->setBool(
+            SystemSettings::FEATURE_NEWS_TECHNICIAN_CONTRIBUTIONS_ENABLED,
+            true,
+        );
+
+        $this->client->loginUser($technician);
+        $this->client->request('POST', '/portal/technician/nyheter/'.$article->getId(), [
+            '_token' => 'ignored',
+            'title' => 'Andrad titel',
+            'summary' => 'Ny sammanfattning',
+            'body' => 'Ny text',
+            'category' => 'general',
+        ]);
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testLoggedInCustomerIsRedirectedAwayFromHomepage(): void
+    {
+        $customer = new User('customer-home@example.test', 'Klara', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'Supersakert123'));
+        $this->entityManager->persist($customer);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($customer);
+        $this->client->request('GET', '/');
+
+        self::assertResponseRedirects('/portal/customer');
+    }
+
+    public function testHomepageShowsActiveTicketsInsteadOfIncidentCounter(): void
+    {
+        $incidentTicket = new Ticket(
+            'DP-9001',
+            'Internet nere',
+            'En incident som fortfarande ar oppen.',
+            TicketStatus::OPEN,
+            TicketVisibility::PRIVATE,
+            TicketPriority::HIGH,
+            TicketRequestType::INCIDENT,
+            TicketImpactLevel::COMPANY,
+        );
+        $supportTicket = new Ticket(
+            'DP-9002',
+            'Behorighet saknas',
+            'Ett vanligt supportarende som fortfarande ar aktivt.',
+            TicketStatus::OPEN,
+            TicketVisibility::PRIVATE,
+            TicketPriority::NORMAL,
+            TicketRequestType::ACCESS_REQUEST,
+            TicketImpactLevel::SINGLE_USER,
+        );
+        $pendingTicket = new Ticket(
+            'DP-9003',
+            'Vantar pa kundsvar',
+            'Arendet ar fortfarande aktivt.',
+            TicketStatus::PENDING_CUSTOMER,
+            TicketVisibility::PRIVATE,
+            TicketPriority::NORMAL,
+            TicketRequestType::SERVICE_REQUEST,
+            TicketImpactLevel::SINGLE_USER,
+        );
+        $resolvedTicket = new Ticket(
+            'DP-9004',
+            'Lost incident',
+            'Ska inte raknas som aktivt.',
+            TicketStatus::RESOLVED,
+            TicketVisibility::PRIVATE,
+            TicketPriority::NORMAL,
+            TicketRequestType::INCIDENT,
+            TicketImpactLevel::SINGLE_USER,
+        );
+
+        $this->entityManager->persist($incidentTicket);
+        $this->entityManager->persist($supportTicket);
+        $this->entityManager->persist($pendingTicket);
+        $this->entityManager->persist($resolvedTicket);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/');
+
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Aktiva ärenden: <strong>3</strong>', $crawler->html());
+        self::assertStringNotContainsString('Pågående incidenter', $crawler->html());
+    }
+}

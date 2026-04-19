@@ -1,0 +1,665 @@
+{% extends 'base.html.twig' %}
+{% set authMaintenanceNotice = maintenance_notice() %}
+
+{% block title %}Driftpunkt | {{ article.title }}{% endblock %}
+{% block page_shell_class %}news-shell{% endblock %}
+{% block body_class %}news-landing{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        body.news-landing {
+            background:
+                radial-gradient(circle at 18% 10%, rgba(148, 162, 255, 0.46), transparent 28%),
+                radial-gradient(circle at 84% 14%, rgba(255, 222, 212, 0.56), transparent 22%),
+                linear-gradient(180deg, #7d89db 0%, #b3b8f2 16%, #d4cdf7 44%, #c9caf7 68%, #a6aff0 100%);
+        }
+
+        body.news-landing::before {
+            background:
+                radial-gradient(ellipse at 22% 30%, rgba(255, 255, 255, 0.3), transparent 28%),
+                radial-gradient(ellipse at 68% 44%, rgba(255, 255, 255, 0.34), transparent 36%);
+            mask-image: none;
+            opacity: 1;
+        }
+
+        .news-shell {
+            width: calc(100% - 2rem);
+            padding-top: 1.4rem;
+        }
+
+        .news-topbar {
+            margin: 0 calc(50% - 50vw);
+            background:
+                linear-gradient(180deg, rgba(79, 88, 170, 0.92), rgba(71, 80, 156, 0.88)),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
+            border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+            box-shadow: 0 14px 36px rgba(56, 63, 125, 0.18);
+            backdrop-filter: blur(12px);
+        }
+
+        .news-topbar-inner {
+            width: calc(100% - 2rem);
+            min-height: 68px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.25rem;
+        }
+
+        .news-brand {
+            display: inline-flex;
+            align-items: center;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .news-brand-logo {
+            height: 2.55rem;
+            width: auto;
+            display: block;
+            filter: drop-shadow(0 12px 20px rgba(14, 39, 119, 0.24));
+        }
+
+        .news-nav {
+            display: flex;
+            align-items: center;
+            gap: 1.1rem;
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        .news-nav-link {
+            color: inherit;
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .news-top-search-form {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            min-width: min(360px, 42vw);
+            margin-left: 0.35rem;
+            padding-left: 1rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .news-top-search-input {
+            width: 100%;
+            min-width: 0;
+            border: 0;
+            outline: none;
+            background: transparent;
+            color: #fff;
+            font: inherit;
+        }
+
+        .news-top-search-input::placeholder {
+            color: rgba(255, 255, 255, 0.72);
+        }
+
+        .news-top-search-button {
+            width: 2.25rem;
+            height: 2.25rem;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .news-login-button {
+            min-width: 104px;
+            padding: 0.74rem 1.28rem;
+            border-radius: 11px;
+            background: linear-gradient(180deg, #ffbf61 0%, #f49b3c 100%);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 22px rgba(228, 142, 48, 0.32);
+            text-decoration: none;
+        }
+
+        .news-statusbar,
+        .news-footer {
+            margin: 0 calc(50% - 50vw);
+        }
+
+        .news-statusbar {
+            background: rgba(236, 226, 255, 0.28);
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            border-bottom: 1px solid rgba(113, 117, 195, 0.16);
+        }
+
+        .news-statusbar-inner,
+        .news-footer-inner {
+            width: calc(100% - 2rem);
+            margin: 0 auto;
+        }
+
+        .news-statusbar-inner {
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.7rem;
+            color: #56628f;
+            font-size: 0.93rem;
+            text-align: center;
+        }
+
+        .status-ok-dot {
+            width: 1rem;
+            height: 1rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: rgba(92, 118, 230, 0.16);
+            color: #4e63c7;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .status-sep {
+            opacity: 0.55;
+        }
+
+        .article-page {
+            display: grid;
+            gap: 1.2rem;
+        }
+
+        .article-hero,
+        .article-body,
+        .article-related {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.84) 0%, rgba(249, 247, 255, 0.76) 100%);
+            border: 1px solid rgba(181, 190, 241, 0.38);
+            border-radius: 24px;
+            box-shadow: 0 24px 60px rgba(87, 101, 177, 0.14);
+            backdrop-filter: blur(16px);
+        }
+
+        .article-hero {
+            position: relative;
+            overflow: hidden;
+            padding: 1.8rem;
+        }
+
+        .article-hero.maintenance {
+            border-color: rgba(234, 191, 121, 0.56);
+            background: linear-gradient(180deg, rgba(255, 250, 241, 0.96), rgba(252, 245, 231, 0.9));
+        }
+
+        .article-hero::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 0.75rem;
+            transform: translateX(-50%);
+            width: min(1040px, 96vw);
+            height: 180px;
+            border-radius: 50%;
+            background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0) 72%);
+            pointer-events: none;
+        }
+
+        .article-image {
+            min-height: 320px;
+            border-radius: 20px;
+            margin-bottom: 1.2rem;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .article-layout {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: minmax(0, 1.18fr) minmax(260px, 0.75fr);
+            align-items: start;
+        }
+
+        .maintenance-banner {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: fit-content;
+            margin-bottom: 0.9rem;
+            padding: 0.62rem 0.9rem;
+            border-radius: 999px;
+            background: rgba(239, 186, 97, 0.2);
+            color: #8b5413;
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .maintenance-banner .pulse {
+            width: 0.55rem;
+            height: 0.55rem;
+            border-radius: 999px;
+            background: #d98624;
+            box-shadow: 0 0 0 0.22rem rgba(217, 134, 36, 0.18);
+        }
+
+        .article-maintenance-status {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            margin-top: 0.85rem;
+            padding: 0.28rem 0.62rem;
+            border-radius: 999px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .article-maintenance-status.upcoming {
+            background: rgba(217, 134, 36, 0.14);
+            color: #9a5c16;
+        }
+
+        .article-maintenance-status.active {
+            background: rgba(214, 70, 70, 0.14);
+            color: #a73b2f;
+        }
+
+        .article-maintenance-status.completed {
+            background: rgba(89, 107, 156, 0.12);
+            color: #5c6995;
+        }
+
+        .article-maintenance-status.scheduled {
+            background: rgba(217, 134, 36, 0.14);
+            color: #9a5c16;
+        }
+
+        .article-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.36rem 0.76rem;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .article-tag.general {
+            color: #3e56a3;
+            background: rgba(81, 111, 235, 0.12);
+        }
+
+        .article-tag.planned_maintenance {
+            color: #8a5415;
+            background: rgba(237, 183, 94, 0.2);
+        }
+
+        .article-title {
+            margin: 0.85rem 0 0.75rem;
+            font-size: clamp(2.4rem, 4.8vw, 4rem);
+            line-height: 1.03;
+            letter-spacing: -0.04em;
+            color: #243174;
+        }
+
+        .article-summary {
+            margin: 0;
+            color: #506085;
+            line-height: 1.7;
+            font-size: 1.08rem;
+        }
+
+        .article-side {
+            display: grid;
+            gap: 0.85rem;
+        }
+
+        .article-side-card {
+            padding: 1rem;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(188, 197, 241, 0.48);
+        }
+
+        .article-side-card strong {
+            display: block;
+            margin-bottom: 0.28rem;
+            color: #2d397a;
+        }
+
+        .article-side-card span {
+            color: #60708d;
+        }
+
+        .article-date-emphasis {
+            display: grid;
+            gap: 0.25rem;
+        }
+
+        .article-date-emphasis strong {
+            font-size: 1.5rem;
+            line-height: 1;
+            color: #8b5413;
+        }
+
+        .article-date-emphasis span {
+            color: #8f6a39;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.76rem;
+            font-weight: 700;
+        }
+
+        .article-body {
+            padding: 1.6rem;
+        }
+
+        .article-body-content {
+            color: #334363;
+            line-height: 1.9;
+            font-size: 1.03rem;
+        }
+
+        .article-body-content h2,
+        .article-body-content h3 {
+            margin: 1.6rem 0 0.8rem;
+            color: #1d2a48;
+            line-height: 1.2;
+        }
+
+        .article-body-content h2 {
+            font-size: 1.6rem;
+        }
+
+        .article-body-content h3 {
+            font-size: 1.25rem;
+        }
+
+        .article-body-content p:first-child {
+            margin-top: 0;
+        }
+
+        .article-body-content ul,
+        .article-body-content ol {
+            margin: 1rem 0;
+            padding-left: 1.4rem;
+        }
+
+        .article-body-content li + li {
+            margin-top: 0.35rem;
+        }
+
+        .article-body-content blockquote {
+            margin: 1.2rem 0;
+            padding: 0.9rem 1rem;
+            border-left: 4px solid rgba(79, 94, 219, 0.34);
+            background: rgba(100, 116, 255, 0.06);
+            border-radius: 0 16px 16px 0;
+        }
+
+        .article-body-content code {
+            padding: 0.12rem 0.4rem;
+            border-radius: 8px;
+            background: rgba(29, 42, 72, 0.08);
+            font-size: 0.95em;
+        }
+
+        .article-body-content hr {
+            margin: 1.5rem 0;
+            border: 0;
+            border-top: 1px solid rgba(120, 136, 173, 0.3);
+        }
+
+        .article-body-content a {
+            color: #2f61d8;
+            font-weight: 700;
+        }
+
+        .article-related {
+            padding: 1.35rem;
+        }
+
+        .article-related-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .article-related-head h2 {
+            margin: 0;
+            color: #273372;
+        }
+
+        .article-related-grid {
+            display: grid;
+            gap: 0.85rem;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        }
+
+        .article-related-item {
+            display: grid;
+            gap: 0.45rem;
+            padding: 1rem;
+            border-radius: 18px;
+            border: 1px solid rgba(193, 201, 239, 0.42);
+            background: rgba(255, 255, 255, 0.72);
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .article-related-item strong {
+            color: #273372;
+        }
+
+        .article-related-item span {
+            color: #60708d;
+            line-height: 1.55;
+        }
+
+        .news-footer {
+            margin-top: 1.2rem;
+            padding: 1.15rem 0 0.35rem;
+        }
+
+        .news-footer-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            color: #56628f;
+        }
+
+        .news-footer-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .news-footer-links a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        @media (max-width: 900px) {
+            .article-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .news-topbar-inner,
+            .news-nav {
+                flex-wrap: wrap;
+            }
+
+            .news-nav {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .news-statusbar-inner,
+            .news-footer-inner {
+                width: calc(100% - 1rem);
+            }
+
+            .news-top-search-form {
+                width: 100%;
+                min-width: 0;
+                margin-left: 0;
+                padding-left: 0;
+                border-left: 0;
+            }
+
+            .news-shell {
+                width: calc(100% - 1rem);
+            }
+
+            .article-hero,
+            .article-body,
+            .article-related {
+                border-radius: 18px;
+            }
+
+            .article-title {
+                font-size: clamp(2.1rem, 10vw, 3rem);
+            }
+
+            .news-statusbar-inner {
+                padding: 0.7rem 0;
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block topbar %}
+    <header class="news-topbar">
+        <div class="news-topbar-inner">
+            <a class="news-brand" href="{{ path('app_home') }}">
+                <img class="news-brand-logo" src="/assets/branding/driftpunkt-logo-full.png" alt="Driftpunkt">
+            </a>
+            <nav class="news-nav" aria-label="Huvudnavigering">
+                <a class="news-nav-link" href="{{ path('app_home') }}">Startsida</a>
+                <a class="news-nav-link" href="{{ path('app_news_index') }}">Nyheter</a>
+                <a class="news-nav-link" href="{{ path('app_status_page') }}">Driftstatus</a>
+                <a class="news-nav-link" href="{{ path('app_contact') }}">Kontakta oss</a>
+                <form class="news-top-search-form" method="get" action="{{ path('app_public_search') }}">
+                    <input class="news-top-search-input" type="search" name="q" value="{{ app.request.query.get('q') }}" placeholder="Sök på hela sajten">
+                    <button class="news-top-search-button" type="submit" aria-label="Sök">⌕</button>
+                </form>
+                <a class="news-login-button" href="{{ app.user ? path('app_portal_entry') : path('app_login') }}">Logga in</a>
+            </nav>
+        </div>
+    </header>
+    <div class="news-statusbar">
+        <div class="news-statusbar-inner">
+            <span class="status-ok-dot" aria-hidden="true">{{ authMaintenanceNotice ? '!' : '✓' }}</span>
+            {% if authMaintenanceNotice %}
+                <span>{{ authMaintenanceNotice.title }}</span>
+                <span class="status-sep">•</span>
+                <a href="{{ authMaintenanceNotice.href ?: path('app_status_page') }}" style="color: inherit; text-decoration: none;">{{ authMaintenanceNotice.linkLabel|default('Visa driftstatus') }}</a>
+            {% else %}
+                <span>Nyhetsdetalj med tydlig driftinformation</span>
+                <span class="status-sep">•</span>
+                <span>Följ uppdateringar och relaterade nyheter vidare härifrån</span>
+                <span class="status-sep">•</span>
+                <a href="{{ path('app_contact') }}" style="color: inherit; text-decoration: none;">Kontakta support</a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block body %}
+    <div class="article-page">
+        <section class="article-hero {{ article.category.value == 'planned_maintenance' ? 'maintenance' }}">
+            {% if article.imageUrl %}
+                <div class="article-image" style="background-image: linear-gradient(180deg, rgba(33, 45, 99, 0.12), rgba(33, 45, 99, 0.26)), url('{{ article.imageUrl|e('html_attr') }}');"></div>
+            {% endif %}
+            <div class="article-layout">
+                <div>
+                    {% if article.category.value == 'planned_maintenance' %}
+                        <div class="maintenance-banner"><span class="pulse"></span> Planerat underhåll</div>
+                    {% endif %}
+                    <span class="article-tag {{ article.category.value }}">{{ article.category.label }}</span>
+                    {% if articleMaintenanceStatus and articleMaintenanceStatus.status != 'standard' %}
+                        <div class="article-maintenance-status {{ articleMaintenanceStatus.status }}">{{ articleMaintenanceStatus.label }}</div>
+                    {% endif %}
+                    <h1 class="article-title">{{ article.title }}</h1>
+                    <p class="article-summary">{{ article.summary }}</p>
+                </div>
+                <aside class="article-side">
+                    <div class="article-side-card">
+                        <strong>Publicerad</strong>
+                        {% if article.category.value == 'planned_maintenance' %}
+                            <div class="article-date-emphasis">
+                                <strong>{{ article.publishedAt|date('d') }}</strong>
+                                <span>{{ article.publishedAt|date('M Y') }}</span>
+                            </div>
+                            <span>{{ article.publishedAt|date('H:i') }}</span>
+                        {% else %}
+                            <span>{{ article.publishedAt|date('Y-m-d H:i') }}</span>
+                        {% endif %}
+                    </div>
+                    {% if articleMaintenanceStatus and articleMaintenanceStatus.schedule %}
+                        <div class="article-side-card">
+                            <strong>Underhållsfönster</strong>
+                            <span>{{ articleMaintenanceStatus.schedule }}</span>
+                        </div>
+                    {% endif %}
+                    <div class="article-side-card">
+                        <strong>Avsändare</strong>
+                        <span>{{ article.author ? article.author.displayName : 'Driftpunkt' }}</span>
+                    </div>
+                    <a class="button" href="{{ path('app_news_index', article.category.value == 'general' ? {} : {kategori: article.category.value}) }}">Fler i samma kategori</a>
+                </aside>
+            </div>
+        </section>
+
+        <section class="article-body">
+            <article class="article-body-content">{{ article.body|article_body }}</article>
+        </section>
+
+        {% if relatedArticles is not empty %}
+            <section class="article-related">
+                <div class="article-related-head">
+                    <h2>Fler nyheter</h2>
+                    <a href="{{ path('app_news_index') }}">Visa alla</a>
+                </div>
+                <div class="article-related-grid">
+                    {% for related in relatedArticles|slice(0, 3) %}
+                        {% set relatedMaintenance = relatedMaintenanceStatuses[related.id] ?? null %}
+                        <a class="article-related-item" href="{{ path('app_news_show', {id: related.id}) }}">
+                            <span class="article-tag {{ related.category.value }}">{{ related.category.label }}</span>
+                            {% if relatedMaintenance and relatedMaintenance.status != 'standard' %}
+                                <span class="article-maintenance-status {{ relatedMaintenance.status }}">{{ relatedMaintenance.label }}</span>
+                            {% endif %}
+                            <strong>{{ related.title }}</strong>
+                            <span>{{ related.summary }}</span>
+                            {% if relatedMaintenance and relatedMaintenance.schedule %}
+                                <span>{{ relatedMaintenance.schedule }}</span>
+                            {% endif %}
+                        </a>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+    </div>
+
+    <footer class="news-footer">
+        <div class="news-footer-inner">
+            <div class="news-footer-links">
+                <a href="{{ path('app_home') }}">Startsida</a>
+                <a href="{{ path('app_news_index') }}">Nyheter</a>
+                <a href="{{ path('app_status_page') }}">Driftstatus</a>
+                <a href="{{ path('app_contact') }}">Kontakta oss</a>
+            </div>
+            <span>© 2026 Driftpunkt</span>
+        </div>
+    </footer>
+{% endblock %}
