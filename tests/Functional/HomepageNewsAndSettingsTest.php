@@ -8,6 +8,7 @@ use App\Module\Identity\Entity\User;
 use App\Module\Identity\Enum\UserType;
 use App\Module\News\Entity\NewsArticle;
 use App\Module\News\Enum\NewsCategory;
+use App\Module\System\Entity\AddonModule;
 use App\Module\System\Service\SystemSettings;
 use App\Module\Ticket\Entity\Ticket;
 use App\Module\Ticket\Enum\TicketImpactLevel;
@@ -102,6 +103,21 @@ final class HomepageNewsAndSettingsTest extends WebTestCase
         self::assertStringContainsString('Första raden.', $detailsCrawler->html());
     }
 
+    public function testLanguageSwitcherPersistsEnglishLocaleAcrossRedirect(): void
+    {
+        $crawler = $this->client->request('GET', '/sprak/en?returnTo=%2F');
+
+        self::assertResponseRedirects('/');
+
+        $crawler = $this->client->followRedirect();
+
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Language', $crawler->html());
+        self::assertStringContainsString('Sign in', $crawler->html());
+        self::assertStringContainsString('Contact us', $crawler->html());
+        self::assertSame('en', $this->client->getRequest()->getLocale());
+    }
+
     public function testNewsArticleBodySupportsRichArticleFormatting(): void
     {
         $author = new User('news-format@example.test', 'Nina', 'Nyhet', UserType::ADMIN);
@@ -125,6 +141,61 @@ final class HomepageNewsAndSettingsTest extends WebTestCase
         self::assertStringContainsString('<h2>Delrubrik</h2>', $crawler->html());
         self::assertStringContainsString('<strong>viktig</strong>', $crawler->html());
         self::assertStringContainsString('<ul><li>Punkt ett</li><li>Punkt två</li></ul>', $crawler->html());
+    }
+
+    public function testNewsArticleBodySupportsNewsEditorPlusBlocks(): void
+    {
+        $author = new User('news-addon@example.test', 'Nina', 'Nyhet', UserType::ADMIN);
+        $author->setPassword($this->passwordHasher->hashPassword($author, 'Supersakert123'));
+
+        $article = new NewsArticle(
+            'News Editor Plus',
+            'Visar de nya blocken.',
+            ":::info Viktigt\nDetta ar **viktig** information.\n:::\n\n- [x] Editor aktiv\n- [ ] Publicera brett\n\n=> Las mer | https://example.test/news-editor-plus\n\n```\nphp bin/phpunit\n```",
+        );
+        $article->setAuthor($author);
+        $article->publish();
+
+        $this->entityManager->persist($author);
+        $this->entityManager->persist($article);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/nyheter/'.$article->getId());
+
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('article-callout info', $crawler->html());
+        self::assertStringContainsString('<strong>Viktigt</strong>', $crawler->html());
+        self::assertStringContainsString('article-checklist', $crawler->html());
+        self::assertStringContainsString('article-checklist-box', $crawler->html());
+        self::assertStringContainsString('article-cta', $crawler->html());
+        self::assertStringContainsString('https://example.test/news-editor-plus', $crawler->html());
+        self::assertStringContainsString('article-code', $crawler->html());
+        self::assertStringContainsString('php bin/phpunit', $crawler->html());
+    }
+
+    public function testNewsArticleBodySupportsInlineImageBlocks(): void
+    {
+        $author = new User('news-image@example.test', 'Nina', 'Nyhet', UserType::ADMIN);
+        $author->setPassword($this->passwordHasher->hashPassword($author, 'Supersakert123'));
+
+        $article = new NewsArticle(
+            'Bildblock i artikel',
+            'Visar infogad bild i brödtexten.',
+            "## Skarmbild\n![Redaktorsvy](https://example.test/editor-preview.png)\n\nKort kommentar efter bilden.",
+        );
+        $article->setAuthor($author);
+        $article->publish();
+
+        $this->entityManager->persist($author);
+        $this->entityManager->persist($article);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/nyheter/'.$article->getId());
+
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('article-media', $crawler->html());
+        self::assertStringContainsString('editor-preview.png', $crawler->html());
+        self::assertStringContainsString('Redaktorsvy', $crawler->html());
     }
 
     public function testAdminCanUpdateHomepageSettingsAndTechnicianNewsPermission(): void
@@ -178,6 +249,41 @@ final class HomepageNewsAndSettingsTest extends WebTestCase
         self::assertStringContainsString('Låt tekniker skapa nyheter', $crawler->html());
         self::assertStringContainsString('Spara behörighet', $crawler->html());
         self::assertStringContainsString('Förhandsvisning', $crawler->html());
+        self::assertStringContainsString('News Editor Plus', $crawler->html());
+        self::assertStringContainsString('Checklista', $crawler->html());
+        self::assertStringContainsString('Bildblock', $crawler->html());
+        self::assertStringContainsString('CTA-knapp', $crawler->html());
+        self::assertStringContainsString('Kodblock', $crawler->html());
+        self::assertStringContainsString('Snabbmallar', $crawler->html());
+        self::assertStringContainsString('Release notes', $crawler->html());
+        self::assertStringContainsString('Driftstörning', $crawler->html());
+        self::assertStringContainsString('Planerat underhåll', $crawler->html());
+        self::assertStringContainsString('smarta standardvärden för publicering, prioritet och underhållsfönster', $crawler->html());
+    }
+
+    public function testAdminNewsPageFallsBackToBaseEditorWhenNewsEditorPlusAddonIsDisabled(): void
+    {
+        $admin = new User('admin-news-addon-off@example.test', 'Ada', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'Supersakert123'));
+        $admin->enableMfa();
+        $addon = (new AddonModule('news-editor-plus', 'News Editor Plus', 'Styr utökad editor för nyheter.'))
+            ->setEnabled(false);
+
+        $this->entityManager->persist($admin);
+        $this->entityManager->persist($addon);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/nyheter');
+
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Addon avstängt: <strong>News Editor Plus</strong>', $crawler->html());
+        self::assertStringContainsString('Basredigering:', $crawler->html());
+        self::assertStringNotContainsString('Snabbmallar', $crawler->html());
+        self::assertStringNotContainsString('Checklista', $crawler->html());
+        self::assertStringNotContainsString('Bildblock', $crawler->html());
+        self::assertStringNotContainsString('CTA-knapp', $crawler->html());
+        self::assertStringNotContainsString('Kodblock', $crawler->html());
     }
 
     public function testTechnicianNewsPageRequiresAdminPermissionFlag(): void
@@ -201,7 +307,10 @@ final class HomepageNewsAndSettingsTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertStringContainsString('Publicera nyheter och uppdateringar till startsidan.', $crawler->html());
         self::assertStringContainsString('>Nyheter</span>', $crawler->html());
-        self::assertStringNotContainsString('Planerat underhåll', $crawler->html());
+        self::assertStringContainsString('Release notes', $crawler->html());
+        self::assertStringContainsString('Driftstörning', $crawler->html());
+        self::assertStringContainsString('färdig struktur för vanliga publiceringstyper', $crawler->html());
+        self::assertStringNotContainsString('data-news-preset="maintenance"', $crawler->html());
         self::assertStringNotContainsString('Underhåll start', $crawler->html());
     }
 

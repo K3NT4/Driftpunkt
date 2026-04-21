@@ -13,7 +13,7 @@ final class TicketReferenceGeneratorTest extends TestCase
 {
     public function testSuggestPrefixFromCompanyNameBuildsReadablePrefix(): void
     {
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = $this->createStub(EntityManagerInterface::class);
         $generator = new TicketReferenceGenerator($entityManager);
 
         self::assertSame('VAX', $generator->suggestPrefixFromCompanyName('Vax AB'));
@@ -22,7 +22,7 @@ final class TicketReferenceGeneratorTest extends TestCase
 
     public function testCustomCompanySequenceUsesOwnPrefixAndCounter(): void
     {
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = $this->createStub(EntityManagerInterface::class);
         $generator = new TicketReferenceGenerator($entityManager);
         $company = new Company('Vax AB');
         $company

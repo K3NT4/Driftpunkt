@@ -213,6 +213,51 @@ final class CustomerTicketCreateTest extends WebTestCase
         self::assertStringContainsString('Till ärendelistan', $detailHtml);
     }
 
+    public function testCustomerTicketListSupportsSearchAndCompletedPriorityToggle(): void
+    {
+        [$company, $customer] = $this->seedCustomerPortalFixture('search-customer@example.test');
+
+        $activeTicket = new Ticket(
+            'DK-2001',
+            'VPN nere för ekonomi',
+            'Aktivt ärende som fortfarande felsöks.',
+            TicketStatus::OPEN,
+            TicketVisibility::PRIVATE,
+        );
+        $activeTicket->setRequester($customer);
+        $activeTicket->setCompany($company);
+
+        $resolvedTicket = new Ticket(
+            'DK-2002',
+            'Skrivare återställd',
+            'Avslutat ärende som ska kunna lyftas fram.',
+            TicketStatus::RESOLVED,
+            TicketVisibility::PRIVATE,
+        );
+        $resolvedTicket->setRequester($customer);
+        $resolvedTicket->setCompany($company);
+
+        $this->entityManager->persist($activeTicket);
+        $this->entityManager->persist($resolvedTicket);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($customer);
+
+        $crawler = $this->client->request('GET', '/portal/customer/tickets?q=skrivare');
+        self::assertResponseIsSuccessful();
+        $html = (string) $crawler->html();
+        self::assertStringContainsString('Skrivare återställd', $html);
+        self::assertStringNotContainsString('VPN nere för ekonomi', $html);
+
+        $crawler = $this->client->request('GET', '/portal/customer/tickets?show_completed=1');
+        self::assertResponseIsSuccessful();
+
+        $listTexts = $crawler->filter('.customer-ticket-list-item .customer-ticket-list-subject')->each(
+            static fn ($node): string => trim($node->text()),
+        );
+        self::assertSame(['Skrivare återställd', 'VPN nere för ekonomi'], $listTexts);
+    }
+
     public function testCustomerCanCreateTicketWithAttachmentWhenFeatureIsEnabled(): void
     {
         [, $customer, $category] = $this->seedCustomerPortalFixture('attachment-customer@example.test');

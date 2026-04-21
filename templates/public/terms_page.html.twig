@@ -1,0 +1,13 @@
+{% extends 'public/policy_base.html.twig' %}
+
+{% set policy = termsPageSettings %}
+{% set policy_eyebrow = 'Villkor' %}
+{% set policy_status_text = 'Villkor för webbplats, konto och support' %}
+{% set aside_title = 'Bra att läsa samtidigt' %}
+{% set aside_copy = 'Här hittar du sidor som ofta hör ihop med användarvillkoren när du vill förstå tjänsten, kontot och hur uppgifter hanteras.' %}
+{% set policy_links = [
+    { label: 'Integritetspolicy', href: path('app_privacy_policy') },
+    { label: 'Cookiepolicy', href: path('app_cookie_policy') },
+    { label: 'Kontakta oss', href: path('app_contact') },
+    { label: 'Startsida', href: path('app_home') }
+] %}

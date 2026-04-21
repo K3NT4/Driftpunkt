@@ -148,7 +148,7 @@ final class MaintenanceModeTest extends WebTestCase
         self::assertStringContainsString('Senast kontrollerad:', $statusCrawler->html());
         self::assertStringContainsString('Källa:', $statusCrawler->html());
         self::assertStringContainsString('Detta paverkas', $statusCrawler->html());
-        self::assertStringContainsString('Planerat arbete', $statusCrawler->html());
+        self::assertStringContainsString('Tillganglig', $statusCrawler->html());
         self::assertStringContainsString('Folj fler uppdateringar', $statusCrawler->html());
 
         $homeCrawler = $publicClient->request('GET', '/');

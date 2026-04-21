@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="{{ app.request.locale|default('sv') }}">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>{% block title %}Driftpunkt{% endblock %}</title>
+        <title>{% block title %}{{ site_branding.name }}{% endblock %}</title>
         <link rel="icon" type="image/png" href="/assets/branding/driftpunkt-logo-icon.png">
         {% block stylesheets %}
             <style>
@@ -225,6 +225,49 @@
                 .section-stack {
                     display: grid;
                     gap: 1.25rem;
+                }
+                .language-switcher {
+                    position: fixed;
+                    right: 1rem;
+                    bottom: 1rem;
+                    z-index: 50;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.35rem;
+                    padding: 0.45rem;
+                    border-radius: 999px;
+                    border: 1px solid rgba(61, 53, 42, 0.12);
+                    background: rgba(255, 251, 245, 0.9);
+                    box-shadow: 0 16px 40px rgba(35, 30, 24, 0.14);
+                    backdrop-filter: blur(14px);
+                }
+                .language-switcher-label {
+                    padding: 0 0.45rem 0 0.65rem;
+                    color: var(--muted);
+                    font-size: 0.85rem;
+                    font-weight: 700;
+                }
+                .language-switcher-link {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-width: 3rem;
+                    padding: 0.55rem 0.9rem;
+                    border-radius: 999px;
+                    color: var(--text);
+                    font-size: 0.9rem;
+                    font-weight: 700;
+                    text-decoration: none;
+                    transition: background 140ms ease, color 140ms ease, transform 140ms ease;
+                }
+                .language-switcher-link:hover {
+                    transform: translateY(-1px);
+                    background: rgba(15, 118, 110, 0.08);
+                }
+                .language-switcher-link.active {
+                    background: var(--brand);
+                    color: #fff;
+                    box-shadow: 0 12px 24px rgba(15, 118, 110, 0.18);
                 }
                 .hero-grid,
                 .stats-grid,
@@ -471,22 +514,30 @@
         {% endif %}
     </head>
     <body class="{% block body_class %}{% endblock %}">
+        {% set currentLocale = app.request.locale|default('sv') %}
+        {% set localeOptions = available_locales() %}
+        <div class="language-switcher" aria-label="{{ t('ui.language') }}">
+            <span class="language-switcher-label">{{ t('ui.language') }}</span>
+            {% for localeOption in localeOptions %}
+                <a class="language-switcher-link {{ currentLocale == localeOption.code ? 'active' : '' }}" href="{{ path('app_locale_switch', { locale: localeOption.code }) }}?returnTo={{ app.request.requestUri|url_encode }}">{{ localeOption.name }}</a>
+            {% endfor %}
+        </div>
         <div class="page-shell {% block page_shell_class %}{% endblock %}">
             {% block topbar %}
                 <div class="topbar">
                     <div class="brand brand-mark">
-                        <img class="brand-logo" src="/assets/branding/driftpunkt-logo-icon.png" alt="Driftpunkt logo">
-                        <span>Driftpunkt</span>
+                        <img class="brand-logo" src="{{ site_branding.logoPath }}" alt="{{ t('brand.logo_alt', {'%name%': site_branding.name}) }}">
+                        <span>{{ site_branding.name }}</span>
                     </div>
                     <div class="nav-links">
-                        <a class="button secondary" href="{{ path('app_home') }}">Startsida</a>
+                        <a class="button secondary" href="{{ path('app_home') }}">{{ t('nav.home') }}</a>
                         {% if app.user %}
-                            <a class="button secondary" href="{{ path('app_portal_entry') }}">Min portal</a>
+                            <a class="button secondary" href="{{ path('app_portal_entry') }}">{{ t('nav.portal') }}</a>
                         {% endif %}
                         {% if app.user %}
-                            <a class="button secondary" href="{{ path('app_logout') }}">Logga ut</a>
+                            <a class="button secondary" href="{{ path('app_logout') }}">{{ t('nav.logout') }}</a>
                         {% else %}
-                            <a class="button secondary" href="{{ path('app_login') }}">Logga in</a>
+                            <a class="button secondary" href="{{ path('app_login') }}">{{ t('nav.login') }}</a>
                         {% endif %}
                     </div>
                 </div>

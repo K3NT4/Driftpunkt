@@ -1,6 +1,6 @@
 # Public Export Manifest
 
-Skapad: 2026-04-19T18:43:37+00:00
+Skapad: 2026-04-21T18:00:26+00:00
 
 ## Källrepo
 
@@ -52,6 +52,7 @@ Skapad: 2026-04-19T18:43:37+00:00
 - `config/packages/property_info.yaml`
 - `config/packages/routing.yaml`
 - `config/packages/security.yaml`
+- `config/packages/translation.yaml`
 - `config/packages/twig.yaml`
 - `config/packages/validator.yaml`
 - `config/preload.php`
@@ -60,6 +61,7 @@ Skapad: 2026-04-19T18:43:37+00:00
 - `config/routes.yaml`
 - `config/services.yaml`
 - `docs/Kundportal.png`
+- `docs/addon_build_and_release_guide.md`
 - `docs/admin sida.png`
 - `docs/admin_information_architecture.md`
 - `docs/customer_portal_experience.md`
@@ -153,13 +155,11 @@ Skapad: 2026-04-19T18:43:37+00:00
 - `migrations/Version20260419113000.php`
 - `migrations/Version20260419120000.php`
 - `migrations/Version20260419130000.php`
-- `public/assets/branding/driftpunkt-logo-full.png`
-- `public/assets/branding/driftpunkt-logo-icon.png`
-- `public/index.php`
-- `src/Command/ArchiveTicketAttachmentsCommand.php`
-- `src/Command/CheckTicketSlaCommand.php`
-- `src/Command/CreateInitialAdminCommand.php`
-- ... och ytterligare 107 filer
+- `migrations/Version20260420190000.php`
+- `migrations/Version20260421090000.php`
+- `migrations/Version20260421100000.php`
+- `migrations/Version20260421110000.php`
+- ... och ytterligare 135 filer
 
 ## Överhoppade sökvägar i denna körning
 

@@ -94,6 +94,32 @@ final class TicketResponseNotifier
         );
     }
 
+    public function notifyCustomerTicketUpdate(Ticket $ticket, TicketComment $comment): void
+    {
+        $recipient = $ticket->getRequester();
+        $subject = sprintf('[%s] Ticket uppdaterad', $ticket->getReference());
+
+        if (!$recipient instanceof User) {
+            $this->logNotification('customer_ticket_update', $ticket, null, '', $subject, false, 'Ingen kundmottagare satt på ticket.');
+            return;
+        }
+
+        if (!$recipient->isEmailNotificationsEnabled()) {
+            $this->logNotification('customer_ticket_update', $ticket, $recipient, $recipient->getEmail(), $subject, false, 'Mailnotiser är avstängda för mottagaren.');
+            return;
+        }
+
+        $this->sendTicketEmail(
+            eventType: 'customer_ticket_update',
+            recipient: $recipient,
+            ticket: $ticket,
+            subject: $subject,
+            intro: 'En tekniker har uppdaterat ditt ärende med ny information.',
+            comment: $comment,
+            badge: 'Uppdatering',
+        );
+    }
+
     public function notifySlaReminder(Ticket $ticket, string $eventType, string $subject, string $intro, string $badge): bool
     {
         $recipient = $ticket->getAssignee();

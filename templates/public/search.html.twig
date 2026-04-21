@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Driftpunkt | Sök{% endblock %}
+{% block title %}{{ site_branding.name }} | {{ t('search.results.title') }}{% endblock %}
 {% block page_shell_class %}home-shell search-shell{% endblock %}
 {% block body_class %}home-landing search-page{% endblock %}
 
@@ -306,17 +306,17 @@
     <header class="home-topbar">
         <div class="home-topbar-inner">
             <a class="home-brand" href="{{ path('app_home') }}">
-                <img class="home-brand-logo" src="/assets/branding/driftpunkt-logo-full.png" alt="Driftpunkt">
+                <img class="home-brand-logo" src="{{ site_branding.logoPath }}" alt="{{ site_branding.name }}">
             </a>
-            <nav class="home-nav" aria-label="Huvudnavigering">
-                <a class="home-nav-link" href="{{ path('app_home') }}">Startsida</a>
-                <a class="home-nav-link" href="{{ path('app_news_index') }}">Nyheter</a>
-                <a class="home-nav-link" href="{{ path('app_contact') }}">Support</a>
+            <nav class="home-nav" aria-label="{{ t('search.nav.aria') }}">
+                <a class="home-nav-link" href="{{ path('app_home') }}">{{ t('nav.home') }}</a>
+                <a class="home-nav-link" href="{{ path('app_news_index') }}">{{ t('nav.news') }}</a>
+                <a class="home-nav-link" href="{{ path('app_contact') }}">{{ t('search.page_support') }}</a>
                 <form class="home-search-form" method="get" action="{{ path('app_public_search') }}">
-                    <input class="home-search-input" type="search" name="q" value="{{ searchQuery }}" placeholder="Sök på hela sajten">
-                    <button class="home-search" type="submit" aria-label="Sök">⌕</button>
+                    <input class="home-search-input" type="search" name="q" value="{{ searchQuery }}" placeholder="{{ t('search.search_placeholder') }}">
+                    <button class="home-search" type="submit" aria-label="{{ t('search.search_aria') }}">⌕</button>
                 </form>
-                <a class="home-login-button" href="{{ app.user ? path('app_portal_entry') : path('app_login') }}">Logga in</a>
+                <a class="home-login-button" href="{{ app.user ? path('app_portal_entry') : path('app_login') }}">{{ t('nav.login') }}</a>
             </nav>
         </div>
     </header>
@@ -324,29 +324,29 @@
 
 {% block body %}
     <section class="search-hero">
-        <span class="search-eyebrow">Publik sökning</span>
-        <h1 class="search-title">Sök på hela Driftpunkt</h1>
-        <p class="search-subtitle">Här visas träffar från publika sidor och undersidor som faktiskt är tillgängliga online just nu, som nyheter, kunskapsbas, kontaktvägar och öppna funktioner.</p>
+        <span class="search-eyebrow">{{ t('search.hero.eyebrow') }}</span>
+        <h1 class="search-title">{{ t('search.hero.title') }}</h1>
+        <p class="search-subtitle">{{ t('search.hero.copy') }}</p>
     </section>
 
     {% if searchQuery is not empty %}
-        <section class="search-results" aria-label="Sökresultat">
+        <section class="search-results" aria-label="{{ t('search.results.aria') }}">
             <div class="search-results-head">
                 <div>
-                    <h2>Sökresultat</h2>
+                    <h2>{{ t('search.results.title') }}</h2>
                     <p>
-                        Publika träffar för "{{ searchQuery }}"
-                        {% if selectedFilter != 'alla' %}
-                            i {{ selectedFilterLabel|lower }}
+                        {{ t('search.results.hits_for', {'%query%': searchQuery}) }}
+                        {% if selectedFilter != 'all' %}
+                            {{ t('search.results.in_filter', {'%filter%': selectedFilterLabel|lower}) }}
                         {% endif %}
                     </p>
                 </div>
-                <p>{{ searchResults|length }} av {{ allResultsCount }} träff{{ allResultsCount == 1 ? '' : 'ar' }}</p>
+                <p>{{ allResultsCount == 1 ? t('search.results.count', {'%shown%': searchResults|length, '%total%': allResultsCount}) : t('search.results.count_plural', {'%shown%': searchResults|length, '%total%': allResultsCount}) }}</p>
             </div>
 
-            <nav class="search-filters" aria-label="Filtrera sökresultat">
+            <nav class="search-filters" aria-label="{{ t('search.filters.aria') }}">
                 {% for option in filterOptions %}
-                    <a class="search-filter-chip {{ selectedFilter == option.value ? 'active' : '' }}" href="{{ path('app_public_search', {q: searchQuery, filter: option.value != 'alla' ? option.value : null}) }}">
+                    <a class="search-filter-chip {{ selectedFilter == option.value ? 'active' : '' }}" href="{{ path('app_public_search', {q: searchQuery, filter: option.value != 'all' ? option.value : null}) }}">
                         <span>{{ option.label }}</span>
                         <span class="search-filter-count">{{ filterCounts[option.value]|default(0) }}</span>
                     </a>
@@ -357,17 +357,28 @@
                 <div class="search-results-grid">
                     {% for result in searchResults %}
                         <a class="search-result-card" {% if result.href %}href="{{ result.href }}"{% endif %}>
-                            <span class="search-result-section">{{ result.section }}</span>
+                            <span class="search-result-section">{{ t('search.filter.' ~ result.section) }}</span>
                             <strong>{{ result.title }}</strong>
                             <span>{{ result.summary }}</span>
                         </a>
                     {% endfor %}
                 </div>
             {% else %}
-                <div class="search-empty">Inga publika träffar hittades. Prova ett annat ord eller öppna sektionerna ovan.</div>
+                <div class="search-empty">{{ t('search.empty.filtered') }}</div>
             {% endif %}
         </section>
     {% else %}
-        <section class="search-empty">Skriv ett ord eller en fras i sökfältet ovan för att hitta publika sidor, artiklar och funktioner.</section>
+        <section class="search-empty">{{ t('search.empty.initial') }}</section>
     {% endif %}
+
+    <footer style="margin-top: 2rem; padding: 1rem 0 0; color: #5f6b85; font-size: 0.95rem; display: flex; flex-wrap: wrap; gap: 0.85rem 1.1rem; border-top: 1px solid rgba(148, 163, 184, 0.18);">
+        <a href="{{ path('app_home') }}">{{ t('nav.home') }}</a>
+        <a href="{{ path('app_news_index') }}">{{ t('nav.news') }}</a>
+        <a href="{{ path('app_contact') }}">{{ t('nav.contact') }}</a>
+        {% if site_branding.footerText %}
+            <span>{{ site_branding.footerText }}</span>
+        {% endif %}
+        <span>{{ t('search.footer.version') }} {{ site_branding.appVersion }}</span>
+        <a href="{{ site_branding.githubUrl }}" target="_blank" rel="noopener noreferrer">{{ site_branding.copyrightLabel }}</a>
+    </footer>
 {% endblock %}

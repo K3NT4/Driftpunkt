@@ -9,11 +9,13 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class SearchController extends AbstractController
 {
     public function __construct(
         private readonly PublicSiteSearch $publicSiteSearch,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -21,19 +23,19 @@ final class SearchController extends AbstractController
     public function __invoke(Request $request): Response
     {
         $searchQuery = trim($request->query->getString('q'));
-        $selectedFilter = trim($request->query->getString('filter', 'alla'));
+        $selectedFilter = trim($request->query->getString('filter', 'all'));
         $allResults = '' !== $searchQuery ? $this->publicSiteSearch->search($searchQuery) : [];
 
         $filterOptions = [
-            ['value' => 'alla', 'label' => 'Alla'],
-            ['value' => 'Sida', 'label' => 'Sidor'],
-            ['value' => 'Nyhet', 'label' => 'Nyheter'],
-            ['value' => 'Kunskapsbas', 'label' => 'Kunskapsbas'],
-            ['value' => 'Systemstatus', 'label' => 'Systemstatus'],
-            ['value' => 'Support', 'label' => 'Support'],
-            ['value' => 'Kontakt', 'label' => 'Kontakt'],
-            ['value' => 'Inloggning', 'label' => 'Inloggning'],
-            ['value' => 'Konto', 'label' => 'Konto'],
+            ['value' => 'all', 'label' => $this->translator->trans('search.filter.all')],
+            ['value' => 'page', 'label' => $this->translator->trans('search.filter.page')],
+            ['value' => 'news', 'label' => $this->translator->trans('search.filter.news')],
+            ['value' => 'knowledge_base', 'label' => $this->translator->trans('search.filter.knowledge_base')],
+            ['value' => 'system_status', 'label' => $this->translator->trans('search.filter.system_status')],
+            ['value' => 'support', 'label' => $this->translator->trans('search.filter.support')],
+            ['value' => 'contact', 'label' => $this->translator->trans('search.filter.contact')],
+            ['value' => 'sign_in', 'label' => $this->translator->trans('search.filter.sign_in')],
+            ['value' => 'account', 'label' => $this->translator->trans('search.filter.account')],
         ];
 
         $validFilters = array_map(
@@ -41,12 +43,12 @@ final class SearchController extends AbstractController
             $filterOptions,
         );
         if (!\in_array($selectedFilter, $validFilters, true)) {
-            $selectedFilter = 'alla';
+            $selectedFilter = 'all';
         }
 
-        $filterCounts = ['alla' => count($allResults)];
+        $filterCounts = ['all' => count($allResults)];
         foreach ($filterOptions as $option) {
-            if ('alla' === $option['value']) {
+            if ('all' === $option['value']) {
                 continue;
             }
 
@@ -56,14 +58,14 @@ final class SearchController extends AbstractController
             ));
         }
 
-        $searchResults = 'alla' === $selectedFilter
+        $searchResults = 'all' === $selectedFilter
             ? $allResults
             : array_values(array_filter(
                 $allResults,
                 static fn (array $result): bool => $result['section'] === $selectedFilter,
             ));
 
-        $selectedFilterLabel = 'Alla';
+        $selectedFilterLabel = $this->translator->trans('search.filter.all');
         foreach ($filterOptions as $option) {
             if ($option['value'] === $selectedFilter) {
                 $selectedFilterLabel = $option['label'];

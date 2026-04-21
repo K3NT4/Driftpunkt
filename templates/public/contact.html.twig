@@ -4,7 +4,7 @@
     publicEnabled: false
 }) %}
 
-{% block title %}Driftpunkt | Kontakta Oss{% endblock %}
+{% block title %}{{ site_branding.name }} | {{ t('contact.page_title') }}{% endblock %}
 
 {% block page_shell_class %}home-shell contact-shell{% endblock %}
 {% block body_class %}home-landing contact-page{% endblock %}
@@ -596,19 +596,19 @@
         <div class="home-topbar-inner">
             <a class="home-brand" href="{{ path('app_home') }}">
                 <span class="home-brand-mark">
-                    <img class="home-brand-logo" src="/assets/branding/driftpunkt-logo-full.png" alt="Driftpunkt">
+                    <img class="home-brand-logo" src="{{ site_branding.logoPath }}" alt="{{ site_branding.name }}">
                 </span>
             </a>
-            <nav class="home-nav" aria-label="Huvudnavigering">
-                <a class="home-nav-link" href="{{ path('app_home') }}">Startsida</a>
-                <a class="home-nav-link" href="{{ path('app_news_index') }}">Nyheter</a>
-                <a class="home-nav-link" href="{{ path('app_status_page') }}">Driftstatus</a>
-                <a class="home-nav-link" href="{{ path('app_contact') }}">Kontakta oss</a>
+            <nav class="home-nav" aria-label="{{ t('contact.nav.aria') }}">
+                <a class="home-nav-link" href="{{ path('app_home') }}">{{ t('nav.home') }}</a>
+                <a class="home-nav-link" href="{{ path('app_news_index') }}">{{ t('nav.news') }}</a>
+                <a class="home-nav-link" href="{{ path('app_status_page') }}">{{ t('nav.status') }}</a>
+                <a class="home-nav-link" href="{{ path('app_contact') }}">{{ t('nav.contact') }}</a>
                 <form class="home-search-form" method="get" action="{{ path('app_public_search') }}">
-                    <input class="home-search-input" type="search" name="q" value="{{ app.request.query.get('q') }}" placeholder="Sök på hela sajten">
-                    <button class="home-search" type="submit" aria-label="Sök">⌕</button>
+                    <input class="home-search-input" type="search" name="q" value="{{ app.request.query.get('q') }}" placeholder="{{ t('contact.search_placeholder') }}">
+                    <button class="home-search" type="submit" aria-label="{{ t('contact.search_aria') }}">⌕</button>
                 </form>
-                <a class="button home-login-button" href="{{ app.user ? path('app_portal_entry') : path('app_login') }}">Logga in</a>
+                <a class="button home-login-button" href="{{ app.user ? path('app_portal_entry') : path('app_login') }}">{{ t('nav.login') }}</a>
             </nav>
         </div>
         <div class="home-statusbar">
@@ -645,12 +645,12 @@
             <p class="contact-subtitle">
                 {{ contactPageSettings.subtitle }}
                 {% if publicMaintenanceLocked %}
-                    Kund- och teknikerinloggning är just nu pausad, så använd gärna driftsidan eller kontakta supporten direkt.
+                    {{ t('contact.maintenance_locked_suffix') }}
                 {% endif %}
             </p>
             <div class="contact-actions" style="justify-content: center; margin-top: 1.4rem;">
                 <a class="contact-button primary" href="{{ publicMaintenanceLocked ? path('app_status_page') : contactPageSettings.primaryCtaUrl }}">
-                    {{ publicMaintenanceLocked ? 'Öppna driftstatus' : contactPageSettings.primaryCtaLabel }}
+                    {{ publicMaintenanceLocked ? t('contact.maintenance_primary_cta') : contactPageSettings.primaryCtaLabel }}
                 </a>
                 {% if knowledgeBaseSettings.publicEnabled %}
                     <a class="contact-button secondary" href="{{ contactPageSettings.secondaryCtaUrl }}">{{ contactPageSettings.secondaryCtaLabel }}</a>
@@ -675,7 +675,7 @@
                 {% set cardLinkLabel = card.linkLabel ?: contactPageSettings.phone %}
             {% else %}
                 {% set cardHref = publicMaintenanceLocked ? path('app_status_page') : (app.user ? path('app_portal_entry') : path('app_login', {role: 'customer'})) %}
-                {% set cardLinkLabel = publicMaintenanceLocked ? 'Se driftstatus' : (card.linkLabel ?: 'Öppna portalen') %}
+                {% set cardLinkLabel = publicMaintenanceLocked ? t('contact.portal_cta_status') : (card.linkLabel ?: t('contact.portal_cta_open')) %}
             {% endif %}
             <article class="contact-card">
                 <div class="contact-channel-icon {{ iconTheme.class }}">{{ iconTheme.icon }}</div>
@@ -712,15 +712,15 @@
             <p>{{ contactPageSettings.priorityIntro }}</p>
             <div class="contact-support-links">
                 <a href="mailto:{{ contactPageSettings.email }}">
-                    <span>{{ contactPageSettings.priorityLinkLabels[0]|default('E-post för support') }}</span>
+                    <span>{{ contactPageSettings.priorityLinkLabels[0]|default(t('contact.priority_link_email')) }}</span>
                     <span>›</span>
                 </a>
                 <a href="tel:{{ contactPageSettings.phoneHref }}">
-                    <span>{{ contactPageSettings.priorityLinkLabels[1]|default('Ring supporten') }}</span>
+                    <span>{{ contactPageSettings.priorityLinkLabels[1]|default(t('contact.priority_link_phone')) }}</span>
                     <span>›</span>
                 </a>
                 <a href="{{ path('app_status_page') }}">
-                    <span>{{ contactPageSettings.priorityLinkLabels[2]|default('Se driftnyheter') }}</span>
+                    <span>{{ contactPageSettings.priorityLinkLabels[2]|default(t('contact.priority_link_status')) }}</span>
                     <span>›</span>
                 </a>
             </div>
@@ -762,12 +762,16 @@
 {% block page_footer %}
     <footer class="home-footer">
         <div class="home-footer-inner">
-            <nav class="footer-links" aria-label="Sidfot">
-                <a href="{{ path('app_home') }}">Startsida</a>
-                <a href="{{ path('app_news_index') }}">Senaste Nytt</a>
-                <a href="{{ path('app_status_page') }}">Driftstatus</a>
-                <a href="{{ path('app_contact') }}">Kontakta oss</a>
-                <span>© 2026 Driftpunkt</span>
+            <nav class="footer-links" aria-label="{{ t('contact.footer.aria') }}">
+                <a href="{{ path('app_home') }}">{{ t('nav.home') }}</a>
+                <a href="{{ path('app_news_index') }}">{{ t('contact.footer.news') }}</a>
+                <a href="{{ path('app_status_page') }}">{{ t('nav.status') }}</a>
+                <a href="{{ path('app_contact') }}">{{ t('nav.contact') }}</a>
+                {% if site_branding.footerText %}
+                    <span>{{ site_branding.footerText }}</span>
+                {% endif %}
+                <span>{{ t('contact.footer.version') }} {{ site_branding.appVersion }}</span>
+                <a href="{{ site_branding.githubUrl }}" target="_blank" rel="noopener noreferrer">{{ site_branding.copyrightLabel }}</a>
             </nav>
         </div>
     </footer>

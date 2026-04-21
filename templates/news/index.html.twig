@@ -1,7 +1,7 @@
 {% extends 'base.html.twig' %}
 {% set authMaintenanceNotice = maintenance_notice() %}
 
-{% block title %}Driftpunkt | Nyheter{% endblock %}
+{% block title %}{{ site_branding.name }} | {{ t('news.page_title') }}{% endblock %}
 {% block page_shell_class %}news-shell{% endblock %}
 {% block body_class %}news-landing{% endblock %}
 
@@ -799,18 +799,18 @@
     <header class="news-topbar">
         <div class="news-topbar-inner">
             <a class="news-brand" href="{{ path('app_home') }}">
-                <img class="news-brand-logo" src="/assets/branding/driftpunkt-logo-full.png" alt="Driftpunkt">
+                <img class="news-brand-logo" src="{{ site_branding.logoPath }}" alt="{{ site_branding.name }}">
             </a>
-            <nav class="news-nav" aria-label="Huvudnavigering">
-                <a class="news-nav-link" href="{{ path('app_home') }}">Startsida</a>
-                <a class="news-nav-link" href="{{ path('app_news_index') }}">Nyheter</a>
-                <a class="news-nav-link" href="{{ path('app_status_page') }}">Driftstatus</a>
-                <a class="news-nav-link" href="{{ path('app_contact') }}">Kontakta oss</a>
+            <nav class="news-nav" aria-label="{{ t('news.nav.aria') }}">
+                <a class="news-nav-link" href="{{ path('app_home') }}">{{ t('nav.home') }}</a>
+                <a class="news-nav-link" href="{{ path('app_news_index') }}">{{ t('nav.news') }}</a>
+                <a class="news-nav-link" href="{{ path('app_status_page') }}">{{ t('nav.status') }}</a>
+                <a class="news-nav-link" href="{{ path('app_contact') }}">{{ t('nav.contact') }}</a>
                 <form class="news-top-search-form" method="get" action="{{ path('app_public_search') }}">
-                    <input class="news-top-search-input" type="search" name="q" value="{{ app.request.query.get('q') }}" placeholder="Sök på hela sajten">
-                    <button class="news-top-search-button" type="submit" aria-label="Sök">⌕</button>
+                    <input class="news-top-search-input" type="search" name="q" value="{{ app.request.query.get('q') }}" placeholder="{{ t('news.search_placeholder') }}">
+                    <button class="news-top-search-button" type="submit" aria-label="{{ t('news.search_aria') }}">⌕</button>
                 </form>
-                <a class="news-login-button" href="{{ app.user ? path('app_portal_entry') : path('app_login') }}">Logga in</a>
+                <a class="news-login-button" href="{{ app.user ? path('app_portal_entry') : path('app_login') }}">{{ t('nav.login') }}</a>
             </nav>
         </div>
     </header>
@@ -820,13 +820,13 @@
             {% if authMaintenanceNotice %}
                 <span>{{ authMaintenanceNotice.title }}</span>
                 <span class="status-sep">•</span>
-                <a href="{{ authMaintenanceNotice.href ?: path('app_status_page') }}" style="color: inherit; text-decoration: none;">{{ authMaintenanceNotice.linkLabel|default('Visa driftstatus') }}</a>
+                <a href="{{ authMaintenanceNotice.href ?: path('app_status_page') }}" style="color: inherit; text-decoration: none;">{{ authMaintenanceNotice.linkLabel|default(t('news.status.link')) }}</a>
             {% else %}
-                <span>Senaste nytt och planerad drift samlat på ett ställe</span>
+                <span>{{ t('news.status.default_primary') }}</span>
                 <span class="status-sep">•</span>
-                <span>Följ releaser, underhåll och viktiga uppdateringar</span>
+                <span>{{ t('news.status.default_secondary') }}</span>
                 <span class="status-sep">•</span>
-                <a href="{{ path('app_contact') }}" style="color: inherit; text-decoration: none;">Kontakta support</a>
+                <a href="{{ path('app_contact') }}" style="color: inherit; text-decoration: none;">{{ t('news.status.contact_support') }}</a>
             {% endif %}
         </div>
     </div>
@@ -837,27 +837,27 @@
         <section class="news-hero">
             <div class="news-hero-grid">
                 <div>
-                    <span class="news-eyebrow">Nyhetsrum</span>
-                    <h1 class="news-page-title">Senaste nytt från Driftpunkt</h1>
-                    <p class="news-page-intro">Nyheter, releaser och driftkommunikation samlade i samma lugna uttryck som resten av sajten, så det blir enkelt att hitta både information och nästa steg.</p>
+                    <span class="news-eyebrow">{{ t('news.hero.eyebrow') }}</span>
+                    <h1 class="news-page-title">{{ t('news.hero.title') }}</h1>
+                    <p class="news-page-intro">{{ t('news.hero.intro') }}</p>
                 </div>
                 <div class="news-hero-stats">
                     <div class="news-stat-card">
-                        <strong>Publicerade artiklar</strong>
-                        <span>{{ articles|length }} i vald vy</span>
+                        <strong>{{ t('news.stats.published') }}</strong>
+                        <span>{{ articles|length }} {{ t('news.stats.published_suffix') }}</span>
                     </div>
                     <div class="news-stat-card">
-                        <strong>Planerade underhåll</strong>
-                        <span>{{ maintenanceArticles|length }} markerade artiklar</span>
+                        <strong>{{ t('news.stats.maintenance') }}</strong>
+                        <span>{{ maintenanceArticles|length }} {{ t('news.stats.maintenance_suffix') }}</span>
                     </div>
-                    <a class="button" href="{{ path('app_status_page') }}">Öppna driftstatus</a>
+                    <a class="button" href="{{ path('app_status_page') }}">{{ t('news.cta.open_status') }}</a>
                 </div>
             </div>
         </section>
 
         <section class="news-filters">
             <div class="news-filter-row">
-                <h2 class="news-filter-title">Filtrera efter kategori</h2>
+                <h2 class="news-filter-title">{{ t('news.filters.title') }}</h2>
                 <div class="news-filter-chips">
                     {% for option in categoryOptions %}
                         {% set isMaintenance = option.value == 'planned_maintenance' %}
@@ -872,8 +872,8 @@
                 {% if selectedCategory != 'alla' %}
                     <input type="hidden" name="kategori" value="{{ selectedCategory }}">
                 {% endif %}
-                <input type="text" name="q" value="{{ searchQuery }}" placeholder="Sök efter titel, innehåll eller sammanfattning">
-                <button class="button" type="submit">Sök</button>
+                <input type="text" name="q" value="{{ searchQuery }}" placeholder="{{ t('news.filters.search_placeholder') }}">
+                <button class="button" type="submit">{{ t('news.filters.search_button') }}</button>
             </form>
         </section>
 
@@ -881,8 +881,8 @@
             <section class="maintenance-band">
                 <div class="maintenance-head">
                     <div>
-                        <h2>Planerat underhåll</h2>
-                        <p>De här inläggen lyfts extra tydligt för att driftfönster och planerade arbeten ska vara lätta att upptäcka.</p>
+                        <h2>{{ t('news.maintenance.title') }}</h2>
+                        <p>{{ t('news.maintenance.intro') }}</p>
                     </div>
                 </div>
                 <div class="maintenance-list">
@@ -912,11 +912,11 @@
                 {% endif %}
                 <div class="news-results-head" style="padding: 1.2rem 1.5rem 0;">
                     <div>
-                        <h2>{{ searchQuery ? 'Sökresultat' : 'Utvald artikel' }}</h2>
+                        <h2>{{ searchQuery ? t('news.featured.search_results') : t('news.featured.featured_article') }}</h2>
                         <p>
-                            {{ totalArticles }} artikel{{ totalArticles == 1 ? '' : 'r' }}
-                            {% if selectedCategory != 'alla' %} i kategorin {{ selectedCategoryLabel }}{% endif %}
-                            {% if searchQuery %} som matchar "{{ searchQuery }}"{% endif %}
+                            {{ totalArticles == 1 ? t('news.featured.article_count', {'%count%': totalArticles}) : t('news.featured.article_count_plural', {'%count%': totalArticles}) }}
+                            {% if selectedCategory != 'alla' %} {{ t('news.featured.in_category', {'%category%': selectedCategoryLabel}) }}{% endif %}
+                            {% if searchQuery %} {{ t('news.featured.matching_query', {'%query%': searchQuery}) }}{% endif %}
                         </p>
                     </div>
                 </div>
@@ -932,23 +932,23 @@
                         <p class="featured-copy">{{ featuredArticle.summary }}</p>
                         <div class="featured-meta">
                             <span>{{ featuredArticle.publishedAt|date('Y-m-d H:i') }}</span>
-                            <span>{{ featuredArticle.author ? featuredArticle.author.displayName : 'Driftpunkt' }}</span>
+                            <span>{{ featuredArticle.author ? featuredArticle.author.displayName : t('news.article.sender_default') }}</span>
                             {% if featuredArticle.isPinned %}
-                                <span>Viktig nyhet</span>
+                                <span>{{ t('news.featured.important') }}</span>
                             {% endif %}
                             {% if featuredMaintenanceStatus and featuredMaintenanceStatus.schedule %}
                                 <span>{{ featuredMaintenanceStatus.schedule }}</span>
                             {% endif %}
                         </div>
                         <div style="margin-top: 1rem;">
-                            <a class="button" href="{{ path('app_news_show', {id: featuredArticle.id}) }}">Läs artikeln</a>
+                            <a class="button" href="{{ path('app_news_show', {id: featuredArticle.id}) }}">{{ t('news.featured.read_article') }}</a>
                         </div>
                     </div>
                     <aside class="news-featured-side">
                         <div class="featured-author">
-                            <strong>Utvald artikel</strong>
-                            <span>{{ featuredArticle.category.label }} lyfts överst i den här vyn{% if selectedCategory != 'alla' %} för vald kategori{% endif %}.</span>
-                            <span>Sortering: viktiga nyheter först, därefter senaste publiceringsdatum.</span>
+                            <strong>{{ t('news.featured.sidebar_title') }}</strong>
+                            <span>{{ t('news.featured.sidebar_copy', {'%category%': featuredArticle.category.label, '%context%': selectedCategory != 'alla' ? t('news.featured.sidebar_context') : ''}) }}</span>
+                            <span>{{ t('news.featured.sidebar_sort') }}</span>
                         </div>
                     </aside>
                 </div>
@@ -971,7 +971,7 @@
                             <h3 class="news-card-title"><a href="{{ path('app_news_show', {id: article.id}) }}">{{ article.title }}</a></h3>
                             <div class="news-card-meta">
                                 <span class="news-card-date"><span class="dot"></span>{{ article.publishedAt|date('Y-m-d H:i') }}</span>
-                                <span>{{ article.author ? article.author.displayName : 'Driftpunkt' }}</span>
+                                <span>{{ article.author ? article.author.displayName : t('news.article.sender_default') }}</span>
                                 {% if maintenance and maintenance.schedule %}
                                     <span>{{ maintenance.schedule }}</span>
                                 {% endif %}
@@ -979,7 +979,7 @@
                             <p class="news-card-copy">{{ article.summary }}</p>
                         </div>
                         <div class="news-card-footer">
-                            <a class="news-read-link" href="{{ path('app_news_show', {id: article.id}) }}">Läs nyheten</a>
+                            <a class="news-read-link" href="{{ path('app_news_show', {id: article.id}) }}">{{ t('news.card.read') }}</a>
                             <span class="chevron" aria-hidden="true">›</span>
                         </div>
                     </article>
@@ -987,12 +987,12 @@
             </section>
         {% elseif featuredArticle is null %}
             <section class="news-empty">
-                <strong>Det finns inga publicerade nyheter i den här kategorin ännu.</strong>
+                <strong>{{ t('news.empty') }}</strong>
             </section>
         {% endif %}
 
         {% if totalPages > 1 %}
-            <nav class="news-pagination" aria-label="Paginering för nyheter">
+            <nav class="news-pagination" aria-label="{{ t('news.pagination.aria') }}">
                 {% if page > 1 %}
                     <a class="news-page-link" href="{{ path('app_news_index', {kategori: selectedCategory != 'alla' ? selectedCategory : null, q: searchQuery ?: null, sida: page - 1}) }}">‹</a>
                 {% endif %}
@@ -1013,12 +1013,16 @@
     <footer class="news-footer">
         <div class="news-footer-inner">
             <div class="news-footer-links">
-                <a href="{{ path('app_home') }}">Startsida</a>
-                <a href="{{ path('app_news_index') }}">Nyheter</a>
-                <a href="{{ path('app_status_page') }}">Driftstatus</a>
-                <a href="{{ path('app_contact') }}">Kontakta oss</a>
+                <a href="{{ path('app_home') }}">{{ t('nav.home') }}</a>
+                <a href="{{ path('app_news_index') }}">{{ t('nav.news') }}</a>
+                <a href="{{ path('app_status_page') }}">{{ t('nav.status') }}</a>
+                <a href="{{ path('app_contact') }}">{{ t('nav.contact') }}</a>
+                {% if site_branding.footerText %}
+                    <span>{{ site_branding.footerText }}</span>
+                {% endif %}
+                <span>{{ t('news.footer.version') }} {{ site_branding.appVersion }}</span>
             </div>
-            <span>© 2026 Driftpunkt</span>
+            <a href="{{ site_branding.githubUrl }}" target="_blank" rel="noopener noreferrer">{{ site_branding.copyrightLabel }}</a>
         </div>
     </footer>
 {% endblock %}

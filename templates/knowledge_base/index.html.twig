@@ -4,7 +4,7 @@
 {% set backRoute = pageMode == 'customer' ? path('app_portal_customer') : path('app_home') %}
 {% set backLabel = pageMode == 'customer' ? 'Till kundportalen' : 'Till startsidan' %}
 
-{% block title %}Driftpunkt | {{ pageTitle }}{% endblock %}
+{% block title %}{{ site_branding.name }} | {{ pageTitle }}{% endblock %}
 {% block page_shell_class %}knowledge-shell{% endblock %}
 {% block body_class %}home-landing knowledge-base-page{% endblock %}
 
@@ -751,18 +751,18 @@
 {% block topbar %}
     <div class="topbar">
         <div class="brand brand-mark">
-            <img class="brand-logo" src="/assets/branding/driftpunkt-logo-icon.png" alt="Driftpunkt logo">
-            <span>Driftpunkt</span>
+            <img class="brand-logo" src="{{ site_branding.logoPath }}" alt="{{ t('brand.logo_alt', {'%name%': site_branding.name}) }}">
+            <span>{{ site_branding.name }}</span>
         </div>
         <div class="nav-links">
             {% if pageMode != 'customer' %}
-                <a class="button secondary" href="{{ path('app_home') }}">Startsida</a>
+                <a class="button secondary" href="{{ path('app_home') }}">{{ t('nav.home') }}</a>
             {% endif %}
             {% if app.user %}
-                <a class="button secondary" href="{{ path('app_portal_entry') }}">Min portal</a>
-                <a class="button secondary" href="{{ path('app_logout') }}">Logga ut</a>
+                <a class="button secondary" href="{{ path('app_portal_entry') }}">{{ t('nav.portal') }}</a>
+                <a class="button secondary" href="{{ path('app_logout') }}">{{ t('nav.logout') }}</a>
             {% else %}
-                <a class="button secondary" href="{{ path('app_login') }}">Logga in</a>
+                <a class="button secondary" href="{{ path('app_login') }}">{{ t('nav.login') }}</a>
             {% endif %}
         </div>
     </div>
@@ -774,12 +774,12 @@
             <div class="knowledge-topbar-inner">
                 <a class="knowledge-brand" href="{{ pageMode == 'customer' ? path('app_portal_customer') : path('app_home') }}">
                     <span class="knowledge-brand-mark">
-                        <img class="knowledge-brand-logo" src="/assets/branding/driftpunkt-logo-full.png" alt="Driftpunkt">
+                        <img class="knowledge-brand-logo" src="{{ site_branding.logoPath }}" alt="{{ site_branding.name }}">
                     </span>
-                    <span>Kunskapsbas</span>
+                    <span>{{ t('knowledge.brand') }}</span>
                 </a>
                 <div class="knowledge-topbar-nav">
-                    <a class="knowledge-pill-link" href="#knowledge-search">Sök svar</a>
+                    <a class="knowledge-pill-link" href="#knowledge-search">{{ t('knowledge.search_again') }}</a>
                     <a class="{{ pageMode == 'customer' ? 'knowledge-pill-link' : 'knowledge-login-button' }}" href="{{ backRoute }}">{{ backLabel }}</a>
                 </div>
             </div>
@@ -788,9 +788,9 @@
         <div class="knowledge-statusbar">
             <div class="knowledge-statusbar-inner">
                 <span class="knowledge-status-dot">●</span>
-                <span>{{ pageMode == 'customer' ? 'Inloggat kunskapsläge för kunder' : 'Publika guider och svar tillgängliga just nu' }}</span>
+                <span>{{ pageMode == 'customer' ? t('knowledge.status.customer_mode') : t('knowledge.status.public_mode') }}</span>
                 <span class="knowledge-status-sep">•</span>
-                <span>{{ searchQuery is not empty ? 'Filtrerat på: ' ~ searchQuery : 'Sök i tips, FAQ och guider' }}</span>
+                <span>{{ searchQuery is not empty ? t('knowledge.status.filtered_on', {'%query%': searchQuery}) : t('knowledge.status.search_hint') }}</span>
             </div>
         </div>
 
@@ -803,7 +803,7 @@
         <section class="knowledge-hero">
             <div class="knowledge-hero-wave" aria-hidden="true"></div>
             <div class="knowledge-hero-content">
-                <div class="knowledge-eyebrow">{{ pageMode == 'customer' ? 'Inloggat läge' : 'Öppet läge' }}</div>
+                <div class="knowledge-eyebrow">{{ pageMode == 'customer' ? t('knowledge.hero.customer') : t('knowledge.hero.public') }}</div>
                 <h1 class="knowledge-title">{{ pageTitle }}</h1>
                 <p class="knowledge-subtitle">{{ pageSubtitle }}</p>
             </div>
@@ -814,15 +814,16 @@
                 <div>
                     <div class="knowledge-heading">
                         <span class="knowledge-heading-icon">⌕</span>
-                        <h2>Sök i kunskapsbasen</h2>
+                        <h2>{{ t('knowledge.search.title') }}</h2>
                     </div>
-                    <p style="margin: 0.2rem 0 0;">{{ pageMode == 'customer' ? 'Här söker du bara i material som är avsett för inloggade kunder.' : 'Här söker du i publika guider, smarta tips och vanliga frågor.' }}</p>
+                    <p style="margin: 0.2rem 0 0;">{{ pageMode == 'customer' ? t('knowledge.search.customer_copy') : t('knowledge.search.public_copy') }}</p>
                 </div>
-                <span class="knowledge-meta-pill">{{ entries.tips|length + entries.faq|length + entries.articles|length }} träffar</span>
+                {% set totalKnowledgeHits = entries.tips|length + entries.faq|length + entries.articles|length %}
+                <span class="knowledge-meta-pill">{{ totalKnowledgeHits == 1 ? t('knowledge.count', {'%count%': totalKnowledgeHits}) : t('knowledge.count_plural', {'%count%': totalKnowledgeHits}) }}</span>
             </div>
             <form method="get" action="{{ path(searchRoute) }}" class="knowledge-search-form">
-                <input class="knowledge-search-input" type="text" name="q" value="{{ searchQuery }}" placeholder="Exempel: återställ lösenord, e-postnotiser eller VPN">
-                <button class="button knowledge-search-button" type="submit">Sök</button>
+                <input class="knowledge-search-input" type="text" name="q" value="{{ searchQuery }}" placeholder="{{ t('knowledge.search.placeholder') }}">
+                <button class="button knowledge-search-button" type="submit">{{ t('search.search_aria') }}</button>
             </form>
         </section>
 
@@ -834,11 +835,11 @@
                             <div>
                                 <div class="knowledge-heading">
                                     <span class="knowledge-heading-icon">✓</span>
-                                    <h2>Smarta Tips</h2>
+                                    <h2>{{ t('knowledge.section.tips') }}</h2>
                                 </div>
-                                <p style="margin: 0.45rem 0 0;">Snabba råd som hjälper dig att komma vidare direkt.</p>
+                                <p style="margin: 0.45rem 0 0;">{{ t('knowledge.section.tips_copy') }}</p>
                             </div>
-                            <span class="knowledge-meta">{{ entries.tips|length }} tips</span>
+                            <span class="knowledge-meta">{{ entries.tips|length }} {{ t('knowledge.meta.tips') }}</span>
                         </div>
                         <div class="knowledge-card-list">
                             {% for entry in entries.tips %}
@@ -860,11 +861,11 @@
                             <div>
                                 <div class="knowledge-heading">
                                     <span class="knowledge-heading-icon">?</span>
-                                    <h2>Vanliga Frågor</h2>
+                                    <h2>{{ t('knowledge.section.faq') }}</h2>
                                 </div>
-                                <p style="margin: 0.45rem 0 0;">Frågor och svar som ofta löser det vanligaste först.</p>
+                                <p style="margin: 0.45rem 0 0;">{{ t('knowledge.section.faq_copy') }}</p>
                             </div>
-                            <span class="knowledge-meta">{{ entries.faq|length }} frågor</span>
+                            <span class="knowledge-meta">{{ entries.faq|length }} {{ t('knowledge.meta.questions') }}</span>
                         </div>
                         <div class="knowledge-faq-list">
                             {% for entry in entries.faq %}
@@ -891,24 +892,24 @@
                     <div>
                         <div class="knowledge-heading">
                             <span class="knowledge-heading-icon">✦</span>
-                            <h2>Guider och artiklar</h2>
+                            <h2>{{ t('knowledge.section.guides') }}</h2>
                         </div>
-                        <p style="margin: 0.45rem 0 0;">Fördjupade instruktioner som går steg för steg.</p>
+                        <p style="margin: 0.45rem 0 0;">{{ t('knowledge.section.guides_copy') }}</p>
                     </div>
-                    <span class="knowledge-meta">{{ entries.articles|length }} artiklar</span>
+                    <span class="knowledge-meta">{{ entries.articles|length }} {{ t('knowledge.meta.articles') }}</span>
                 </div>
                 <div class="knowledge-article-list">
                     {% for entry in entries.articles %}
                         <article class="knowledge-article-card">
                             <h3>{{ entry.title }}</h3>
                             <div class="knowledge-meta" style="margin-bottom: 0.7rem;">
-                                Målgrupp:
+                                {{ t('knowledge.audience.label') }}
                                 {% if entry.audience.value == 'public' %}
-                                    Publik
+                                    {{ t('knowledge.audience.public') }}
                                 {% elseif entry.audience.value == 'customer' %}
-                                    Inloggade kunder
+                                    {{ t('knowledge.audience.customer') }}
                                 {% else %}
-                                    Publik och kund
+                                    {{ t('knowledge.audience.both') }}
                                 {% endif %}
                             </div>
                             <p style="margin: 0;">{{ entry.body|nl2br }}</p>
@@ -922,17 +923,21 @@
             <section class="knowledge-empty">
                 <div class="knowledge-heading">
                     <span class="knowledge-heading-icon">!</span>
-                    <h2 style="margin: 0; color: #232b57;">Ingen träff just nu</h2>
+                    <h2 style="margin: 0; color: #232b57;">{{ t('knowledge.empty.title') }}</h2>
                 </div>
-                <p style="margin: 0;">Vi hittade inget i kunskapsbasen för din sökning. Prova gärna ett enklare ord eller gå tillbaka och försök igen senare.</p>
+                <p style="margin: 0;">{{ t('knowledge.empty.copy') }}</p>
             </section>
         {% endif %}
 
         <div class="knowledge-footer">
-            <a class="knowledge-footer-link" href="{{ pageMode == 'customer' ? path('app_portal_customer') : path('app_home') }}">{{ pageMode == 'customer' ? 'Kundportal' : 'Startsida' }}</a>
-            <a class="knowledge-footer-link" href="{{ pageMode == 'customer' ? path('app_portal_customer') : path('app_login', {role: 'customer'}) }}">{{ pageMode == 'customer' ? 'Kundportal' : 'Kundinloggning' }}</a>
-            <a class="knowledge-footer-link" href="#knowledge-search">Sök igen</a>
-            <span>© 2024 Driftpunkt</span>
+            <a class="knowledge-footer-link" href="{{ pageMode == 'customer' ? path('app_portal_customer') : path('app_home') }}">{{ pageMode == 'customer' ? t('knowledge.footer.customer_portal') : t('nav.home') }}</a>
+            <a class="knowledge-footer-link" href="{{ pageMode == 'customer' ? path('app_portal_customer') : path('app_login', {role: 'customer'}) }}">{{ pageMode == 'customer' ? t('knowledge.footer.customer_portal') : t('knowledge.footer.customer_login') }}</a>
+            <a class="knowledge-footer-link" href="#knowledge-search">{{ t('knowledge.search_again') }}</a>
+            {% if site_branding.footerText %}
+                <span>{{ site_branding.footerText }}</span>
+            {% endif %}
+            <span>{{ t('search.footer.version') }} {{ site_branding.appVersion }}</span>
+            <a class="knowledge-footer-link" href="{{ site_branding.githubUrl }}" target="_blank" rel="noopener noreferrer">{{ site_branding.copyrightLabel }}</a>
         </div>
 
         {% if pageMode == 'customer' %}

@@ -16,6 +16,8 @@ use App\Module\Mail\Enum\MailServerDirection;
 use App\Module\News\Entity\NewsArticle;
 use App\Module\News\Enum\NewsCategory;
 use App\Module\Notification\Entity\NotificationLog;
+use App\Module\System\Entity\AddonModule;
+use App\Module\System\Entity\AddonReleaseLog;
 use App\Module\System\Entity\SystemSetting;
 use App\Module\System\Service\SystemSettings;
 use App\Module\Ticket\Entity\TicketCategory;
@@ -88,8 +90,21 @@ final class AdminIdentityFlowTest extends WebTestCase
             dirname(__DIR__, 2).'/var/code_update_backups',
             dirname(__DIR__, 2).'/var/code_update_staging',
             dirname(__DIR__, 2).'/var/code_update_runs',
+            dirname(__DIR__, 2).'/var/addon_packages',
+            dirname(__DIR__, 2).'/var/addon_package_staging',
+            dirname(__DIR__, 2).'/public/assets/branding/custom-site-logo.png',
+            dirname(__DIR__, 2).'/public/assets/branding/custom-site-logo.jpg',
+            dirname(__DIR__, 2).'/public/assets/branding/custom-site-logo.jpeg',
+            dirname(__DIR__, 2).'/public/assets/branding/custom-site-logo.webp',
+            dirname(__DIR__, 2).'/public/assets/branding/custom-site-logo.gif',
         ] as $directory) {
-            $this->removeDirectory($directory);
+            if (is_dir($directory)) {
+                $this->removeDirectory($directory);
+
+                continue;
+            }
+
+            @unlink($directory);
         }
     }
 
@@ -278,6 +293,51 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertNull($user->getCompany());
         self::assertFalse($user->isMfaEnabled());
         self::assertTrue($this->passwordHasher->isPasswordValid($user, 'AnotherSecure123'));
+    }
+
+    public function testAdminCanUpdateSiteBrandingWithLogoAndFooterText(): void
+    {
+        $admin = $this->createAdminUser();
+        $this->client->loginUser($admin);
+
+        $crawler = $this->client->request('GET', '/portal/admin/identity');
+        self::assertResponseIsSuccessful();
+
+        $logoPath = $this->createTinyPng();
+        $form = $crawler->selectButton('Spara webbplatsidentitet')->form([
+            'site_name' => 'Kundportalen AB',
+            'footer_text' => 'All support hanteras vardagar 08-17.',
+        ]);
+        $this->client->request(
+            'POST',
+            '/portal/admin/site-branding',
+            [
+                '_token' => (string) $form['_token']->getValue(),
+                'site_name' => 'Kundportalen AB',
+                'footer_text' => 'All support hanteras vardagar 08-17.',
+            ],
+            [
+                'site_logo' => new UploadedFile($logoPath, 'kundportalen.png', 'image/png', null, true),
+            ],
+        );
+
+        self::assertResponseRedirects('/portal/admin/identity');
+        $this->client->followRedirect();
+
+        self::assertSame('Kundportalen AB', $this->entityManager->getRepository(SystemSetting::class)->find(SystemSettings::SITE_BRAND_NAME)?->getSettingValue());
+        self::assertSame('All support hanteras vardagar 08-17.', $this->entityManager->getRepository(SystemSetting::class)->find(SystemSettings::SITE_FOOTER_TEXT)?->getSettingValue());
+        self::assertSame('/assets/branding/custom-site-logo.png', $this->entityManager->getRepository(SystemSetting::class)->find(SystemSettings::SITE_BRAND_LOGO_PATH)?->getSettingValue());
+        self::assertFileExists(dirname(__DIR__, 2).'/public/assets/branding/custom-site-logo.png');
+
+        $crawler = $this->client->request('GET', '/');
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $crawler->html();
+        self::assertStringContainsString('Kundportalen AB | Start', $html);
+        self::assertStringContainsString('/assets/branding/custom-site-logo.png', $html);
+        self::assertStringContainsString('All support hanteras vardagar 08-17.', $html);
+        self::assertStringContainsString('https://github.com/K3NT4/Driftpunkt', $html);
+        self::assertStringContainsString(sprintf('© %s Driftpunkt', date('Y')), $html);
     }
 
     public function testAdminCanFilterNotificationLog(): void
@@ -493,6 +553,8 @@ final class AdminIdentityFlowTest extends WebTestCase
     {
         $admin = $this->createAdminUser();
         $this->client->loginUser($admin);
+        $today = new \DateTimeImmutable('today 10:00:00');
+        $older = $today->modify('-20 days');
 
         $databaseJobsDirectory = dirname(__DIR__, 2).'/var/database_jobs';
         $codeUpdateRunsDirectory = dirname(__DIR__, 2).'/var/code_update_runs';
@@ -501,8 +563,8 @@ final class AdminIdentityFlowTest extends WebTestCase
 
         file_put_contents($databaseJobsDirectory.'/job-today.json', json_encode([
             'id' => 'job-today',
-            'queuedAt' => '2026-04-19T10:00:00+02:00',
-            'startedAt' => '2026-04-19T10:00:02+02:00',
+            'queuedAt' => $today->format(DATE_ATOM),
+            'startedAt' => $today->modify('+2 seconds')->format(DATE_ATOM),
             'finishedAt' => null,
             'status' => 'running',
             'action' => 'backup',
@@ -515,9 +577,9 @@ final class AdminIdentityFlowTest extends WebTestCase
 
         file_put_contents($codeUpdateRunsDirectory.'/job-older.json', json_encode([
             'id' => 'job-older',
-            'queuedAt' => '2026-04-01T09:00:00+02:00',
-            'startedAt' => '2026-04-01T09:00:01+02:00',
-            'finishedAt' => '2026-04-01T09:02:00+02:00',
+            'queuedAt' => $older->format(DATE_ATOM),
+            'startedAt' => $older->modify('+1 second')->format(DATE_ATOM),
+            'finishedAt' => $older->modify('+2 minutes')->format(DATE_ATOM),
             'status' => 'completed',
             'succeeded' => true,
             'selectedTasks' => ['composer_install'],
@@ -739,6 +801,29 @@ final class AdminIdentityFlowTest extends WebTestCase
         $html = (string) $this->client->getResponse()->getContent();
         self::assertStringContainsString('Databasbackup köades som jobb', $html);
         self::assertStringContainsString('Databasjobb', $html);
+    }
+
+    public function testAdminCanQueueDatabaseMigrationsFromDatabaseSection(): void
+    {
+        $admin = $this->createAdminUser();
+        $this->client->loginUser($admin);
+
+        $crawler = $this->client->request('GET', '/portal/admin/database');
+        self::assertResponseIsSuccessful();
+
+        $this->client->submitForm('Köa migrering', []);
+
+        self::assertResponseRedirects('/portal/admin/database');
+        $this->client->followRedirect();
+
+        $html = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('Databasmigreringen köades som körning', $html);
+
+        $runFiles = glob(dirname(__DIR__, 2).'/var/code_update_runs/*.json') ?: [];
+        self::assertCount(1, $runFiles);
+
+        $run = json_decode((string) file_get_contents($runFiles[0]), true, 512, \JSON_THROW_ON_ERROR);
+        self::assertSame(['doctrine_migrate', 'cache_clear'], $run['selectedTasks']);
     }
 
     public function testAdminCanStageZipPackageFromUpdatesSection(): void
@@ -1722,6 +1807,578 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertStringContainsString('value="mail"', $html);
     }
 
+    public function testAddonSectionIsReadOnlyForManualRegistration(): void
+    {
+        $admin = $this->createAdminUser();
+        $this->client->loginUser($admin);
+
+        $crawler = $this->client->request('GET', '/portal/admin/addons');
+        self::assertResponseIsSuccessful();
+
+        self::assertStringNotContainsString('Lägg till i katalogen', (string) $crawler->html());
+        self::assertSame(0, $crawler->filter('input[name="slug"]')->reduce(static fn ($node): bool => 'exempel-addon' === (string) $node->attr('placeholder'))->count());
+
+        $this->client->request('POST', '/portal/admin/addons', [
+            '_token' => 'manual-registration-disabled',
+            'name' => 'SMS Gateway',
+            'slug' => 'SMS Gateway',
+            'version' => '1.2.3',
+            'install_status' => 'configuring',
+            'health_status' => 'warning',
+            'source_label' => 'Kundspecifikt paket',
+            'description' => 'Skickar SMS vid kritiska notifieringar.',
+            'admin_route' => '/portal/admin/status',
+            'verified_at' => '2026-04-21 09:30',
+            'notes' => 'Kräver separat API-nyckel i produktion.',
+            'dependencies' => "Twilio-konto\nNotifieringskö",
+            'environment_variables' => "TWILIO_ACCOUNT_SID\nTWILIO_AUTH_TOKEN",
+            'setup_checklist' => "Skapa API-nyckel\nVerifiera testnummer",
+            'impact_areas' => "Notifieringar\n/portal/admin/status\nSMS-utskick",
+            'is_enabled' => '1',
+        ]);
+
+        self::assertResponseRedirects('/portal/admin/addons');
+        $this->client->followRedirect();
+
+        $addon = $this->entityManager->getRepository(AddonModule::class)->findOneBy(['slug' => 'sms-gateway']);
+        self::assertNull($addon);
+
+        $html = (string) $this->client->getCrawler()->html();
+        self::assertStringContainsString('Addon-katalogen är låst', $html);
+        self::assertStringContainsString('Addon-katalogen är skrivskyddad i adminen. Bygg eller importera addon-paket i stället.', $html);
+    }
+
+    public function testAddonSectionDoesNotAllowEditingRegisteredAddon(): void
+    {
+        $admin = $this->createAdminUser();
+        $addon = new AddonModule('ops-calendar', 'Ops Calendar', 'Visar jour- och beredskapsschema.');
+        $addon
+            ->setVersion('0.9.0')
+            ->setInstallStatus('planned')
+            ->setHealthStatus('unknown')
+            ->setSourceLabel('Internt paket')
+            ->setNotes('Första pilotversionen.')
+            ->setDependencies("Schema-api\nSSO")
+            ->setEnvironmentVariables("OPS_CALENDAR_URL")
+            ->setSetupChecklist("Bekräfta schemaimport")
+            ->setEnabled(false);
+
+        $this->entityManager->persist($addon);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/addons');
+        self::assertResponseIsSuccessful();
+
+        self::assertSame(0, $crawler->filter(sprintf('form[action="/portal/admin/addons/%d"]', $addon->getId()))->count());
+
+        $this->client->request('POST', sprintf('/portal/admin/addons/%d', $addon->getId()), [
+            '_token' => 'manual-update-disabled',
+            'name' => 'Ops Calendar Plus',
+            'slug' => 'ops-calendar-plus',
+            'version' => '1.0.0',
+            'install_status' => 'installed',
+            'health_status' => 'healthy',
+            'source_label' => 'Partnerpaket',
+            'description' => 'Visar jour, beredskap och nästa växelöverlämning.',
+            'admin_route' => '/portal/admin/overview',
+            'verified_at' => '2026-04-21 10:45',
+            'notes' => 'Redo för bredare utrullning.',
+            'dependencies' => "Schema-api\nSSO\nKvittenswebhook",
+            'environment_variables' => "OPS_CALENDAR_URL\nOPS_CALENDAR_TOKEN",
+            'setup_checklist' => "Verifiera import\nSlå på synk",
+            'impact_areas' => "Jourschema\n/portal/admin/overview\nÖverlämningar",
+            'is_enabled' => '1',
+        ]);
+
+        self::assertResponseRedirects('/portal/admin/addons');
+        $this->client->followRedirect();
+
+        $this->entityManager->clear();
+        $updatedAddon = $this->entityManager->getRepository(AddonModule::class)->find($addon->getId());
+        self::assertNotNull($updatedAddon);
+        self::assertSame('ops-calendar', $updatedAddon->getSlug());
+        self::assertSame('Ops Calendar', $updatedAddon->getName());
+        self::assertSame('0.9.0', $updatedAddon->getVersion());
+        self::assertSame('planned', $updatedAddon->getInstallStatus());
+        self::assertSame('unknown', $updatedAddon->getHealthStatus());
+        self::assertSame('Internt paket', $updatedAddon->getSourceLabel());
+        self::assertFalse($updatedAddon->isEnabled());
+
+        $html = (string) $this->client->getCrawler()->html();
+        self::assertStringContainsString('Addon "Ops Calendar" kan inte ändras i adminen.', $html);
+        self::assertStringNotContainsString('Spara metadata', $html);
+        self::assertStringContainsString('Planerad', $html);
+        self::assertStringContainsString('Ej verifierad', $html);
+    }
+
+    public function testAdminCanUploadAddonZipPackageAndRegisterItAutomatically(): void
+    {
+        $admin = $this->createAdminUser();
+        $this->client->loginUser($admin);
+
+        $crawler = $this->client->request('GET', '/portal/admin/addons');
+        self::assertResponseIsSuccessful();
+
+        $form = $crawler->filter('form[action="/portal/admin/addons/upload-package"]')->form();
+        $zipPath = $this->createValidAddonPackageZip();
+        $form['addon_package'] = new UploadedFile($zipPath, 'status-board.zip', 'application/zip', null, true);
+        $this->client->submit($form);
+
+        self::assertResponseRedirects('/portal/admin/addons');
+        $this->client->followRedirect();
+
+        $this->entityManager->clear();
+        $addon = $this->entityManager->getRepository(AddonModule::class)->findOneBy(['slug' => 'status-board']);
+        self::assertNotNull($addon);
+        self::assertSame('Status Board', $addon->getName());
+        self::assertSame('1.4.0', $addon->getVersion());
+        self::assertSame('Zip-import', $addon->getSourceLabel());
+        self::assertSame('configuring', $addon->getInstallStatus());
+        self::assertSame(['STATUS_BOARD_API_KEY'], $addon->getEnvironmentVariablesList());
+        self::assertSame(['Publik status', 'Adminöversikt'], $addon->getImpactAreasList());
+
+        $html = (string) $this->client->getCrawler()->html();
+        self::assertStringContainsString('Addon-paketet "Status Board" (1.4.0) laddades upp och registrerades automatiskt.', $html);
+        self::assertStringContainsString('Ladda upp addon som zip', $html);
+        self::assertStringContainsString('Importerade addon-paket', $html);
+        self::assertStringContainsString('Aktivt paket:', $html);
+        self::assertStringContainsString('Aktivt paket 1.4.0', $html);
+        self::assertStringContainsString('Paketversioner', $html);
+    }
+
+    public function testAdminCanRollbackAddonPackageToEarlierVersion(): void
+    {
+        $admin = $this->createAdminUser();
+        $this->client->loginUser($admin);
+
+        $crawler = $this->client->request('GET', '/portal/admin/addons');
+        self::assertResponseIsSuccessful();
+
+        $uploadForm = $crawler->filter('form[action="/portal/admin/addons/upload-package"]')->form();
+        $uploadForm['addon_package'] = new UploadedFile($this->createValidAddonPackageZip('1.4.0'), 'status-board-1.4.0.zip', 'application/zip', null, true);
+        $this->client->submit($uploadForm);
+        self::assertResponseRedirects('/portal/admin/addons');
+        $this->client->followRedirect();
+
+        $crawler = $this->client->request('GET', '/portal/admin/addons');
+        self::assertResponseIsSuccessful();
+
+        $uploadForm = $crawler->filter('form[action="/portal/admin/addons/upload-package"]')->form();
+        $uploadForm['addon_package'] = new UploadedFile($this->createValidAddonPackageZip('1.5.0'), 'status-board-1.5.0.zip', 'application/zip', null, true);
+        $this->client->submit($uploadForm);
+        self::assertResponseRedirects('/portal/admin/addons');
+        $this->client->followRedirect();
+
+        $this->entityManager->clear();
+        $addon = $this->entityManager->getRepository(AddonModule::class)->findOneBy(['slug' => 'status-board']);
+        self::assertNotNull($addon);
+
+        $crawler = $this->client->request('GET', '/portal/admin/addons');
+        self::assertResponseIsSuccessful();
+        $rollbackForm = $crawler->filter(sprintf('form[action="/portal/admin/addons/%d/packages/activate"] input[value="1.4.0"]', $addon->getId()))->ancestors()->filter('form')->form();
+        $this->client->submit($rollbackForm);
+
+        self::assertResponseRedirects('/portal/admin/addons');
+        $this->client->followRedirect();
+
+        $this->entityManager->clear();
+        $addon = $this->entityManager->getRepository(AddonModule::class)->findOneBy(['slug' => 'status-board']);
+        self::assertNotNull($addon);
+        self::assertSame('1.4.0', $addon->getVersion());
+
+        $html = (string) $this->client->getCrawler()->html();
+        self::assertStringContainsString('Addon "Status Board" använder nu paketversion 1.4.0 som aktiv version.', $html);
+        self::assertStringContainsString('Aktiv version', $html);
+        self::assertStringContainsString('Tidigare version', $html);
+        self::assertStringContainsString('Aktivera denna version', $html);
+    }
+
+    public function testNonOwnerAdminCannotReleaseAddon(): void
+    {
+        $admin = $this->createAdminUser();
+        $addon = (new AddonModule('release-candidate', 'Release Candidate', 'Redo för release men skyddad.'))
+            ->setInstallStatus('installed')
+            ->setHealthStatus('healthy')
+            ->setVerifiedAt(new \DateTimeImmutable('2026-04-21 11:00'))
+            ->setSetupChecklist("Verifiera API\nVerifiera UI");
+
+        $this->entityManager->persist($addon);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/addons');
+        self::assertResponseIsSuccessful();
+
+        $releaseForm = $crawler->filter(sprintf('form[action="/portal/admin/addons/%d/release"]', $addon->getId()));
+        self::assertSame(0, $releaseForm->count());
+
+        $this->client->request('POST', sprintf('/portal/admin/addons/%d/release', $addon->getId()), [
+            '_token' => 'not-needed-for-non-owner',
+        ]);
+
+        self::assertResponseRedirects('/portal/admin/addons');
+        $this->client->followRedirect();
+
+        $this->entityManager->clear();
+        $addon = $this->entityManager->getRepository(AddonModule::class)->find($addon->getId());
+        self::assertNotNull($addon);
+        self::assertFalse($addon->isReleased());
+
+        $html = (string) $this->client->getCrawler()->html();
+        self::assertStringContainsString('Bara ägarkontot för addon-release får släppa addons till ärendesystemet.', $html);
+    }
+
+    public function testConfiguredOwnerCanReleaseAddon(): void
+    {
+        $owner = $this->createReleaseOwnerUser();
+        $addon = (new AddonModule('owner-release', 'Owner Release', 'Ska kunna släppas av owner.'))
+            ->setInstallStatus('installed')
+            ->setHealthStatus('healthy')
+            ->setVerifiedAt(new \DateTimeImmutable('2026-04-21 11:15'))
+            ->setSetupChecklist("Verifiera auth\nVerifiera notifiering");
+
+        $this->entityManager->persist($addon);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($owner);
+        $crawler = $this->client->request('GET', '/portal/admin/addons');
+        self::assertResponseIsSuccessful();
+
+        $releaseForm = $crawler->filter(sprintf('form[action="/portal/admin/addons/%d/release"]', $addon->getId()));
+        self::assertGreaterThan(0, $releaseForm->count());
+        $this->client->submit($releaseForm->form([
+            'release_notes' => 'Första godkända versionen för skarp användning i ärendesystemet.',
+        ]));
+
+        self::assertResponseRedirects('/portal/admin/addons');
+        $this->client->followRedirect();
+
+        $this->entityManager->clear();
+        $addon = $this->entityManager->getRepository(AddonModule::class)->find($addon->getId());
+        self::assertNotNull($addon);
+        self::assertTrue($addon->isReleased());
+        self::assertSame('owner-addon@example.test', $addon->getReleasedByEmail());
+        self::assertTrue($addon->isEnabled());
+        self::assertNotNull($addon->getReleasedAt());
+        $releaseLogs = $this->entityManager->getRepository(AddonReleaseLog::class)->findBy(['addon' => $addon], ['releasedAt' => 'DESC']);
+        self::assertCount(1, $releaseLogs);
+        self::assertSame('owner-addon@example.test', $releaseLogs[0]->getReleasedByEmail());
+        self::assertStringContainsString('status installed', $releaseLogs[0]->getSummary());
+        self::assertStringContainsString('health healthy', $releaseLogs[0]->getSummary());
+        self::assertSame('Första godkända versionen för skarp användning i ärendesystemet.', $releaseLogs[0]->getReleaseNotes());
+        $releasedAtLabel = $releaseLogs[0]->getReleasedAt()->format('Y-m-d H:i');
+
+        $html = (string) $this->client->getCrawler()->html();
+        self::assertStringContainsString('Registrerade addons', $html);
+        self::assertStringContainsString('Släppta addons', $html);
+        self::assertStringContainsString('Blockerade addons', $html);
+        self::assertStringContainsString('Senaste släpp', $html);
+        self::assertStringContainsString($releasedAtLabel, $html);
+        self::assertStringContainsString('släpptes till ärendesystemet av owner-addon@example.test', $html);
+        self::assertStringContainsString('Släppt till ärendesystemet', $html);
+        self::assertStringContainsString('Releasehistorik', $html);
+        self::assertStringContainsString('Ingen rollback registrerad ännu.', $html);
+        self::assertStringContainsString('owner-addon@example.test', $html);
+        self::assertStringContainsString('Första godkända versionen för skarp användning i ärendesystemet.', $html);
+    }
+
+    public function testOwnerMustWriteReleaseNotesBeforeRelease(): void
+    {
+        $owner = $this->createReleaseOwnerUser();
+        $addon = (new AddonModule('owner-release-notes', 'Owner Release Notes', 'Ska kräva release notes.'))
+            ->setInstallStatus('installed')
+            ->setHealthStatus('healthy')
+            ->setVerifiedAt(new \DateTimeImmutable('2026-04-21 11:20'))
+            ->setSetupChecklist("Verifiera steg ett\nVerifiera steg två");
+
+        $this->entityManager->persist($addon);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($owner);
+        $crawler = $this->client->request('GET', '/portal/admin/addons');
+        self::assertResponseIsSuccessful();
+
+        $releaseForm = $crawler->filter(sprintf('form[action="/portal/admin/addons/%d/release"]', $addon->getId()));
+        self::assertGreaterThan(0, $releaseForm->count());
+        $this->client->submit($releaseForm->form([
+            'release_notes' => '',
+        ]));
+
+        self::assertResponseRedirects('/portal/admin/addons');
+        $this->client->followRedirect();
+
+        $this->entityManager->clear();
+        $addon = $this->entityManager->getRepository(AddonModule::class)->find($addon->getId());
+        self::assertNotNull($addon);
+        self::assertFalse($addon->isReleased());
+
+        $releaseLogs = $this->entityManager->getRepository(AddonReleaseLog::class)->findBy(['addon' => $addon]);
+        self::assertCount(0, $releaseLogs);
+
+        $html = (string) $this->client->getCrawler()->html();
+        self::assertStringContainsString('Skriv release notes innan addonet släpps.', $html);
+    }
+
+    public function testOwnerCanRevokeLatestAddonRelease(): void
+    {
+        $owner = $this->createReleaseOwnerUser();
+        $addon = (new AddonModule('owner-release-revoke', 'Owner Release Revoke', 'Ska kunna rollbackas.'))
+            ->setInstallStatus('installed')
+            ->setHealthStatus('healthy')
+            ->setVerifiedAt(new \DateTimeImmutable('2026-04-21 11:30'))
+            ->setSetupChecklist("Verifiera release ett\nVerifiera release två");
+
+        $this->entityManager->persist($addon);
+        $this->entityManager->flush();
+
+        $releaseLog = new AddonReleaseLog(
+            $addon,
+            'owner-addon@example.test',
+            '1.0.0',
+            'status installed · health healthy',
+            'Versionen orsakade fel i produktion.',
+        );
+        $addon
+            ->setReleasedAt($releaseLog->getReleasedAt())
+            ->setReleasedByEmail('owner-addon@example.test')
+            ->setEnabled(true);
+        $this->entityManager->persist($releaseLog);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($owner);
+        $crawler = $this->client->request('GET', '/portal/admin/addons');
+        self::assertResponseIsSuccessful();
+
+        $revokeForm = $crawler->filter(sprintf('form[action="/portal/admin/addons/release-logs/%d/revoke"]', $releaseLog->getId()));
+        self::assertGreaterThan(0, $revokeForm->count());
+        $this->client->submit($revokeForm->form([
+            'revoke_notes' => 'Rollback efter verifierade produktionsfel i notifieringskedjan.',
+        ]));
+
+        self::assertResponseRedirects('/portal/admin/addons');
+        $this->client->followRedirect();
+
+        $this->entityManager->clear();
+        $addon = $this->entityManager->getRepository(AddonModule::class)->find($addon->getId());
+        self::assertNotNull($addon);
+        self::assertFalse($addon->isReleased());
+        self::assertFalse($addon->isEnabled());
+        self::assertSame('blocked', $addon->getInstallStatus());
+
+        $releaseLog = $this->entityManager->getRepository(AddonReleaseLog::class)->find($releaseLog->getId());
+        self::assertNotNull($releaseLog);
+        self::assertTrue($releaseLog->isRevoked());
+        self::assertSame('owner-addon@example.test', $releaseLog->getRevokedByEmail());
+        self::assertSame('Rollback efter verifierade produktionsfel i notifieringskedjan.', $releaseLog->getRevokeNotes());
+        $releasedAtLabel = $releaseLog->getReleasedAt()->format('Y-m-d H:i');
+        $revokedAtLabel = $releaseLog->getRevokedAt()?->format('Y-m-d H:i');
+
+        $html = (string) $this->client->getCrawler()->html();
+        self::assertStringContainsString('Registrerade addons', $html);
+        self::assertStringContainsString('Släppta addons', $html);
+        self::assertStringContainsString('Blockerade addons', $html);
+        self::assertStringContainsString('Senaste släpp', $html);
+        self::assertStringContainsString($releasedAtLabel, $html);
+        self::assertStringContainsString('drogs tillbaka och addonet markerades som blockerat', $html);
+        self::assertStringContainsString('Indragen', $html);
+        self::assertStringContainsString('Rollback-notering:', $html);
+        self::assertNotNull($revokedAtLabel);
+        self::assertStringContainsString('Senaste rollback:', $html);
+        self::assertStringContainsString($revokedAtLabel, $html);
+        self::assertStringContainsString('Owner Release Revoke', $html);
+    }
+
+    public function testAddonAdminShowsMigrationWarningWhenAddonSchemaIsOutdated(): void
+    {
+        $admin = $this->createAdminUser();
+        $connection = $this->entityManager->getConnection();
+
+        $connection->executeStatement('DROP TABLE IF EXISTS addon_release_logs');
+        $connection->executeStatement('DROP TABLE IF EXISTS addon_modules');
+        $connection->executeStatement('CREATE TABLE addon_modules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            slug VARCHAR(120) NOT NULL,
+            name VARCHAR(180) NOT NULL,
+            description CLOB NOT NULL,
+            version VARCHAR(64) DEFAULT NULL,
+            admin_route VARCHAR(255) DEFAULT NULL,
+            source_label VARCHAR(120) DEFAULT NULL,
+            notes CLOB DEFAULT NULL,
+            is_enabled BOOLEAN DEFAULT 0 NOT NULL,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )');
+
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/portal/admin/addons');
+
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $this->client->getCrawler()->html();
+        self::assertStringContainsString('Addon-databasen behöver migreras', $html);
+        self::assertStringContainsString('install_status', $html);
+        self::assertStringContainsString('Kör migreringar nu', $html);
+        self::assertStringNotContainsString('Registrera nytt addon', $html);
+    }
+
+    public function testAdminOverviewHandlesOutdatedNewsSchemaGracefully(): void
+    {
+        $admin = $this->createAdminUser();
+        $connection = $this->entityManager->getConnection();
+
+        $connection->executeStatement('DROP TABLE IF EXISTS news_articles');
+        $connection->executeStatement('CREATE TABLE news_articles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            title VARCHAR(180) NOT NULL,
+            summary CLOB NOT NULL,
+            body CLOB NOT NULL,
+            image_url VARCHAR(2048) DEFAULT NULL,
+            maintenance_starts_at DATETIME DEFAULT NULL,
+            maintenance_ends_at DATETIME DEFAULT NULL,
+            is_published BOOLEAN NOT NULL,
+            published_at DATETIME NOT NULL,
+            is_pinned BOOLEAN NOT NULL,
+            category VARCHAR(255) NOT NULL,
+            author_id INTEGER DEFAULT NULL,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )');
+
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/portal/admin');
+
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $this->client->getCrawler()->html();
+        self::assertStringContainsString('Nyheter', $html);
+        self::assertStringContainsString('Inga nyheter publicerade ännu', $html);
+    }
+
+    public function testAdminNewsShowsMigrationWarningWhenNewsSchemaIsOutdated(): void
+    {
+        $admin = $this->createAdminUser();
+        $connection = $this->entityManager->getConnection();
+
+        $connection->executeStatement('DROP TABLE IF EXISTS news_articles');
+        $connection->executeStatement('CREATE TABLE news_articles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            title VARCHAR(180) NOT NULL,
+            summary CLOB NOT NULL,
+            body CLOB NOT NULL,
+            image_url VARCHAR(2048) DEFAULT NULL,
+            maintenance_starts_at DATETIME DEFAULT NULL,
+            maintenance_ends_at DATETIME DEFAULT NULL,
+            is_published BOOLEAN NOT NULL,
+            published_at DATETIME NOT NULL,
+            is_pinned BOOLEAN NOT NULL,
+            category VARCHAR(255) NOT NULL,
+            author_id INTEGER DEFAULT NULL,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )');
+
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/portal/admin/nyheter');
+
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $this->client->getCrawler()->html();
+        self::assertStringContainsString('Nyhetsdatabasen behöver migreras', $html);
+        self::assertStringContainsString('archived_at', $html);
+    }
+
+    public function testAddonSectionShowsNewsEditorPlusStatusCard(): void
+    {
+        $admin = $this->createAdminUser();
+        $addon = (new AddonModule('news-editor-plus', 'News Editor Plus', 'Utökad editor för nyhetsmodulen.'))
+            ->setVersion('1.0.0')
+            ->setInstallStatus('installed')
+            ->setHealthStatus('healthy')
+            ->setAdminRoute('/portal/admin/nyheter')
+            ->setImpactAreas("Nyhetsmodul\n/portal/admin/nyheter\n/portal/technician/nyheter\nPublik artikelrendering")
+            ->setEnabled(true);
+
+        $this->entityManager->persist($addon);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/addons');
+
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $crawler->html();
+        self::assertStringContainsString('Påverkade ytor', $html);
+        self::assertStringContainsString('Addonet är aktivt och påverkar följande moduler, vyer eller funktioner.', $html);
+        self::assertStringContainsString('/portal/admin/nyheter', $html);
+        self::assertStringContainsString('/portal/technician/nyheter', $html);
+        self::assertStringContainsString('Publik artikelrendering', $html);
+        self::assertSame(0, $crawler->filter(sprintf('form[action="/portal/admin/addons/%d"]', $addon->getId()))->count());
+        self::assertStringContainsString('Inaktivera addon', $html);
+
+        $toggleForm = $crawler->filter(sprintf('form[action="/portal/admin/addons/%d/toggle-enabled"]', $addon->getId()));
+        self::assertSame(1, $toggleForm->count());
+        $this->client->submit($toggleForm->form([
+            'enable' => '0',
+        ]));
+
+        self::assertResponseRedirects('/portal/admin/addons');
+        $this->client->followRedirect();
+
+        $this->entityManager->clear();
+        $addon = $this->entityManager->getRepository(AddonModule::class)->findOneBy(['slug' => 'news-editor-plus']);
+        self::assertInstanceOf(AddonModule::class, $addon);
+        self::assertFalse($addon->isEnabled());
+
+        $html = (string) $this->client->getCrawler()->html();
+        self::assertStringContainsString('Addon "News Editor Plus" inaktiverades i portalen.', $html);
+        self::assertStringContainsString('Addonet är avstängt, men de här ytorna påverkas när det aktiveras igen.', $html);
+        self::assertStringContainsString('/portal/technician/nyheter', $html);
+        self::assertStringContainsString('Aktivera addon', $html);
+    }
+
+    public function testAdminCanQueueDatabaseMigrationsFromAddonWarning(): void
+    {
+        $admin = $this->createAdminUser();
+        $connection = $this->entityManager->getConnection();
+
+        $connection->executeStatement('DROP TABLE IF EXISTS addon_release_logs');
+        $connection->executeStatement('DROP TABLE IF EXISTS addon_modules');
+        $connection->executeStatement('CREATE TABLE addon_modules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            slug VARCHAR(120) NOT NULL,
+            name VARCHAR(180) NOT NULL,
+            description CLOB NOT NULL,
+            version VARCHAR(64) DEFAULT NULL,
+            admin_route VARCHAR(255) DEFAULT NULL,
+            source_label VARCHAR(120) DEFAULT NULL,
+            notes CLOB DEFAULT NULL,
+            is_enabled BOOLEAN DEFAULT 0 NOT NULL,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )');
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/addons');
+        self::assertResponseIsSuccessful();
+
+        $this->client->submit(
+            $crawler->filter('form[action="/portal/admin/database/migrations/run"]')->form(),
+        );
+
+        self::assertResponseRedirects('/portal/admin/addons');
+        $this->client->followRedirect();
+
+        $html = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('Databasmigreringen köades som körning', $html);
+
+        $runFiles = glob(dirname(__DIR__, 2).'/var/code_update_runs/*.json') ?: [];
+        self::assertCount(1, $runFiles);
+
+        $run = json_decode((string) file_get_contents($runFiles[0]), true, 512, \JSON_THROW_ON_ERROR);
+        self::assertSame(['doctrine_migrate', 'cache_clear'], $run['selectedTasks']);
+    }
+
     public function testAdminCanFilterNewsEntriesByDate(): void
     {
         $admin = $this->createAdminUser();
@@ -1901,6 +2558,60 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertStringNotContainsString('Publikt tips', $customerHtml);
     }
 
+    public function testAdminCanAddLocaleAndSaveTranslationsFromAdmin(): void
+    {
+        $admin = $this->createAdminUser();
+        $this->client->loginUser($admin);
+
+        $crawler = $this->client->request('GET', '/portal/admin/languages?translations_locale=de&translations_per_page=100');
+        self::assertResponseIsSuccessful();
+
+        $localeForm = $crawler->selectButton('Spara språklista')->form();
+        $localeForm['locale_codes[0]'] = 'sv';
+        $localeForm['locale_codes[1]'] = 'en';
+        $localeForm['locale_codes[2]'] = 'de';
+        $localeForm['locale_names[0]'] = 'Svenska';
+        $localeForm['locale_names[1]'] = 'English';
+        $localeForm['locale_names[2]'] = 'Deutsch';
+        $localeForm['selected_translation_locale'] = 'de';
+        $this->client->submit($localeForm);
+
+        self::assertResponseStatusCodeSame(302);
+        self::assertStringStartsWith(
+            '/portal/admin/languages?translations_locale=de',
+            (string) $this->client->getResponse()->headers->get('Location'),
+        );
+        $this->client->followRedirect();
+
+        $crawler = $this->client->request('GET', '/portal/admin/languages?translations_locale=de&translations_per_page=100');
+        self::assertResponseIsSuccessful();
+
+        $form = $crawler->selectButton('Spara översättningar')->form();
+        $form['translations[ui.language]'] = 'Sprache';
+        $form['translations[nav.home]'] = 'Startseite';
+        $form['translations[nav.login]'] = 'Anmelden';
+        $this->client->submit($form);
+
+        self::assertResponseStatusCodeSame(302);
+        self::assertStringStartsWith(
+            '/portal/admin/languages?translations_locale=de',
+            (string) $this->client->getResponse()->headers->get('Location'),
+        );
+        $this->client->followRedirect();
+
+        $this->client->request('GET', '/sprak/de?returnTo=%2F');
+        self::assertResponseRedirects('/');
+        $crawler = $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+
+        $html = $crawler->html();
+        self::assertIsString($html);
+        self::assertStringContainsString('Sprache', $html);
+        self::assertStringContainsString('Anmelden', $html);
+        self::assertStringContainsString('Deutsch', $html);
+
+    }
+
     private function createAdminUser(): User
     {
         $admin = new User('admin@test.local', 'Ada', 'Admin', UserType::SUPER_ADMIN);
@@ -1915,6 +2626,34 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertNotNull($admin);
 
         return $admin;
+    }
+
+    private function createReleaseOwnerUser(): User
+    {
+        $admin = new User('owner-addon@example.test', 'Olivia', 'Owner', UserType::SUPER_ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'AdminPassword123'));
+        $admin->enableMfa();
+
+        $this->entityManager->persist($admin);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+
+        $admin = $this->entityManager->getRepository(User::class)->findOneBy(['email' => 'owner-addon@example.test']);
+        self::assertNotNull($admin);
+
+        return $admin;
+    }
+
+    private function createTinyPng(): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'branding-logo-');
+        self::assertNotFalse($path);
+        file_put_contents(
+            $path,
+            base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+X2uoAAAAASUVORK5CYII=', true),
+        );
+
+        return $path;
     }
 
     private function setEntityCreatedAt(object $entity, \DateTimeImmutable $createdAt): void
@@ -1995,6 +2734,58 @@ final class AdminIdentityFlowTest extends WebTestCase
             }
 
             $relativePath = substr($file->getPathname(), \strlen($root.'/package/') );
+            $zip->addFile($file->getPathname(), 'package/'.$relativePath);
+        }
+
+        $zip->close();
+        $this->removeDirectory($root);
+
+        return $zipPath;
+    }
+
+    private function createValidAddonPackageZip(string $version = '1.4.0'): string
+    {
+        $root = sys_get_temp_dir().'/driftpunkt-addon-upload-'.bin2hex(random_bytes(4));
+        mkdir($root.'/package/files/src/Module/StatusBoard/Controller', 0777, true);
+        mkdir($root.'/package/files/templates/status_board', 0777, true);
+
+        file_put_contents($root.'/package/addon.json', json_encode([
+            'slug' => 'status-board',
+            'name' => 'Status Board',
+            'description' => 'Visar statuskort och driftinformation.',
+            'version' => $version,
+            'files' => 'files',
+            'install_status' => 'configuring',
+            'health_status' => 'unknown',
+            'environment_variables' => ['STATUS_BOARD_API_KEY'],
+            'impact_areas' => ['Publik status', 'Adminöversikt'],
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+        file_put_contents($root.'/package/files/src/Module/StatusBoard/Controller/StatusBoardController.php', "<?php\n");
+        file_put_contents($root.'/package/files/templates/status_board/index.html.twig', "<section>Status board</section>\n");
+
+        $zipPath = tempnam(sys_get_temp_dir(), 'driftpunkt-addon-upload-');
+        if (false === $zipPath) {
+            throw new \RuntimeException('Kunde inte skapa temporär addon-zip för testet.');
+        }
+        @unlink($zipPath);
+        $zipPath .= '.zip';
+
+        $zip = new \ZipArchive();
+        $result = $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+        if (true !== $result) {
+            throw new \RuntimeException('Kunde inte öppna addon-zip för testet.');
+        }
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($root.'/package', \FilesystemIterator::SKIP_DOTS),
+        );
+
+        foreach ($iterator as $file) {
+            if (!$file->isFile()) {
+                continue;
+            }
+
+            $relativePath = substr($file->getPathname(), \strlen($root.'/package/'));
             $zip->addFile($file->getPathname(), 'package/'.$relativePath);
         }
 

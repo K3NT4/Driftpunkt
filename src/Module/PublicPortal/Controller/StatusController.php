@@ -7,6 +7,7 @@ namespace App\Module\PublicPortal\Controller;
 use App\Module\Maintenance\Service\MaintenanceMode;
 use App\Module\News\Entity\NewsArticle;
 use App\Module\News\Enum\NewsCategory;
+use App\Module\News\Service\NewsArticleSchemaInspector;
 use App\Module\PublicPortal\Service\PublicSiteSearch;
 use App\Module\System\Service\SystemSettings;
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,6 +20,7 @@ final class StatusController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly MaintenanceMode $maintenanceMode,
+        private readonly NewsArticleSchemaInspector $newsArticleSchemaInspector,
         private readonly PublicSiteSearch $publicSiteSearch,
         private readonly SystemSettings $systemSettings,
     ) {
@@ -31,19 +33,35 @@ final class StatusController extends AbstractController
         $maintenanceState = $this->maintenanceMode->getState($now);
         $statusPageSettings = $this->systemSettings->getStatusPageSettings();
         /** @var list<NewsArticle> $maintenanceArticles */
-        $maintenanceArticles = $this->entityManager->getRepository(NewsArticle::class)->createQueryBuilder('article')
-            ->andWhere('article.isPublished = :published')
-            ->andWhere('article.publishedAt <= :now')
-            ->andWhere('article.category = :category')
-            ->setParameter('published', true)
-            ->setParameter('now', $now)
-            ->setParameter('category', NewsCategory::PLANNED_MAINTENANCE)
-            ->orderBy('article.isPinned', 'DESC')
-            ->addOrderBy('article.publishedAt', 'DESC')
-            ->addOrderBy('article.updatedAt', 'DESC')
-            ->setMaxResults(6)
-            ->getQuery()
-            ->getResult();
+        $maintenanceArticles = $this->newsArticleSchemaInspector->isReady()
+            ? $this->entityManager->getRepository(NewsArticle::class)->createQueryBuilder('article')
+                ->andWhere('article.isPublished = :published')
+                ->andWhere('article.publishedAt <= :now')
+                ->andWhere('article.category = :category')
+                ->setParameter('published', true)
+                ->setParameter('now', $now)
+                ->setParameter('category', NewsCategory::PLANNED_MAINTENANCE)
+                ->orderBy('article.isPinned', 'DESC')
+                ->addOrderBy('article.publishedAt', 'DESC')
+                ->addOrderBy('article.updatedAt', 'DESC')
+                ->setMaxResults(6)
+                ->getQuery()
+                ->getResult()
+            : [];
+
+        /** @var list<NewsArticle> $recentNews */
+        $recentNews = $this->newsArticleSchemaInspector->isReady()
+            ? $this->entityManager->getRepository(NewsArticle::class)->createQueryBuilder('article')
+                ->andWhere('article.isPublished = :published')
+                ->andWhere('article.publishedAt <= :now')
+                ->setParameter('published', true)
+                ->setParameter('now', $now)
+                ->orderBy('article.isPinned', 'DESC')
+                ->addOrderBy('article.publishedAt', 'DESC')
+                ->setMaxResults($statusPageSettings['recentUpdatesMaxItems'])
+                ->getQuery()
+                ->getResult()
+            : [];
 
         return $this->render('public/status.html.twig', [
             'maintenanceState' => $maintenanceState,
@@ -61,16 +79,7 @@ final class StatusController extends AbstractController
             'impactStatuses' => $this->buildImpactStatuses($statusPageSettings['impactItems'], $maintenanceState),
             'maintenanceArticles' => $maintenanceArticles,
             'maintenanceStatuses' => $this->buildMaintenanceStatuses($maintenanceArticles, $now),
-            'recentNews' => $this->entityManager->getRepository(NewsArticle::class)->createQueryBuilder('article')
-                ->andWhere('article.isPublished = :published')
-                ->andWhere('article.publishedAt <= :now')
-                ->setParameter('published', true)
-                ->setParameter('now', $now)
-                ->orderBy('article.isPinned', 'DESC')
-                ->addOrderBy('article.publishedAt', 'DESC')
-                ->setMaxResults($statusPageSettings['recentUpdatesMaxItems'])
-                ->getQuery()
-                ->getResult(),
+            'recentNews' => $recentNews,
             'systemStatuses' => $this->publicSiteSearch->getSystemStatuses(),
         ]);
     }

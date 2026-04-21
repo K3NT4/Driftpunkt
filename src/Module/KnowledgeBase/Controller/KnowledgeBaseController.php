@@ -21,12 +21,14 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class KnowledgeBaseController extends AbstractController
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly SystemSettings $systemSettings,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -42,8 +44,8 @@ final class KnowledgeBaseController extends AbstractController
 
         return $this->render('knowledge_base/index.html.twig', [
             'pageMode' => 'public',
-            'pageTitle' => 'Kunskapsbas',
-            'pageSubtitle' => 'Sök bland guider, smarta tips och vanliga frågor innan du loggar in.',
+            'pageTitle' => $this->translator->trans('knowledge.page_title.public'),
+            'pageSubtitle' => $this->translator->trans('knowledge.page_subtitle.public'),
             'searchQuery' => trim((string) $request->query->get('q')),
             'entries' => $this->findEntriesForAudience($request, true),
             'knowledgeBaseSettings' => $settings,
@@ -65,8 +67,8 @@ final class KnowledgeBaseController extends AbstractController
 
         return $this->render('knowledge_base/index.html.twig', [
             'pageMode' => 'customer',
-            'pageTitle' => 'Kunskapsbas för kunder',
-            'pageSubtitle' => 'Sök bland guider, vanliga frågor och tips för att hitta rätt snabbare.',
+            'pageTitle' => $this->translator->trans('knowledge.page_title.customer'),
+            'pageSubtitle' => $this->translator->trans('knowledge.page_subtitle.customer'),
             'searchQuery' => trim((string) $request->query->get('q')),
             'entries' => $this->findEntriesForAudience($request, false),
             'knowledgeBaseSettings' => $settings,

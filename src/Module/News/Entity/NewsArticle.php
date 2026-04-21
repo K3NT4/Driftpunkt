@@ -48,6 +48,9 @@ class NewsArticle
     #[ORM\Column]
     private bool $isPinned = false;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $archivedAt = null;
+
     #[ORM\Column(enumType: NewsCategory::class, options: ['default' => 'general'])]
     private NewsCategory $category = NewsCategory::GENERAL;
 
@@ -211,6 +214,31 @@ class NewsArticle
     public function setCategory(NewsCategory $category): self
     {
         $this->category = $category;
+
+        return $this;
+    }
+
+    public function getArchivedAt(): ?\DateTimeImmutable
+    {
+        return $this->archivedAt;
+    }
+
+    public function isArchived(): bool
+    {
+        return null !== $this->archivedAt;
+    }
+
+    public function archive(?\DateTimeImmutable $archivedAt = null): self
+    {
+        $this->archivedAt = $archivedAt ?? new \DateTimeImmutable();
+        $this->unpublish();
+
+        return $this;
+    }
+
+    public function unarchive(): self
+    {
+        $this->archivedAt = null;
 
         return $this;
     }

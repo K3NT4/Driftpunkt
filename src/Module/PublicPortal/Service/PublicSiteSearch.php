@@ -8,10 +8,12 @@ use App\Module\KnowledgeBase\Entity\KnowledgeBaseEntry;
 use App\Module\KnowledgeBase\Enum\KnowledgeBaseAudience;
 use App\Module\News\Entity\NewsArticle;
 use App\Module\News\Enum\NewsCategory;
+use App\Module\News\Service\NewsArticleSchemaInspector;
 use App\Module\System\Service\StatusMonitorService;
 use App\Module\System\Service\SystemSettings;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class PublicSiteSearch
 {
@@ -19,7 +21,9 @@ final class PublicSiteSearch
         private readonly EntityManagerInterface $entityManager,
         private readonly SystemSettings $systemSettings,
         private readonly StatusMonitorService $statusMonitorService,
+        private readonly NewsArticleSchemaInspector $newsArticleSchemaInspector,
         private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -54,6 +58,9 @@ final class PublicSiteSearch
         $knowledgeBaseSettings = $this->systemSettings->getKnowledgeBaseSettings();
         $customerLoginSettings = $this->systemSettings->getCustomerLoginSettings();
         $contactPageSettings = $this->systemSettings->getContactPageSettings();
+        $privacyPolicySettings = $this->systemSettings->getPrivacyPolicySettings();
+        $termsPageSettings = $this->systemSettings->getTermsPageSettings();
+        $cookiePolicySettings = $this->systemSettings->getCookiePolicySettings();
         $supportWidget = $this->filterHomeSupportWidget(
             $this->systemSettings->getHomeSupportWidgetSettings(),
             (bool) $knowledgeBaseSettings['publicEnabled'],
@@ -65,30 +72,30 @@ final class PublicSiteSearch
             $results,
             $needle,
             $terms,
-            'Sida',
-            'Startsida',
-            'Samlad överblick över driftstatus, senaste nytt, inloggning och publika genvägar.',
+            'page',
+            $this->translator->trans('nav.home'),
+            $this->translator->trans('search.index.home_summary'),
             $this->urlGenerator->generate('app_home'),
-            'startsida driftstatus support nyheter logga in kund admin tekniker',
+            $this->translator->trans('search.index.home_keywords'),
             48,
         );
         $this->addResultIfMatches(
             $results,
             $needle,
             $terms,
-            'Sida',
-            'Nyheter',
-            'Alla publicerade driftnyheter, underhållsfönster och uppdateringar.',
+            'page',
+            $this->translator->trans('nav.news'),
+            $this->translator->trans('search.index.news_summary'),
             $this->urlGenerator->generate('app_news_index'),
-            'nyheter blogg driftinformation underhåll status uppdateringar releaser',
+            $this->translator->trans('search.index.news_keywords'),
             52,
         );
         $this->addResultIfMatches(
             $results,
             $needle,
             $terms,
-            'Sida',
-            'Kontakta oss',
+            'page',
+            $this->translator->trans('nav.contact'),
             sprintf('%s %s', $contactPageSettings['title'], $contactPageSettings['subtitle']),
             $this->urlGenerator->generate('app_contact'),
             sprintf(
@@ -100,53 +107,98 @@ final class PublicSiteSearch
             ),
             54,
         );
+        $this->addResultIfMatches(
+            $results,
+            $needle,
+            $terms,
+            'page',
+            $privacyPolicySettings['title'],
+            $privacyPolicySettings['intro'],
+            $this->urlGenerator->generate('app_privacy_policy'),
+            sprintf(
+                'integritetspolicy gdpr dataskydd personuppgifter imy cookies lagringstid rattigheter %s %s',
+                $privacyPolicySettings['title'],
+                $privacyPolicySettings['contactEmail'],
+            ),
+            56,
+        );
+        $this->addResultIfMatches(
+            $results,
+            $needle,
+            $terms,
+            'page',
+            $termsPageSettings['title'],
+            $termsPageSettings['intro'],
+            $this->urlGenerator->generate('app_terms_page'),
+            sprintf(
+                'anvandarvillkor villkor avtal konto regler support %s %s',
+                $termsPageSettings['title'],
+                $termsPageSettings['contactEmail'],
+            ),
+            55,
+        );
+        $this->addResultIfMatches(
+            $results,
+            $needle,
+            $terms,
+            'page',
+            $cookiePolicySettings['title'],
+            $cookiePolicySettings['intro'],
+            $this->urlGenerator->generate('app_cookie_policy'),
+            sprintf(
+                'cookiepolicy cookies sessionscookie samtycke spårning webbläsare %s %s',
+                $cookiePolicySettings['title'],
+                $cookiePolicySettings['contactEmail'],
+            ),
+            55,
+        );
 
         if ($knowledgeBaseSettings['publicEnabled']) {
             $this->addResultIfMatches(
                 $results,
                 $needle,
                 $terms,
-                'Sida',
-                'Kunskapsbas',
-                'Publika guider, smarta tips och vanliga frågor.',
+                'page',
+                $this->translator->trans('search.filter.knowledge_base'),
+                $this->translator->trans('search.index.knowledge_base_summary'),
                 $this->urlGenerator->generate('app_knowledge_base_public'),
-                'kunskapsbas kunskapsbank guider smarta tips faq vanliga fragor',
+                $this->translator->trans('search.index.knowledge_base_keywords'),
                 58,
             );
         }
 
         $publicLinks = [
             [
-                'section' => 'Inloggning',
-                'title' => 'Tekniker Login',
-                'summary' => 'Logga in som tekniker och hantera supportärenden.',
+                'section' => 'sign_in',
+                'title' => $this->translator->trans('home.roles.technician.title'),
+                'summary' => $this->translator->trans('home.roles.technician.copy'),
                 'href' => $this->urlGenerator->generate('app_login', ['role' => 'technician']),
             ],
             [
-                'section' => 'Inloggning',
-                'title' => 'Admin Login',
-                'summary' => 'Logga in som admin och hantera systeminställningar.',
+                'section' => 'sign_in',
+                'title' => $this->translator->trans('home.roles.admin.title'),
+                'summary' => $this->translator->trans('home.roles.admin.copy'),
                 'href' => $this->urlGenerator->generate('app_login', ['role' => 'admin']),
             ],
             [
-                'section' => 'Inloggning',
-                'title' => 'Kund Login',
-                'summary' => 'Logga in som kund för att skapa och följa dina ärenden.',
+                'section' => 'sign_in',
+                'title' => $this->translator->trans('home.roles.customer.title'),
+                'summary' => $this->translator->trans('home.roles.customer.copy'),
                 'href' => $this->urlGenerator->generate('app_login', ['role' => 'customer']),
             ],
             [
-                'section' => 'Konto',
-                'title' => 'Glömt lösenord',
-                'summary' => 'Begär en länk för att återställa ditt lösenord.',
+                'section' => 'account',
+                'title' => $this->translator->trans('reset.request.page_title'),
+                'summary' => $this->translator->trans('search.index.reset_summary'),
                 'href' => $this->urlGenerator->generate('app_password_reset_request', ['role' => 'customer']),
             ],
         ];
 
         if ($customerLoginSettings['createAccountEnabled']) {
             $publicLinks[] = [
-                'section' => 'Konto',
-                'title' => 'Skapa konto',
-                'summary' => 'Registrera ett nytt kundkonto.',
+                'section' => 'account',
+                'title' => $this->translator->trans('register.page_title'),
+                'summary' => $this->translator->trans('search.index.register_summary'),
                 'href' => $this->urlGenerator->generate('app_register_customer'),
             ];
         }
@@ -161,7 +213,7 @@ final class PublicSiteSearch
                 $link['summary'],
                 $link['href'],
                 null,
-                'Skapa konto' === $link['title'] ? 42 : 44,
+                $this->translator->trans('register.page_title') === $link['title'] ? 42 : 44,
             );
         }
 
@@ -170,7 +222,7 @@ final class PublicSiteSearch
                 $results,
                 $needle,
                 $terms,
-                'Support',
+                'support',
                 $item['title'],
                 $supportWidget['intro'],
                 $item['url'],
@@ -183,7 +235,7 @@ final class PublicSiteSearch
             $results,
             $needle,
             $terms,
-            'Kontakt',
+            'contact',
             $contactPageSettings['quickHelpTitle'],
             $contactPageSettings['quickHelpIntro'],
             $this->urlGenerator->generate('app_contact'),
@@ -194,7 +246,7 @@ final class PublicSiteSearch
             $results,
             $needle,
             $terms,
-            'Kontakt',
+            'contact',
             $contactPageSettings['priorityTitle'],
             $contactPageSettings['priorityIntro'],
             $this->urlGenerator->generate('app_contact'),
@@ -205,9 +257,9 @@ final class PublicSiteSearch
             $results,
             $needle,
             $terms,
-            'Kontakt',
+            'contact',
             $contactPageSettings['whenTitle'],
-            'Råd för när du ska mejla, ringa eller använda portalen.',
+            $this->translator->trans('search.index.contact_when_summary'),
             $this->urlGenerator->generate('app_contact'),
             null,
             44,
@@ -218,7 +270,7 @@ final class PublicSiteSearch
                 $results,
                 $needle,
                 $terms,
-                'Systemstatus',
+                'system_status',
                 $system['name'],
                 trim(sprintf('%s %s', $system['status'], $system['stateLabel'] ?? '')),
                 $this->urlGenerator->generate('app_home').'#systemstatus',
@@ -228,21 +280,24 @@ final class PublicSiteSearch
         }
 
         /** @var list<NewsArticle> $newsArticles */
-        $newsQueryBuilder = $this->entityManager->getRepository(NewsArticle::class)->createQueryBuilder('article')
-            ->andWhere('article.isPublished = true')
-            ->andWhere('article.publishedAt <= :now')
-            ->setParameter('now', new \DateTimeImmutable())
-            ->orderBy('article.isPinned', 'DESC')
-            ->addOrderBy('article.publishedAt', 'DESC')
-            ->setMaxResults(16);
-        $this->applySearchConstraint(
-            $newsQueryBuilder,
-            ['article.title', 'article.summary', 'article.body'],
-            $terms,
-        );
-        $newsArticles = $newsQueryBuilder
-            ->getQuery()
-            ->getResult();
+        $newsArticles = [];
+        if ($this->newsArticleSchemaInspector->isReady()) {
+            $newsQueryBuilder = $this->entityManager->getRepository(NewsArticle::class)->createQueryBuilder('article')
+                ->andWhere('article.isPublished = true')
+                ->andWhere('article.publishedAt <= :now')
+                ->setParameter('now', new \DateTimeImmutable())
+                ->orderBy('article.isPinned', 'DESC')
+                ->addOrderBy('article.publishedAt', 'DESC')
+                ->setMaxResults(16);
+            $this->applySearchConstraint(
+                $newsQueryBuilder,
+                ['article.title', 'article.summary', 'article.body'],
+                $terms,
+            );
+            $newsArticles = $newsQueryBuilder
+                ->getQuery()
+                ->getResult();
+        }
 
         foreach ($newsArticles as $article) {
             $summary = $article->getSummary();
@@ -252,7 +307,7 @@ final class PublicSiteSearch
 
             $this->addResult(
                 $results,
-                'Nyhet',
+                'news',
                 $article->getTitle(),
                 $summary,
                 $this->urlGenerator->generate('app_news_show', ['id' => $article->getId()]),
@@ -287,9 +342,9 @@ final class PublicSiteSearch
 
             foreach ($knowledgeBaseEntries as $entry) {
                 $this->addResult(
-                    $results,
-                    'Kunskapsbas',
-                    $entry->getTitle(),
+                $results,
+                'knowledge_base',
+                $entry->getTitle(),
                     mb_strimwidth(trim(strip_tags($entry->getBody())), 0, 150, '...'),
                     $this->urlGenerator->generate('app_knowledge_base_public', ['q' => $entry->getTitle()]),
                     $this->scoreContentMatch(

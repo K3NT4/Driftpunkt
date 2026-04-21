@@ -1,7 +1,7 @@
 {% extends 'base.html.twig' %}
 {% set authMaintenanceNotice = maintenance_notice() %}
 
-{% block title %}Driftpunkt | {{ article.title }}{% endblock %}
+{% block title %}{{ site_branding.name }} | {{ article.title }}{% endblock %}
 {% block page_shell_class %}news-shell{% endblock %}
 {% block body_class %}news-landing{% endblock %}
 
@@ -407,6 +407,117 @@
             font-size: 0.95em;
         }
 
+        .article-body-content .article-callout {
+            margin: 1.2rem 0;
+            padding: 1rem 1.05rem;
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .article-body-content .article-callout strong {
+            display: block;
+            margin-bottom: 0.35rem;
+            color: #1d2a48;
+        }
+
+        .article-body-content .article-callout.info {
+            border-color: rgba(59, 130, 246, 0.25);
+            background: rgba(59, 130, 246, 0.08);
+        }
+
+        .article-body-content .article-callout.warning {
+            border-color: rgba(234, 88, 12, 0.28);
+            background: rgba(249, 115, 22, 0.1);
+        }
+
+        .article-body-content .article-callout.success {
+            border-color: rgba(16, 185, 129, 0.25);
+            background: rgba(16, 185, 129, 0.08);
+        }
+
+        .article-body-content .article-checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .article-body-content .article-checklist li {
+            display: flex;
+            gap: 0.7rem;
+            align-items: start;
+        }
+
+        .article-body-content .article-checklist-box {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.2rem;
+            height: 1.2rem;
+            margin-top: 0.15rem;
+            border-radius: 999px;
+            border: 1px solid rgba(120, 136, 173, 0.45);
+            background: rgba(255, 255, 255, 0.9);
+            color: #0f766e;
+            font-size: 0.8rem;
+            font-weight: 800;
+        }
+
+        .article-body-content .article-checklist li.is-done span:last-child {
+            color: #56657f;
+            text-decoration: line-through;
+        }
+
+        .article-body-content .article-media {
+            display: grid;
+            gap: 0.65rem;
+            margin: 1.2rem 0;
+        }
+
+        .article-body-content .article-media img {
+            display: block;
+            width: 100%;
+            max-height: 520px;
+            object-fit: cover;
+            border-radius: 22px;
+            border: 1px solid rgba(181, 190, 241, 0.38);
+            box-shadow: 0 18px 42px rgba(87, 101, 177, 0.14);
+        }
+
+        .article-body-content .article-media figcaption {
+            color: #60708d;
+            font-size: 0.96rem;
+            text-align: center;
+        }
+
+        .article-body-content .article-code {
+            margin: 1.2rem 0;
+            padding: 1rem 1.05rem;
+            overflow-x: auto;
+            border-radius: 18px;
+            background: #1f2937;
+            color: #f8fafc;
+        }
+
+        .article-body-content .article-code code {
+            display: block;
+            padding: 0;
+            background: transparent;
+            color: inherit;
+            white-space: pre;
+        }
+
+        .article-body-content .article-cta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.78rem 1.05rem;
+            border-radius: 999px;
+            background: #0f766e;
+            color: #fff;
+            text-decoration: none;
+            box-shadow: 0 14px 34px rgba(15, 118, 110, 0.18);
+        }
+
         .article-body-content hr {
             margin: 1.5rem 0;
             border: 0;
@@ -542,18 +653,18 @@
     <header class="news-topbar">
         <div class="news-topbar-inner">
             <a class="news-brand" href="{{ path('app_home') }}">
-                <img class="news-brand-logo" src="/assets/branding/driftpunkt-logo-full.png" alt="Driftpunkt">
+                <img class="news-brand-logo" src="{{ site_branding.logoPath }}" alt="{{ site_branding.name }}">
             </a>
-            <nav class="news-nav" aria-label="Huvudnavigering">
-                <a class="news-nav-link" href="{{ path('app_home') }}">Startsida</a>
-                <a class="news-nav-link" href="{{ path('app_news_index') }}">Nyheter</a>
-                <a class="news-nav-link" href="{{ path('app_status_page') }}">Driftstatus</a>
-                <a class="news-nav-link" href="{{ path('app_contact') }}">Kontakta oss</a>
+            <nav class="news-nav" aria-label="{{ t('news.nav.aria') }}">
+                <a class="news-nav-link" href="{{ path('app_home') }}">{{ t('nav.home') }}</a>
+                <a class="news-nav-link" href="{{ path('app_news_index') }}">{{ t('nav.news') }}</a>
+                <a class="news-nav-link" href="{{ path('app_status_page') }}">{{ t('nav.status') }}</a>
+                <a class="news-nav-link" href="{{ path('app_contact') }}">{{ t('nav.contact') }}</a>
                 <form class="news-top-search-form" method="get" action="{{ path('app_public_search') }}">
-                    <input class="news-top-search-input" type="search" name="q" value="{{ app.request.query.get('q') }}" placeholder="Sök på hela sajten">
-                    <button class="news-top-search-button" type="submit" aria-label="Sök">⌕</button>
+                    <input class="news-top-search-input" type="search" name="q" value="{{ app.request.query.get('q') }}" placeholder="{{ t('news.search_placeholder') }}">
+                    <button class="news-top-search-button" type="submit" aria-label="{{ t('news.search_aria') }}">⌕</button>
                 </form>
-                <a class="news-login-button" href="{{ app.user ? path('app_portal_entry') : path('app_login') }}">Logga in</a>
+                <a class="news-login-button" href="{{ app.user ? path('app_portal_entry') : path('app_login') }}">{{ t('nav.login') }}</a>
             </nav>
         </div>
     </header>
@@ -563,13 +674,13 @@
             {% if authMaintenanceNotice %}
                 <span>{{ authMaintenanceNotice.title }}</span>
                 <span class="status-sep">•</span>
-                <a href="{{ authMaintenanceNotice.href ?: path('app_status_page') }}" style="color: inherit; text-decoration: none;">{{ authMaintenanceNotice.linkLabel|default('Visa driftstatus') }}</a>
+                <a href="{{ authMaintenanceNotice.href ?: path('app_status_page') }}" style="color: inherit; text-decoration: none;">{{ authMaintenanceNotice.linkLabel|default(t('news.status.link')) }}</a>
             {% else %}
-                <span>Nyhetsdetalj med tydlig driftinformation</span>
+                <span>{{ t('news.article.status_default_primary') }}</span>
                 <span class="status-sep">•</span>
-                <span>Följ uppdateringar och relaterade nyheter vidare härifrån</span>
+                <span>{{ t('news.article.status_default_secondary') }}</span>
                 <span class="status-sep">•</span>
-                <a href="{{ path('app_contact') }}" style="color: inherit; text-decoration: none;">Kontakta support</a>
+                <a href="{{ path('app_contact') }}" style="color: inherit; text-decoration: none;">{{ t('news.status.contact_support') }}</a>
             {% endif %}
         </div>
     </div>
@@ -584,7 +695,7 @@
             <div class="article-layout">
                 <div>
                     {% if article.category.value == 'planned_maintenance' %}
-                        <div class="maintenance-banner"><span class="pulse"></span> Planerat underhåll</div>
+                        <div class="maintenance-banner"><span class="pulse"></span> {{ t('news.article.maintenance_banner') }}</div>
                     {% endif %}
                     <span class="article-tag {{ article.category.value }}">{{ article.category.label }}</span>
                     {% if articleMaintenanceStatus and articleMaintenanceStatus.status != 'standard' %}
@@ -595,7 +706,7 @@
                 </div>
                 <aside class="article-side">
                     <div class="article-side-card">
-                        <strong>Publicerad</strong>
+                        <strong>{{ t('news.article.published') }}</strong>
                         {% if article.category.value == 'planned_maintenance' %}
                             <div class="article-date-emphasis">
                                 <strong>{{ article.publishedAt|date('d') }}</strong>
@@ -608,15 +719,15 @@
                     </div>
                     {% if articleMaintenanceStatus and articleMaintenanceStatus.schedule %}
                         <div class="article-side-card">
-                            <strong>Underhållsfönster</strong>
+                            <strong>{{ t('news.article.maintenance_window') }}</strong>
                             <span>{{ articleMaintenanceStatus.schedule }}</span>
                         </div>
                     {% endif %}
                     <div class="article-side-card">
-                        <strong>Avsändare</strong>
-                        <span>{{ article.author ? article.author.displayName : 'Driftpunkt' }}</span>
+                        <strong>{{ t('news.article.sender') }}</strong>
+                        <span>{{ article.author ? article.author.displayName : t('news.article.sender_default') }}</span>
                     </div>
-                    <a class="button" href="{{ path('app_news_index', article.category.value == 'general' ? {} : {kategori: article.category.value}) }}">Fler i samma kategori</a>
+                    <a class="button" href="{{ path('app_news_index', article.category.value == 'general' ? {} : {kategori: article.category.value}) }}">{{ t('news.article.same_category') }}</a>
                 </aside>
             </div>
         </section>
@@ -628,8 +739,8 @@
         {% if relatedArticles is not empty %}
             <section class="article-related">
                 <div class="article-related-head">
-                    <h2>Fler nyheter</h2>
-                    <a href="{{ path('app_news_index') }}">Visa alla</a>
+                    <h2>{{ t('news.article.related') }}</h2>
+                    <a href="{{ path('app_news_index') }}">{{ t('news.article.show_all') }}</a>
                 </div>
                 <div class="article-related-grid">
                     {% for related in relatedArticles|slice(0, 3) %}
@@ -654,12 +765,16 @@
     <footer class="news-footer">
         <div class="news-footer-inner">
             <div class="news-footer-links">
-                <a href="{{ path('app_home') }}">Startsida</a>
-                <a href="{{ path('app_news_index') }}">Nyheter</a>
-                <a href="{{ path('app_status_page') }}">Driftstatus</a>
-                <a href="{{ path('app_contact') }}">Kontakta oss</a>
+                <a href="{{ path('app_home') }}">{{ t('nav.home') }}</a>
+                <a href="{{ path('app_news_index') }}">{{ t('nav.news') }}</a>
+                <a href="{{ path('app_status_page') }}">{{ t('nav.status') }}</a>
+                <a href="{{ path('app_contact') }}">{{ t('nav.contact') }}</a>
+                {% if site_branding.footerText %}
+                    <span>{{ site_branding.footerText }}</span>
+                {% endif %}
+                <span>{{ t('news.footer.version') }} {{ site_branding.appVersion }}</span>
             </div>
-            <span>© 2026 Driftpunkt</span>
+            <a href="{{ site_branding.githubUrl }}" target="_blank" rel="noopener noreferrer">{{ site_branding.copyrightLabel }}</a>
         </div>
     </footer>
 {% endblock %}

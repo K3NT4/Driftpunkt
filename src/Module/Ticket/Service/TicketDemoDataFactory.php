@@ -15,11 +15,13 @@ use App\Module\Ticket\Enum\TicketRequestType;
 use App\Module\Ticket\Enum\TicketStatus;
 use App\Module\Ticket\Enum\TicketVisibility;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpKernel\KernelInterface;
 
 final class TicketDemoDataFactory
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly KernelInterface $kernel,
     ) {
     }
 
@@ -28,9 +30,19 @@ final class TicketDemoDataFactory
      */
     public function ensureDemoTickets(): array
     {
-        $existing = $this->entityManager->getRepository(Ticket::class)->findBy([], ['createdAt' => 'DESC']);
-        if ([] !== $existing) {
-            return $existing;
+        if ('test' === $this->kernel->getEnvironment()) {
+            return [];
+        }
+
+        $connection = $this->entityManager->getConnection();
+        try {
+            $existingCount = (int) $connection->fetchOne('SELECT COUNT(*) FROM tickets');
+        } catch (\Throwable) {
+            return [];
+        }
+
+        if ($existingCount > 0) {
+            return [];
         }
 
         $users = $this->entityManager->getRepository(User::class)->findBy([], ['createdAt' => 'ASC']);
@@ -113,7 +125,7 @@ final class TicketDemoDataFactory
 
         $this->entityManager->flush();
 
-        return $this->entityManager->getRepository(Ticket::class)->findBy([], ['createdAt' => 'DESC']);
+        return $tickets;
     }
 
     /**

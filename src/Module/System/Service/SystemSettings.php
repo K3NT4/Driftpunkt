@@ -86,6 +86,32 @@ final class SystemSettings
     public const CONTACT_PAGE_WHEN_ITEMS = 'contact.when_items';
     public const CONTACT_PAGE_EXTRA_HELP_TITLE = 'contact.extra_help_title';
     public const CONTACT_PAGE_EXTRA_HELP_INTRO = 'contact.extra_help_intro';
+    public const I18N_AVAILABLE_LOCALES = 'i18n.available_locales';
+    public const I18N_TRANSLATION_OVERRIDES = 'i18n.translation_overrides';
+    public const SITE_BRAND_NAME = 'site.brand_name';
+    public const SITE_BRAND_LOGO_PATH = 'site.brand_logo_path';
+    public const SITE_FOOTER_TEXT = 'site.footer_text';
+    public const PRIVACY_POLICY_TITLE = 'privacy_policy.title';
+    public const PRIVACY_POLICY_INTRO = 'privacy_policy.intro';
+    public const PRIVACY_POLICY_BODY = 'privacy_policy.body';
+    public const PRIVACY_POLICY_EFFECTIVE_DATE = 'privacy_policy.effective_date';
+    public const PRIVACY_POLICY_CONTACT_EMAIL = 'privacy_policy.contact_email';
+    public const FEATURE_PRIVACY_POLICY_EXTERNAL_ENABLED = 'feature.privacy_policy_external_enabled';
+    public const PRIVACY_POLICY_EXTERNAL_URL = 'privacy_policy.external_url';
+    public const TERMS_PAGE_TITLE = 'terms_page.title';
+    public const TERMS_PAGE_INTRO = 'terms_page.intro';
+    public const TERMS_PAGE_BODY = 'terms_page.body';
+    public const TERMS_PAGE_EFFECTIVE_DATE = 'terms_page.effective_date';
+    public const TERMS_PAGE_CONTACT_EMAIL = 'terms_page.contact_email';
+    public const FEATURE_TERMS_PAGE_EXTERNAL_ENABLED = 'feature.terms_page_external_enabled';
+    public const TERMS_PAGE_EXTERNAL_URL = 'terms_page.external_url';
+    public const COOKIE_POLICY_TITLE = 'cookie_policy.title';
+    public const COOKIE_POLICY_INTRO = 'cookie_policy.intro';
+    public const COOKIE_POLICY_BODY = 'cookie_policy.body';
+    public const COOKIE_POLICY_EFFECTIVE_DATE = 'cookie_policy.effective_date';
+    public const COOKIE_POLICY_CONTACT_EMAIL = 'cookie_policy.contact_email';
+    public const FEATURE_COOKIE_POLICY_EXTERNAL_ENABLED = 'feature.cookie_policy_external_enabled';
+    public const COOKIE_POLICY_EXTERNAL_URL = 'cookie_policy.external_url';
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
@@ -169,6 +195,179 @@ final class SystemSettings
         }
 
         $this->entityManager->flush();
+    }
+
+    /**
+     * @return list<array{code: string, name: string}>
+     */
+    public function getTranslationLocales(): array
+    {
+        $defaultLocales = [
+            'sv' => 'Svenska',
+            'en' => 'English',
+        ];
+
+        $stored = json_decode($this->getString(self::I18N_AVAILABLE_LOCALES, ''), true);
+        if (!\is_array($stored)) {
+            $stored = [];
+        }
+
+        $locales = [];
+        foreach ($defaultLocales as $code => $name) {
+            $locales[$code] = $name;
+        }
+
+        foreach ($stored as $code => $name) {
+            $normalizedCode = \is_string($code) ? trim(mb_strtolower(str_replace('_', '-', $code))) : '';
+            $normalizedName = \is_string($name) ? trim($name) : '';
+
+            if ('' === $normalizedCode || preg_match('/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/', $normalizedCode) !== 1) {
+                continue;
+            }
+
+            $locales[$normalizedCode] = '' !== $normalizedName ? $normalizedName : mb_strtoupper($normalizedCode);
+        }
+
+        $entries = [];
+        foreach ($locales as $code => $name) {
+            $entries[] = [
+                'code' => $code,
+                'name' => $name,
+            ];
+        }
+
+        usort(
+            $entries,
+            static function (array $left, array $right): int {
+                if ('sv' === $left['code']) {
+                    return -1;
+                }
+
+                if ('sv' === $right['code']) {
+                    return 1;
+                }
+
+                if ('en' === $left['code']) {
+                    return -1;
+                }
+
+                if ('en' === $right['code']) {
+                    return 1;
+                }
+
+                return strcmp($left['code'], $right['code']);
+            },
+        );
+
+        return $entries;
+    }
+
+    /**
+     * @param list<array{code: string, name: string}> $locales
+     */
+    public function setTranslationLocales(array $locales): void
+    {
+        $normalized = [];
+
+        foreach ($locales as $locale) {
+            $code = trim(mb_strtolower(str_replace('_', '-', (string) ($locale['code'] ?? ''))));
+            $name = trim((string) ($locale['name'] ?? ''));
+
+            if ('' === $code || preg_match('/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/', $code) !== 1) {
+                continue;
+            }
+
+            $normalized[$code] = '' !== $name ? $name : mb_strtoupper($code);
+        }
+
+        $normalized['sv'] = $normalized['sv'] ?? 'Svenska';
+        $normalized['en'] = $normalized['en'] ?? 'English';
+
+        ksort($normalized);
+        $this->setString(self::I18N_AVAILABLE_LOCALES, json_encode($normalized, \JSON_UNESCAPED_UNICODE | \JSON_PRETTY_PRINT) ?: '{}');
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    public function getTranslationOverrides(): array
+    {
+        $decoded = json_decode($this->getString(self::I18N_TRANSLATION_OVERRIDES, ''), true);
+        if (!\is_array($decoded)) {
+            return [];
+        }
+
+        $catalogues = [];
+        foreach ($decoded as $locale => $messages) {
+            $normalizedLocale = \is_string($locale) ? trim(mb_strtolower(str_replace('_', '-', $locale))) : '';
+            if ('' === $normalizedLocale || preg_match('/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/', $normalizedLocale) !== 1 || !\is_array($messages)) {
+                continue;
+            }
+
+            $catalogues[$normalizedLocale] = [];
+            foreach ($messages as $key => $message) {
+                if (!\is_string($key) || !\is_scalar($message)) {
+                    continue;
+                }
+
+                $normalizedKey = trim($key);
+                $normalizedMessage = trim((string) $message);
+                if ('' === $normalizedKey || '' === $normalizedMessage) {
+                    continue;
+                }
+
+                $catalogues[$normalizedLocale][$normalizedKey] = $normalizedMessage;
+            }
+        }
+
+        return $catalogues;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function getTranslationOverridesForLocale(string $locale): array
+    {
+        $locale = trim(mb_strtolower(str_replace('_', '-', $locale)));
+
+        return $this->getTranslationOverrides()[$locale] ?? [];
+    }
+
+    /**
+     * @param array<string, string> $messages
+     */
+    public function setTranslationOverridesForLocale(string $locale, array $messages): void
+    {
+        $locale = trim(mb_strtolower(str_replace('_', '-', $locale)));
+        if ('' === $locale || preg_match('/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/', $locale) !== 1) {
+            return;
+        }
+
+        $catalogues = $this->getTranslationOverrides();
+        $catalogues[$locale] = [];
+
+        foreach ($messages as $key => $message) {
+            $normalizedKey = trim((string) $key);
+            $normalizedMessage = trim((string) $message);
+
+            if ('' === $normalizedKey || '' === $normalizedMessage) {
+                continue;
+            }
+
+            $catalogues[$locale][$normalizedKey] = $normalizedMessage;
+        }
+
+        if ([] === $catalogues[$locale]) {
+            unset($catalogues[$locale]);
+        }
+
+        ksort($catalogues);
+        foreach ($catalogues as &$catalogue) {
+            ksort($catalogue);
+        }
+        unset($catalogue);
+
+        $this->setString(self::I18N_TRANSLATION_OVERRIDES, json_encode($catalogues, \JSON_UNESCAPED_UNICODE | \JSON_PRETTY_PRINT) ?: '{}');
     }
 
     /**
@@ -390,6 +589,159 @@ final class SystemSettings
             'title' => $this->getString(self::HOME_STATUS_SECTION_TITLE, 'Systemstatus'),
             'intro' => $this->getString(self::HOME_STATUS_SECTION_INTRO, 'Överblick över systemets hälsa.'),
             'maxItems' => min(12, max(1, $this->getInt(self::HOME_STATUS_SECTION_MAX_ITEMS, 4))),
+        ];
+    }
+
+    /**
+     * @return array{name: string, logoPath: string, footerText: string}
+     */
+    public function getSiteBrandingSettings(): array
+    {
+        $name = trim($this->getString(self::SITE_BRAND_NAME, 'Driftpunkt'));
+        $logoPath = trim($this->getString(self::SITE_BRAND_LOGO_PATH, '/assets/branding/driftpunkt-logo-full.png'));
+        $footerText = trim($this->getString(self::SITE_FOOTER_TEXT, ''));
+
+        if ('' === $name) {
+            $name = 'Driftpunkt';
+        }
+
+        if ('' === $logoPath) {
+            $logoPath = '/assets/branding/driftpunkt-logo-full.png';
+        }
+
+        return [
+            'name' => $name,
+            'logoPath' => $logoPath,
+            'footerText' => $footerText,
+        ];
+    }
+
+    /**
+     * @return array{
+     *     title: string,
+     *     intro: string,
+     *     body: string,
+     *     effectiveDate: string,
+     *     contactEmail: string,
+     *     externalEnabled: bool,
+     *     externalUrl: string
+     * }
+     */
+    public function getPrivacyPolicySettings(): array
+    {
+        $contactPageSettings = $this->getContactPageSettings();
+        $contactEmail = trim($this->getString(
+            self::PRIVACY_POLICY_CONTACT_EMAIL,
+            (string) ($contactPageSettings['email'] ?? ''),
+        ));
+
+        if ('' === $contactEmail) {
+            $contactEmail = 'privacy@example.com';
+        }
+
+        return [
+            'title' => $this->getString(self::PRIVACY_POLICY_TITLE, 'Integritetspolicy'),
+            'intro' => $this->getString(
+                self::PRIVACY_POLICY_INTRO,
+                'Här beskriver vi hur personuppgifter behandlas när någon använder webbplatsen, kontaktar supporten eller använder kundportalen.',
+            ),
+            'body' => $this->getString(
+                self::PRIVACY_POLICY_BODY,
+                $this->defaultPrivacyPolicyBody($contactEmail),
+            ),
+            'effectiveDate' => $this->getString(
+                self::PRIVACY_POLICY_EFFECTIVE_DATE,
+                (new \DateTimeImmutable('today'))->format('Y-m-d'),
+            ),
+            'contactEmail' => $contactEmail,
+            'externalEnabled' => $this->getBool(self::FEATURE_PRIVACY_POLICY_EXTERNAL_ENABLED, false),
+            'externalUrl' => trim($this->getString(self::PRIVACY_POLICY_EXTERNAL_URL, '')),
+        ];
+    }
+
+    /**
+     * @return array{
+     *     title: string,
+     *     intro: string,
+     *     body: string,
+     *     effectiveDate: string,
+     *     contactEmail: string,
+     *     externalEnabled: bool,
+     *     externalUrl: string
+     * }
+     */
+    public function getTermsPageSettings(): array
+    {
+        $contactPageSettings = $this->getContactPageSettings();
+        $contactEmail = trim($this->getString(
+            self::TERMS_PAGE_CONTACT_EMAIL,
+            (string) ($contactPageSettings['email'] ?? ''),
+        ));
+
+        if ('' === $contactEmail) {
+            $contactEmail = 'support@example.com';
+        }
+
+        return [
+            'title' => $this->getString(self::TERMS_PAGE_TITLE, 'Användarvillkor'),
+            'intro' => $this->getString(
+                self::TERMS_PAGE_INTRO,
+                'Här beskriver vi villkoren för att använda webbplatsen, kundportalen och Driftpunkts supporttjänster.',
+            ),
+            'body' => $this->getString(
+                self::TERMS_PAGE_BODY,
+                $this->defaultTermsPageBody($contactEmail),
+            ),
+            'effectiveDate' => $this->getString(
+                self::TERMS_PAGE_EFFECTIVE_DATE,
+                (new \DateTimeImmutable('today'))->format('Y-m-d'),
+            ),
+            'contactEmail' => $contactEmail,
+            'externalEnabled' => $this->getBool(self::FEATURE_TERMS_PAGE_EXTERNAL_ENABLED, false),
+            'externalUrl' => trim($this->getString(self::TERMS_PAGE_EXTERNAL_URL, '')),
+        ];
+    }
+
+    /**
+     * @return array{
+     *     title: string,
+     *     intro: string,
+     *     body: string,
+     *     effectiveDate: string,
+     *     contactEmail: string,
+     *     externalEnabled: bool,
+     *     externalUrl: string
+     * }
+     */
+    public function getCookiePolicySettings(): array
+    {
+        $contactPageSettings = $this->getContactPageSettings();
+        $contactEmail = trim($this->getString(
+            self::COOKIE_POLICY_CONTACT_EMAIL,
+            (string) ($contactPageSettings['email'] ?? ''),
+        ));
+
+        if ('' === $contactEmail) {
+            $contactEmail = 'support@example.com';
+        }
+
+        return [
+            'title' => $this->getString(self::COOKIE_POLICY_TITLE, 'Cookiepolicy'),
+            'intro' => $this->getString(
+                self::COOKIE_POLICY_INTRO,
+                'Här beskriver vi hur cookies, sessionsdata och liknande tekniker används på webbplatsen och i kundportalen.',
+            ),
+            'body' => $this->getString(
+                self::COOKIE_POLICY_BODY,
+                $this->defaultCookiePolicyBody($contactEmail),
+            ),
+            'effectiveDate' => $this->getString(
+                self::COOKIE_POLICY_EFFECTIVE_DATE,
+                (new \DateTimeImmutable('today'))->format('Y-m-d'),
+            ),
+            'contactEmail' => $contactEmail,
+            'externalEnabled' => $this->getBool(self::FEATURE_COOKIE_POLICY_EXTERNAL_ENABLED, false),
+            'externalUrl' => trim($this->getString(self::COOKIE_POLICY_EXTERNAL_URL, '')),
         ];
     }
 
@@ -712,6 +1064,128 @@ final class SystemSettings
             ['icon' => 'book', 'title' => 'Kunskapsbank', 'url' => '/kunskapsbas'],
             ['icon' => 'check', 'title' => 'Kontakta Support', 'url' => '/portal'],
         ];
+    }
+
+    private function defaultPrivacyPolicyBody(string $contactEmail): string
+    {
+        return implode("\n\n", [
+            '## Personuppgiftsansvarig'."\n".
+            'Den organisation som driver denna webbplats och tillhorande kundportal ar personuppgiftsansvarig for den behandling av personuppgifter som beskrivs i denna policy. Om du har fragor om hur uppgifterna hanteras kan du kontakta oss via `'.$contactEmail.'`.',
+            '## Nar policyn galler'."\n".
+            'Policyn galler for behandling av personuppgifter nar du:'."\n".
+            '- besoker den publika webbplatsen'."\n".
+            '- kontaktar supporten via formulär, e-post eller telefon'."\n".
+            '- skapar konto eller loggar in i kundportalen'."\n".
+            '- skapar, foljer eller uppdaterar arenden'."\n".
+            '- prenumererar pa driftinformation, nyheter eller annan kommunikation',
+            '## Vilka uppgifter vi kan behandla'."\n".
+            'Beroende pa hur du använder tjänsten kan vi behandla foljande kategorier av uppgifter:'."\n".
+            '- namn, foretag, roll och kontaktuppgifter som e-postadress och telefonnummer'."\n".
+            '- kontouppgifter som anvandar-id, inloggningshistorik och behorigheter'."\n".
+            '- ärendeinformation, meddelanden, bilagor och annan information du sjalv skickar in'."\n".
+            '- tekniska uppgifter som IP-adress, webblasartyp, enhet, loggar och tidpunkter for aktivitet'."\n".
+            '- uppgifter som behovs for att felsoka, skydda och forbattra tjänsten',
+            '## Andamal med behandlingen'."\n".
+            'Vi behandlar personuppgifter for att kunna:'."\n".
+            '- tillhandahalla webbplats, kundportal och support'."\n".
+            '- hantera konton, behorigheter och inloggning'."\n".
+            '- registrera, prioritera och folja upp arenden'."\n".
+            '- kommunicera om driftstatus, support, incidenter och planerat underhall'."\n".
+            '- uppfylla rattsliga skyldigheter, forebygga missbruk och uppratthalla sakerhet'."\n".
+            '- analysera, forbattra och utveckla tjänsten',
+            '## Rattslig grund'."\n".
+            'Behandlingen sker normalt med stod av en eller flera av dessa rattsliga grunder:'."\n".
+            '- avtal: for att kunna leverera avtalad tjänst eller support'."\n".
+            '- rattslig forpliktelse: nar vi maste spara eller lamna ut uppgifter enligt lag'."\n".
+            '- berattigat intresse: for drift, sakerhet, loggning, felsokning och utveckling'."\n".
+            '- samtycke: nar en viss behandling bygger pa ett aktivt godkannande, som kan aterkallas',
+            '## Kallor till personuppgifter'."\n".
+            'Vi samlar i forsta hand in uppgifter direkt fran dig, ditt foretag eller nagon som administrerar ert konto. Vissa tekniska uppgifter skapas automatiskt nar du anvander webbplatsen eller kundportalen.',
+            '## Mottagare och personuppgiftsbitraden'."\n".
+            'Uppgifter delas endast nar det behovs for att tillhandahalla tjänsten, till exempel med driftleverantorer, supportverktyg, e-postleverantorer, hostingpartner eller andra personuppgiftsbitraden som behandlar uppgifter enligt avtal och instruktioner. Uppgifter kan ocksa lamnas ut nar lag eller myndighetsbeslut kraver det.',
+            '## Overforing utanfor EU/EES'."\n".
+            'Vi stravar efter att behandla personuppgifter inom EU/EES. Om overforing till land utanfor EU/EES skulle bli aktuell ska den ske med laglig skyddsniva, exempelvis genom EU-kommissionens standardavtalsklausuler eller annat tillatet skydd enligt dataskyddsreglerna.',
+            '## Lagringstid'."\n".
+            'Vi sparar personuppgifter sa lange det behovs for de andamal som anges i denna policy, sa lange det finns ett aktivt kundforhallande eller sa lange vi maste spara uppgifter enligt lag, avtal, bokforingskrav, sakerhetsbehov eller for att hantera reklamationer och rattsliga ansprak.',
+            '## Dina rattigheter'."\n".
+            'Du har enligt dataskyddsreglerna ratt att begara information om vilka personuppgifter vi behandlar om dig och i vissa fall ratt att fa felaktiga uppgifter rattade, uppgifter raderade, behandlingen begransad, invanda mot viss behandling eller fa ut uppgifter for dataportabilitet. Om behandlingen bygger pa samtycke kan du nar som helst aterkalla samtycket for framtiden.',
+            '## Klagomal till tillsynsmyndighet'."\n".
+            'Om du anser att behandlingen av dina personuppgifter strider mot gallande regler har du ratt att lamna klagomal till Integritetsskyddsmyndigheten, IMY, via [imy.se](https://www.imy.se/).',
+            '## Informationssakerhet'."\n".
+            'Vi arbetar med tekniska och organisatoriska sakerhetsatgarder for att skydda personuppgifter mot obehorig atkomst, forlust, andring och annan otillaten behandling. Atkomst till uppgifter begransas till personer som behover den for sitt arbete.',
+            '## Cookies och loggar'."\n".
+            'Webbplatsen och kundportalen kan anvanda nodvandiga cookies, sessionsdata och loggar for att fungera korrekt, skydda inloggningen, felsoka problem och forsta hur tjänsten används. Om ytterligare cookies eller spårning används ska det beskrivas tydligt och, nar det kravs, hanteras med samtycke.',
+            '## Andringar i policyn'."\n".
+            'Vi kan uppdatera denna integritetspolicy nar tjänsten eller regelverket andras. Den senaste versionen finns alltid publicerad pa denna sida.',
+        ]);
+    }
+
+    private function defaultTermsPageBody(string $contactEmail): string
+    {
+        return implode("\n\n", [
+            '## Om villkoren'."\n".
+            'Dessa användarvillkor gäller för användning av denna webbplats, kundportalen och tillhörande supporttjänster. Genom att använda tjänsten accepterar användaren dessa villkor.',
+            '## Tjänstens syfte'."\n".
+            'Tjänsten används för att hantera supportärenden, driftinformation, kommunikation och relaterade funktioner mellan Driftpunkt och kunder eller andra behöriga användare.',
+            '## Konto och behörighet'."\n".
+            '- användaren ansvarar för att lämnade uppgifter är korrekta och uppdaterade'."\n".
+            '- inloggningsuppgifter ska hanteras säkert och får inte delas med obehöriga'."\n".
+            '- konton får endast användas av den person eller organisation som tilldelats behörigheten'."\n".
+            '- Driftpunkt får stänga av eller begränsa konto vid misstanke om missbruk, säkerhetsrisk eller brott mot villkoren',
+            '## Tillåten användning'."\n".
+            'Tjänsten får endast användas för legitima support- och driftrelaterade ändamål. Det är inte tillåtet att försöka störa tjänsten, kringgå säkerhetsfunktioner, ladda upp skadlig kod eller använda tjänsten på sätt som kan skada Driftpunkt, andra kunder eller tredje man.',
+            '## Kundens ansvar'."\n".
+            'Användaren ansvarar för innehållet i ärenden, meddelanden och bilagor som skickas in. Material får inte vara olagligt, kränkande, vilseledande eller innehålla skadlig kod. Användaren ansvarar också för att inte lämna fler personuppgifter än nödvändigt.',
+            '## Tillgänglighet och förändringar'."\n".
+            'Driftpunkt strävar efter hög tillgänglighet men garanterar inte att tjänsten alltid är fri från avbrott eller fel. Planerat underhåll, säkerhetsåtgärder, uppdateringar eller oförutsedda incidenter kan påverka tillgängligheten.',
+            '## Immateriella rättigheter'."\n".
+            'Webbplatsen, kundportalen, designen, koden, texterna och övrigt material tillhör Driftpunkt eller dess licensgivare om inget annat anges. Innehåll får inte kopieras, säljas, spridas eller användas utanför avsett syfte utan tillstånd.',
+            '## Ansvarsbegränsning'."\n".
+            'Driftpunkt ansvarar inte för indirekta skador, utebliven vinst, dataförlust eller annan följdskada, i den utsträckning sådan begränsning är tillåten enligt lag. Tjänsten tillhandahålls i befintligt skick om inget annat följer av särskilt avtal.',
+            '## Personuppgifter'."\n".
+            'Behandling av personuppgifter regleras i vår [Integritetspolicy](/integritetspolicy). Om användningen av tjänsten innebär behandling av personuppgifter för kunds räkning kan ytterligare avtal eller instruktioner behöva gälla.',
+            '## Avstängning och avslut'."\n".
+            'Driftpunkt får tillfälligt eller permanent stänga av tillgång till tjänsten vid säkerhetsincidenter, avtalsbrott, utebliven betalning, missbruk eller när det krävs för drift och underhåll.',
+            '## Tillämplig lag och tvister'."\n".
+            'Dessa villkor ska tolkas enligt svensk rätt, om inte annat följer av tvingande lag eller särskilt avtal. Tvister ska i första hand lösas genom dialog mellan parterna.',
+            '## Kontakt'."\n".
+            'Om du har frågor om villkoren kan du kontakta oss via `'.$contactEmail.'`.',
+            '## Ändringar i villkoren'."\n".
+            'Vi kan uppdatera dessa villkor när tjänsten utvecklas, lagkrav förändras eller nya funktioner införs. Den senaste versionen publiceras alltid på denna sida.',
+        ]);
+    }
+
+    private function defaultCookiePolicyBody(string $contactEmail): string
+    {
+        return implode("\n\n", [
+            '## Om cookies'."\n".
+            'Cookies är små textfiler som lagras i webbläsaren när du besöker en webbplats. De används ofta för att få sidor att fungera, komma ihåg val och ge information om hur tjänsten används.',
+            '## Vad vi använder cookies till'."\n".
+            'Webbplatsen och kundportalen kan använda cookies, sessionsdata eller liknande tekniker för att:'."\n".
+            '- hålla användaren inloggad under en aktiv session'."\n".
+            '- skydda formulär och inloggning mot missbruk'."\n".
+            '- komma ihåg språkval eller andra grundläggande inställningar'."\n".
+            '- felsöka, säkra och förbättra tjänsten'."\n".
+            '- i förekommande fall mäta användning och prestanda',
+            '## Typer av cookies'."\n".
+            'Tjänsten kan använda följande kategorier:'."\n".
+            '- nödvändiga cookies: krävs för att webbplatsen och kundportalen ska fungera'."\n".
+            '- funktionscookies: sparar val som språk eller liknande preferenser'."\n".
+            '- analyscookies: används för statistik och förbättringsarbete om sådana verktyg aktiveras'."\n".
+            '- tredjepartscookies: kan förekomma om externa tjänster bäddas in eller används',
+            '## Lagringstid'."\n".
+            'Vissa cookies raderas när du stänger webbläsaren och andra ligger kvar under en viss tid. Lagringstiden beror på cookiens syfte och tekniska funktion.',
+            '## Tredjepartstjänster'."\n".
+            'Om externa tjänster används, exempelvis för analys, inbäddat innehåll eller driftövervakning, kan dessa sätta egna cookies eller samla in teknisk information enligt sina egna villkor.',
+            '## Hur du kan hantera cookies'."\n".
+            'Du kan själv styra och radera cookies i din webbläsare. Om du blockerar nödvändiga cookies kan delar av webbplatsen eller kundportalen sluta fungera korrekt.',
+            '## Samtycke'."\n".
+            'Om tjänsten använder cookies som kräver samtycke enligt gällande regler ska sådant samtycke hämtas innan dessa aktiveras. Nödvändiga cookies kan användas utan samtycke när de krävs för att tjänsten ska fungera.',
+            '## Mer information'."\n".
+            'Om du har frågor om vår användning av cookies eller liknande tekniker kan du kontakta oss via `'.$contactEmail.'`.',
+            '## Uppdateringar'."\n".
+            'Vi kan uppdatera denna cookiepolicy när tjänsten förändras eller när regelverket kräver det. Den senaste versionen publiceras alltid på denna sida.',
+        ]);
     }
 
     /**

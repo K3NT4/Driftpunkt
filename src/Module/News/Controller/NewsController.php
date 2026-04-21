@@ -8,6 +8,8 @@ use App\Module\Identity\Entity\User;
 use App\Module\News\Entity\NewsArticle;
 use App\Module\News\Enum\NewsCategory;
 use App\Module\Maintenance\Service\MaintenanceMode;
+use App\Module\News\Service\NewsArticleSchemaInspector;
+use App\Module\System\Entity\AddonModule;
 use App\Module\System\Service\SystemSettings;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -19,10 +21,13 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 final class NewsController extends AbstractController
 {
+    private ?bool $newsEditorPlusEnabled = null;
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly SystemSettings $systemSettings,
         private readonly MaintenanceMode $maintenanceMode,
+        private readonly NewsArticleSchemaInspector $newsArticleSchemaInspector,
     ) {
     }
 
@@ -43,9 +48,34 @@ final class NewsController extends AbstractController
             $selectedCategory = 'alla';
         }
 
+        if (!$this->newsArticleSchemaInspector->isReady()) {
+            return $this->render('news/index.html.twig', [
+                'articles' => [],
+                'featuredArticle' => null,
+                'remainingArticles' => [],
+                'maintenanceArticles' => [],
+                'selectedCategory' => $selectedCategory,
+                'categoryOptions' => [[
+                    'value' => 'alla',
+                    'label' => 'Alla',
+                    'count' => 0,
+                ]],
+                'selectedCategoryLabel' => 'Alla',
+                'searchQuery' => $searchQuery,
+                'page' => 1,
+                'perPage' => $perPage,
+                'totalArticles' => 0,
+                'totalPages' => 1,
+                'maintenanceStatuses' => [],
+                'featuredMaintenanceStatus' => null,
+                'articleMaintenanceStatuses' => [],
+            ]);
+        }
+
         $queryBuilder = $this->entityManager->getRepository(NewsArticle::class)->createQueryBuilder('article')
             ->andWhere('article.isPublished = :published')
             ->andWhere('article.publishedAt <= :now')
+            ->andWhere('article.archivedAt IS NULL')
             ->setParameter('published', true)
             ->setParameter('now', $now)
             ->orderBy('article.isPinned', 'DESC')
@@ -85,6 +115,7 @@ final class NewsController extends AbstractController
         $maintenanceArticles = $this->entityManager->getRepository(NewsArticle::class)->createQueryBuilder('article')
             ->andWhere('article.isPublished = :published')
             ->andWhere('article.publishedAt <= :now')
+            ->andWhere('article.archivedAt IS NULL')
             ->andWhere('article.category = :category')
             ->setParameter('published', true)
             ->setParameter('now', $now)
@@ -107,6 +138,7 @@ final class NewsController extends AbstractController
                     ->select('COUNT(article.id)')
                     ->andWhere('article.isPublished = :published')
                     ->andWhere('article.publishedAt <= :now')
+                    ->andWhere('article.archivedAt IS NULL')
                     ->setParameter('published', true)
                     ->setParameter('now', $now)
                     ->getQuery()
@@ -122,6 +154,7 @@ final class NewsController extends AbstractController
                     ->select('COUNT(article.id)')
                     ->andWhere('article.isPublished = :published')
                     ->andWhere('article.publishedAt <= :now')
+                    ->andWhere('article.archivedAt IS NULL')
                     ->andWhere('article.category = :category')
                     ->setParameter('published', true)
                     ->setParameter('now', $now)
@@ -162,18 +195,28 @@ final class NewsController extends AbstractController
     }
 
     #[Route('/nyheter/{id}', name: 'app_news_show', methods: ['GET'], requirements: ['id' => '\d+'])]
-    public function show(NewsArticle $article): Response
+    public function show(int $id): Response
     {
+        if (!$this->newsArticleSchemaInspector->isReady()) {
+            throw $this->createNotFoundException('Nyhetsdatabasen behöver migreras innan nyheten kan visas.');
+        }
+
+        $article = $this->findNewsArticleOr404($id);
         $now = new \DateTimeImmutable();
 
         if (!$article->isPublished() || $article->getPublishedAt() > $now) {
             throw $this->createNotFoundException('Nyheten är inte publicerad.');
         }
 
+        if ($article->isArchived()) {
+            throw $this->createNotFoundException('Nyheten är arkiverad.');
+        }
+
         /** @var list<NewsArticle> $relatedArticles */
         $relatedArticles = $this->entityManager->getRepository(NewsArticle::class)->createQueryBuilder('article')
             ->andWhere('article.isPublished = :published')
             ->andWhere('article.publishedAt <= :now')
+            ->andWhere('article.archivedAt IS NULL')
             ->setParameter('published', true)
             ->setParameter('now', $now)
             ->orderBy('article.isPinned', 'DESC')
@@ -199,17 +242,24 @@ final class NewsController extends AbstractController
     {
         $searchQuery = trim($request->query->getString('news_q'));
         $dateFilter = trim($request->query->getString('news_date', 'all'));
+        $selectedArticleId = $request->query->getInt('edit', 0);
+        $newsSchemaReady = $this->newsArticleSchemaInspector->isReady();
+        $newsArticles = $newsSchemaReady ? $this->findAllArticles($searchQuery, $dateFilter) : [];
 
         return $this->render('portal/admin_news.html.twig', [
             'title' => 'Nyheter',
             'summary' => 'Publicera nyheter som visas på startsidan och i nyhetslistan.',
             'maintenanceState' => $this->maintenanceMode->getState(),
-            'newsArticles' => $this->findAllArticles($searchQuery, $dateFilter),
+            'newsArticles' => $newsArticles,
+            'selectedArticle' => $this->resolveSelectedArticle($newsArticles, $selectedArticleId),
             'newsFilters' => [
                 'q' => $searchQuery,
                 'date' => $dateFilter,
             ],
+            'newsSchemaReady' => $newsSchemaReady,
+            'newsSchemaMissingColumns' => $this->newsArticleSchemaInspector->missingColumns(),
             'newsSettings' => $this->systemSettings->getNewsSettings(),
+            'newsEditorPlusEnabled' => $this->isNewsEditorPlusEnabled(),
             'homeSupportWidget' => $this->systemSettings->getHomeSupportWidgetSettings(),
             'homepageStatusSection' => $this->systemSettings->getHomepageStatusSectionSettings(),
             'maintenanceNoticeSettings' => $this->systemSettings->getMaintenanceNoticeSettings(),
@@ -220,6 +270,10 @@ final class NewsController extends AbstractController
     #[IsGranted('ROLE_ADMIN')]
     public function createAdminNews(Request $request): RedirectResponse
     {
+        if ($redirect = $this->redirectIfNewsSchemaIsOutdated('app_portal_admin_news')) {
+            return $redirect;
+        }
+
         if (!$this->isCsrfTokenValid('create_news_article', (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Kunde inte verifiera formuläret för nyheten.');
 
@@ -231,8 +285,13 @@ final class NewsController extends AbstractController
 
     #[Route('/portal/admin/nyheter/{id}', name: 'app_portal_admin_news_update', methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN')]
-    public function updateAdminNews(Request $request, NewsArticle $article): RedirectResponse
+    public function updateAdminNews(Request $request, int $id): RedirectResponse
     {
+        if ($redirect = $this->redirectIfNewsSchemaIsOutdated('app_portal_admin_news')) {
+            return $redirect;
+        }
+
+        $article = $this->findNewsArticleOr404($id);
         if (!$this->isCsrfTokenValid(sprintf('update_news_article_%d', $article->getId()), (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Kunde inte verifiera uppdateringen av nyheten.');
 
@@ -242,9 +301,59 @@ final class NewsController extends AbstractController
         return $this->handleNewsUpsert($request, $article, 'app_portal_admin_news');
     }
 
+    #[Route('/portal/admin/nyheter/{id}/arkivera', name: 'app_portal_admin_news_archive', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
+    public function archiveAdminNews(Request $request, int $id): RedirectResponse
+    {
+        if ($redirect = $this->redirectIfNewsSchemaIsOutdated('app_portal_admin_news')) {
+            return $redirect;
+        }
+
+        $article = $this->findNewsArticleOr404($id);
+        if (!$this->isCsrfTokenValid(sprintf('archive_news_article_%d', $article->getId()), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Kunde inte verifiera arkiveringen av nyheten.');
+
+            return $this->redirectToAdminNewsSelection($request, $article);
+        }
+
+        if ($article->isArchived()) {
+            $article->unarchive();
+            $this->addFlash('success', 'Nyheten flyttades tillbaka från arkivet.');
+        } else {
+            $article->archive();
+            $this->addFlash('success', 'Nyheten arkiverades.');
+        }
+
+        $this->entityManager->flush();
+
+        return $this->redirectToAdminNewsSelection($request, $article);
+    }
+
+    #[Route('/portal/admin/nyheter/{id}/ta-bort', name: 'app_portal_admin_news_delete', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
+    public function deleteAdminNews(Request $request, int $id): RedirectResponse
+    {
+        if ($redirect = $this->redirectIfNewsSchemaIsOutdated('app_portal_admin_news')) {
+            return $redirect;
+        }
+
+        $article = $this->findNewsArticleOr404($id);
+        if (!$this->isCsrfTokenValid(sprintf('delete_news_article_%d', $article->getId()), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Kunde inte verifiera borttagningen av nyheten.');
+
+            return $this->redirectToRoute('app_portal_admin_news', $this->buildNewsRedirectParameters($request));
+        }
+
+        $this->entityManager->remove($article);
+        $this->entityManager->flush();
+        $this->addFlash('success', 'Nyheten togs bort.');
+
+        return $this->redirectToRoute('app_portal_admin_news', $this->buildNewsRedirectParameters($request));
+    }
+
     #[Route('/portal/technician/nyheter', name: 'app_portal_technician_news', methods: ['GET'])]
     #[IsGranted('ROLE_TECHNICIAN')]
-    public function technicianIndex(): Response
+    public function technicianIndex(Request $request): Response
     {
         if (!$this->systemSettings->getNewsSettings()['technicianContributionsEnabled']) {
             $this->addFlash('error', 'Tekniker kan inte skapa nyheter just nu.');
@@ -252,12 +361,25 @@ final class NewsController extends AbstractController
             return $this->redirectToRoute('app_portal_technician');
         }
 
+        $searchQuery = trim($request->query->getString('news_q'));
+        $selectedArticleId = $request->query->getInt('edit', 0);
+        $newsSchemaReady = $this->newsArticleSchemaInspector->isReady();
+        $newsArticles = $newsSchemaReady ? $this->findArticlesForTechnician($searchQuery) : [];
+
         return $this->render('portal/technician_news.html.twig', [
             'title' => 'Nyheter',
             'summary' => 'Publicera nyheter och uppdateringar till startsidan.',
-            'newsArticles' => $this->findArticlesForTechnician(),
+            'newsArticles' => $newsArticles,
+            'selectedArticle' => $this->resolveSelectedArticle($newsArticles, $selectedArticleId),
             'newsSettings' => $this->systemSettings->getNewsSettings(),
+            'newsSchemaReady' => $newsSchemaReady,
+            'newsSchemaMissingColumns' => $this->newsArticleSchemaInspector->missingColumns(),
+            'newsEditorPlusEnabled' => $this->isNewsEditorPlusEnabled(),
             'allowMaintenanceCategory' => false,
+            'newsFilters' => [
+                'q' => $searchQuery,
+                'date' => 'all',
+            ],
         ]);
     }
 
@@ -267,6 +389,10 @@ final class NewsController extends AbstractController
     {
         if (!$this->systemSettings->getNewsSettings()['technicianContributionsEnabled']) {
             throw $this->createAccessDeniedException('Tekniker får inte skapa nyheter just nu.');
+        }
+
+        if ($redirect = $this->redirectIfNewsSchemaIsOutdated('app_portal_technician_news')) {
+            return $redirect;
         }
 
         if (!$this->isCsrfTokenValid('create_news_article_technician', (string) $request->request->get('_token'))) {
@@ -280,12 +406,17 @@ final class NewsController extends AbstractController
 
     #[Route('/portal/technician/nyheter/{id}', name: 'app_portal_technician_news_update', methods: ['POST'])]
     #[IsGranted('ROLE_TECHNICIAN')]
-    public function updateTechnicianNews(Request $request, NewsArticle $article): RedirectResponse
+    public function updateTechnicianNews(Request $request, int $id): RedirectResponse
     {
         if (!$this->systemSettings->getNewsSettings()['technicianContributionsEnabled']) {
             throw $this->createAccessDeniedException('Tekniker får inte uppdatera nyheter just nu.');
         }
 
+        if ($redirect = $this->redirectIfNewsSchemaIsOutdated('app_portal_technician_news')) {
+            return $redirect;
+        }
+
+        $article = $this->findNewsArticleOr404($id);
         if (NewsCategory::PLANNED_MAINTENANCE === $article->getCategory()) {
             throw $this->createAccessDeniedException('Tekniker får inte uppdatera underhållsnyheter.');
         }
@@ -297,6 +428,60 @@ final class NewsController extends AbstractController
         }
 
         return $this->handleNewsUpsert($request, $article, 'app_portal_technician_news', false);
+    }
+
+    #[Route('/portal/technician/nyheter/{id}/arkivera', name: 'app_portal_technician_news_archive', methods: ['POST'])]
+    #[IsGranted('ROLE_TECHNICIAN')]
+    public function archiveTechnicianNews(Request $request, int $id): RedirectResponse
+    {
+        if ($redirect = $this->redirectIfNewsSchemaIsOutdated('app_portal_technician_news')) {
+            return $redirect;
+        }
+
+        $article = $this->findNewsArticleOr404($id);
+        $this->assertTechnicianNewsAccess($article, 'arkivera');
+
+        if (!$this->isCsrfTokenValid(sprintf('archive_news_article_technician_%d', $article->getId()), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Kunde inte verifiera arkiveringen av nyheten.');
+
+            return $this->redirectToTechnicianNewsSelection($request, $article);
+        }
+
+        if ($article->isArchived()) {
+            $article->unarchive();
+            $this->addFlash('success', 'Nyheten flyttades tillbaka från arkivet.');
+        } else {
+            $article->archive();
+            $this->addFlash('success', 'Nyheten arkiverades.');
+        }
+
+        $this->entityManager->flush();
+
+        return $this->redirectToTechnicianNewsSelection($request, $article);
+    }
+
+    #[Route('/portal/technician/nyheter/{id}/ta-bort', name: 'app_portal_technician_news_delete', methods: ['POST'])]
+    #[IsGranted('ROLE_TECHNICIAN')]
+    public function deleteTechnicianNews(Request $request, int $id): RedirectResponse
+    {
+        if ($redirect = $this->redirectIfNewsSchemaIsOutdated('app_portal_technician_news')) {
+            return $redirect;
+        }
+
+        $article = $this->findNewsArticleOr404($id);
+        $this->assertTechnicianNewsAccess($article, 'ta bort');
+
+        if (!$this->isCsrfTokenValid(sprintf('delete_news_article_technician_%d', $article->getId()), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Kunde inte verifiera borttagningen av nyheten.');
+
+            return $this->redirectToRoute('app_portal_technician_news', $this->buildNewsRedirectParameters($request));
+        }
+
+        $this->entityManager->remove($article);
+        $this->entityManager->flush();
+        $this->addFlash('success', 'Nyheten togs bort.');
+
+        return $this->redirectToRoute('app_portal_technician_news', $this->buildNewsRedirectParameters($request));
     }
 
     private function handleNewsUpsert(
@@ -373,6 +558,10 @@ final class NewsController extends AbstractController
             ->setMaintenanceEndsAt($maintenanceEndsAt)
             ->setCategory($category);
 
+        if ($article->isArchived()) {
+            $article->unarchive();
+        }
+
         $isPublished ? $article->publish() : $article->unpublish();
         $isPinned ? $article->pin() : $article->unpin();
 
@@ -380,7 +569,10 @@ final class NewsController extends AbstractController
 
         $this->addFlash('success', $isNew ? 'Nyheten skapades.' : 'Nyheten uppdaterades.');
 
-        return $this->redirectToRoute($redirectRoute);
+        $parameters = $this->buildNewsRedirectParameters($request);
+        $parameters['edit'] = $article->getId();
+
+        return $this->redirectToRoute($redirectRoute, $parameters);
     }
 
     /**
@@ -390,6 +582,7 @@ final class NewsController extends AbstractController
     {
         /** @var list<NewsArticle> $articles */
         $articles = $this->entityManager->getRepository(NewsArticle::class)->findBy([], [
+            'archivedAt' => 'ASC',
             'isPinned' => 'DESC',
             'publishedAt' => 'DESC',
             'updatedAt' => 'DESC',
@@ -422,19 +615,127 @@ final class NewsController extends AbstractController
     /**
      * @return list<NewsArticle>
      */
-    private function findArticlesForTechnician(): array
+    private function findArticlesForTechnician(string $searchQuery = ''): array
     {
+        if (!$this->newsArticleSchemaInspector->isReady()) {
+            return [];
+        }
+
         /** @var list<NewsArticle> $articles */
         $articles = $this->entityManager->getRepository(NewsArticle::class)->findBy(
             ['category' => NewsCategory::GENERAL],
             [
+                'archivedAt' => 'ASC',
                 'isPinned' => 'DESC',
                 'publishedAt' => 'DESC',
                 'updatedAt' => 'DESC',
             ],
         );
 
-        return $articles;
+        if ('' === $searchQuery) {
+            return $articles;
+        }
+
+        $needle = mb_strtolower($searchQuery);
+
+        return array_values(array_filter(
+            $articles,
+            static function (NewsArticle $article) use ($needle): bool {
+                $haystack = mb_strtolower(implode(' ', [
+                    $article->getTitle(),
+                    $article->getSummary(),
+                    $article->getBody(),
+                    $article->getCategory()->value,
+                ]));
+
+                return str_contains($haystack, $needle);
+            },
+        ));
+    }
+
+    private function findNewsArticleOr404(int $id): NewsArticle
+    {
+        /** @var NewsArticle|null $article */
+        $article = $this->entityManager->getRepository(NewsArticle::class)->find($id);
+        if (!$article instanceof NewsArticle) {
+            throw $this->createNotFoundException('Nyheten kunde inte hittas.');
+        }
+
+        return $article;
+    }
+
+    private function redirectIfNewsSchemaIsOutdated(string $route): ?RedirectResponse
+    {
+        if ($this->newsArticleSchemaInspector->isReady()) {
+            return null;
+        }
+
+        $this->addFlash('error', sprintf(
+            'Nyhetsdatabasen behöver migreras innan nyhetsmodulen kan användas. Saknade kolumner: %s.',
+            implode(', ', $this->newsArticleSchemaInspector->missingColumns()),
+        ));
+
+        return $this->redirectToRoute($route);
+    }
+
+    /**
+     * @param list<NewsArticle> $articles
+     */
+    private function resolveSelectedArticle(array $articles, int $selectedArticleId): ?NewsArticle
+    {
+        if ($selectedArticleId > 0) {
+            foreach ($articles as $article) {
+                if ($article->getId() === $selectedArticleId) {
+                    return $article;
+                }
+            }
+        }
+
+        return $articles[0] ?? null;
+    }
+
+    private function redirectToAdminNewsSelection(Request $request, NewsArticle $article): RedirectResponse
+    {
+        $parameters = $this->buildNewsRedirectParameters($request);
+        $parameters['edit'] = $article->getId();
+
+        return $this->redirectToRoute('app_portal_admin_news', $parameters);
+    }
+
+    private function redirectToTechnicianNewsSelection(Request $request, NewsArticle $article): RedirectResponse
+    {
+        $parameters = $this->buildNewsRedirectParameters($request);
+        $parameters['edit'] = $article->getId();
+
+        return $this->redirectToRoute('app_portal_technician_news', $parameters);
+    }
+
+    /**
+     * @return array<string, string|int>
+     */
+    private function buildNewsRedirectParameters(Request $request): array
+    {
+        $parameters = [];
+
+        foreach (['news_q', 'news_date'] as $queryKey) {
+            $value = trim((string) $request->query->get($queryKey, ''));
+            if ('' !== $value) {
+                $parameters[$queryKey] = $value;
+            }
+        }
+
+        return $parameters;
+    }
+
+    private function assertTechnicianNewsAccess(NewsArticle $article, string $action): void
+    {
+        if (!$this->systemSettings->getNewsSettings()['technicianContributionsEnabled']) {
+            throw $this->createAccessDeniedException(sprintf('Tekniker får inte %s nyheter just nu.', $action));
+        }
+
+        if (NewsCategory::PLANNED_MAINTENANCE === $article->getCategory()) {
+            throw $this->createAccessDeniedException(sprintf('Tekniker får inte %s underhållsnyheter.', $action));
+        }
     }
 
     private function matchesDatePreset(\DateTimeImmutable $createdAt, string $preset): bool
@@ -445,6 +746,32 @@ final class NewsController extends AbstractController
             'older' => $createdAt < new \DateTimeImmutable('-7 days'),
             default => true,
         };
+    }
+
+    private function isNewsEditorPlusEnabled(): bool
+    {
+        if (null !== $this->newsEditorPlusEnabled) {
+            return $this->newsEditorPlusEnabled;
+        }
+
+        try {
+            $schemaManager = $this->entityManager->getConnection()->createSchemaManager();
+            if (!$schemaManager->tablesExist(['addon_modules'])) {
+                $this->newsEditorPlusEnabled = true;
+
+                return $this->newsEditorPlusEnabled;
+            }
+        } catch (\Throwable) {
+            $this->newsEditorPlusEnabled = true;
+
+            return $this->newsEditorPlusEnabled;
+        }
+
+        /** @var AddonModule|null $addon */
+        $addon = $this->entityManager->getRepository(AddonModule::class)->findOneBy(['slug' => 'news-editor-plus']);
+        $this->newsEditorPlusEnabled = null === $addon ? true : $addon->isEnabled();
+
+        return $this->newsEditorPlusEnabled;
     }
 
     /**

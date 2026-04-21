@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Driftpunkt | Underhållsläge{% endblock %}
+{% block title %}{{ site_branding.name }} | Underhållsläge{% endblock %}
 
 {% block page_shell_class %}home-shell{% endblock %}
 {% block body_class %}home-landing maintenance-page{% endblock %}
@@ -354,23 +354,23 @@
     <header class="home-topbar">
         <div class="home-topbar-inner">
             <a class="home-brand" href="{{ path('app_home') }}">
-                <img class="home-brand-logo" src="/assets/branding/driftpunkt-logo-full.png" alt="Driftpunkt">
+                <img class="home-brand-logo" src="{{ site_branding.logoPath }}" alt="{{ site_branding.name }}">
             </a>
-            <nav class="home-nav" aria-label="Huvudnavigering">
-                <a class="home-nav-link" href="{{ path('app_home') }}">Startsida</a>
-                <a class="home-nav-link" href="{{ path('app_status_page') }}">Driftstatus</a>
-                <a class="home-nav-link" href="{{ path('app_contact') }}">Kontakta oss</a>
-                <a class="button home-login-button" href="{{ path('app_login', {role: 'admin'}) }}">Admin login</a>
+            <nav class="home-nav" aria-label="{{ t('nav.search_main') }}">
+                <a class="home-nav-link" href="{{ path('app_home') }}">{{ t('nav.home') }}</a>
+                <a class="home-nav-link" href="{{ path('app_status_page') }}">{{ t('nav.status') }}</a>
+                <a class="home-nav-link" href="{{ path('app_contact') }}">{{ t('nav.contact') }}</a>
+                <a class="button home-login-button" href="{{ path('app_login', {role: 'admin'}) }}">{{ t('maintenance.admin_login') }}</a>
             </nav>
         </div>
         <div class="home-statusbar">
             <div class="home-statusbar-inner">
                 <span class="status-ok-dot" aria-hidden="true">!</span>
-                <span>Underhållsläge aktivt</span>
+                <span>{{ t('maintenance.status.active') }}</span>
                 <span class="status-sep">•</span>
-                <span>Kund- och teknikerinloggning är pausad</span>
+                <span>{{ t('maintenance.status.logins_paused') }}</span>
                 <span class="status-sep">•</span>
-                <span>Admin kan fortfarande verifiera systemet</span>
+                <span>{{ t('maintenance.status.admin_verify') }}</span>
             </div>
         </div>
     </header>
@@ -378,10 +378,10 @@
 
 {% block body %}
     <section class="maintenance-hero">
-        <span class="maintenance-pill">Planerat arbete</span>
-        <h1 class="maintenance-title">Driftpunkt är tillfälligt i underhållsläge</h1>
+        <span class="maintenance-pill">{{ t('maintenance.hero.eyebrow') }}</span>
+        <h1 class="maintenance-title">{{ t('maintenance.hero.title') }}</h1>
         <p class="maintenance-subtitle">
-            {{ message ?: 'Driftpunkt genomför just nu planerat arbete. Följ driftinformationen eller kontakta supporten om ni behöver hjälp medan underhållet pågår.' }}
+            {{ message ?: t('maintenance.hero.copy') }}
         </p>
     </section>
 
@@ -390,7 +390,7 @@
             <div class="maintenance-summary">
                 {% if notice %}
                     <div class="maintenance-callout">
-                        <strong>Senaste driftinformation</strong>
+                        <strong>{{ t('maintenance.latest_info') }}</strong>
                         <p>{{ notice.title }}</p>
                         {% if notice.schedule %}
                             <p>{{ notice.schedule }}</p>
@@ -400,35 +400,46 @@
 
                 <div class="maintenance-meta">
                     <article>
-                        <span>Publika sidor</span>
-                        <strong>Startsida, driftstatus och kontakt är fortsatt öppna</strong>
+                        <span>{{ t('maintenance.meta.public_pages') }}</span>
+                        <strong>{{ t('maintenance.meta.public_pages_copy') }}</strong>
                     </article>
                     <article>
-                        <span>Inloggning</span>
-                        <strong>Kund och tekniker pausade under arbetet</strong>
+                        <span>{{ t('maintenance.meta.sign_in') }}</span>
+                        <strong>{{ t('maintenance.meta.sign_in_copy') }}</strong>
                     </article>
                     <article>
-                        <span>Verifiering</span>
-                        <strong>Admin kan fortfarande logga in och kontrollera läget</strong>
+                        <span>{{ t('maintenance.meta.verification') }}</span>
+                        <strong>{{ t('maintenance.meta.verification_copy') }}</strong>
                     </article>
                 </div>
 
                 <div class="maintenance-actions">
-                    <a class="button" href="{{ path('app_home') }}">Till startsidan</a>
-                    <a class="button secondary" href="{{ path('app_status_page') }}">Öppna driftstatus</a>
-                    <a class="button secondary" href="{{ path('app_contact') }}">Kontakta support</a>
+                    <a class="button" href="{{ path('app_home') }}">{{ t('maintenance.actions.home') }}</a>
+                    <a class="button secondary" href="{{ path('app_status_page') }}">{{ t('maintenance.actions.status') }}</a>
+                    <a class="button secondary" href="{{ path('app_contact') }}">{{ t('login.contact_support') }}</a>
                 </div>
             </div>
         </article>
 
         <aside class="maintenance-info">
-            <h2>Vad fungerar under tiden?</h2>
+            <h2>{{ t('maintenance.info.title') }}</h2>
             <ul class="maintenance-list">
-                <li><strong>Startsidan</strong> fortsätter vara öppen för information och länkar vidare.</li>
-                <li><strong>Driftstatus</strong> visar senaste läget och planerade fönster.</li>
-                <li><strong>Kontakta oss</strong> går att använda om ni behöver nå teamet.</li>
-                <li><strong>Admin</strong> kan logga in för verifiering och avstämning.</li>
+                <li><strong>{{ t('maintenance.info.home_label') }}</strong> {{ t('maintenance.info.home_copy') }}</li>
+                <li><strong>{{ t('maintenance.info.status_label') }}</strong> {{ t('maintenance.info.status_copy') }}</li>
+                <li><strong>{{ t('maintenance.info.contact_label') }}</strong> {{ t('maintenance.info.contact_copy') }}</li>
+                <li><strong>{{ t('maintenance.info.admin_label') }}</strong> {{ t('maintenance.info.admin_copy') }}</li>
             </ul>
         </aside>
     </section>
+
+    <footer style="margin-top: 2rem; padding-top: 1rem; color: #6a748d; font-size: 0.95rem; display: flex; flex-wrap: wrap; gap: 0.85rem 1.1rem; border-top: 1px solid rgba(148, 163, 184, 0.18);">
+        <a href="{{ path('app_home') }}">{{ t('nav.home') }}</a>
+        <a href="{{ path('app_status_page') }}">{{ t('nav.status') }}</a>
+        <a href="{{ path('app_contact') }}">{{ t('nav.contact') }}</a>
+        {% if site_branding.footerText %}
+            <span>{{ site_branding.footerText }}</span>
+        {% endif %}
+        <span>{{ t('search.footer.version') }} {{ site_branding.appVersion }}</span>
+        <a href="{{ site_branding.githubUrl }}" target="_blank" rel="noopener noreferrer">{{ site_branding.copyrightLabel }}</a>
+    </footer>
 {% endblock %}

@@ -1,0 +1,14 @@
+{% extends 'public/policy_base.html.twig' %}
+
+{% set policy = privacyPolicySettings %}
+{% set policy_eyebrow = 'GDPR & Dataskydd' %}
+{% set policy_status_text = 'Integritet, personuppgifter och dataskydd' %}
+{% set aside_title = 'Relaterade sidor' %}
+{% set aside_copy = 'Vill du läsa mer om hur Driftpunkt används eller hur cookies hanteras finns de viktigaste sidorna samlade här.' %}
+{% set policy_links = [
+    { label: 'Kontakta oss', href: path('app_contact') },
+    { label: 'Driftstatus', href: path('app_status_page') },
+    { label: 'Användarvillkor', href: path('app_terms_page') },
+    { label: 'Cookiepolicy', href: path('app_cookie_policy') },
+    { label: 'IMY', href: 'https://www.imy.se/', external: true }
+] %}

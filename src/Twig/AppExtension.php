@@ -20,6 +20,7 @@ final class AppExtension extends AbstractExtension implements GlobalsInterface
     {
         return [
             'maintenance_mode' => $this->runtime->maintenanceMode(),
+            'site_branding' => $this->runtime->siteBranding(),
         ];
     }
 
@@ -27,6 +28,8 @@ final class AppExtension extends AbstractExtension implements GlobalsInterface
     {
         return [
             new TwigFunction('maintenance_notice', [$this->runtime, 'maintenanceNotice']),
+            new TwigFunction('t', [$this->runtime, 'translate']),
+            new TwigFunction('available_locales', [$this->runtime, 'availableLocales']),
         ];
     }
 

@@ -89,6 +89,30 @@ Driftpunkt innehaller bland annat:
 
 5. Oppna `http://127.0.0.1:8000`
 
+## Snabbstart Med Docker Compose
+
+Om du foredrar containerbaserad drift kan du starta projektet med Docker Compose:
+
+1. Bygg och starta tjansterna
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+2. Kor migrationer i containern
+
+   ```bash
+   docker compose exec php php bin/console doctrine:migrations:migrate -n
+   ```
+
+3. (Valfritt) skapa testkonton
+
+   ```bash
+   docker compose exec php php bin/console app:create-test-accounts
+   ```
+
+4. Oppna `http://127.0.0.1:8000`
+
 ## Testkonton
 
 Om du kor `app:create-test-accounts` skapas:

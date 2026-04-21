@@ -9,6 +9,7 @@ use App\Module\Identity\Enum\UserType;
 use App\Module\Maintenance\Service\MaintenanceMode;
 use App\Module\News\Entity\NewsArticle;
 use App\Module\News\Enum\NewsCategory;
+use App\Module\News\Service\NewsArticleSchemaInspector;
 use App\Module\PublicPortal\Service\PublicSiteSearch;
 use App\Module\System\Service\SystemSettings;
 use App\Module\Ticket\Entity\Ticket;
@@ -19,6 +20,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 final class HomeController extends AbstractController
 {
@@ -26,7 +28,9 @@ final class HomeController extends AbstractController
         private readonly EntityManagerInterface $entityManager,
         private readonly SystemSettings $systemSettings,
         private readonly MaintenanceMode $maintenanceMode,
+        private readonly NewsArticleSchemaInspector $newsArticleSchemaInspector,
         private readonly PublicSiteSearch $publicSiteSearch,
+        private readonly RequestStack $requestStack,
     ) {
     }
 
@@ -43,16 +47,18 @@ final class HomeController extends AbstractController
         $customerLoginSettings = $this->systemSettings->getCustomerLoginSettings();
         $searchQuery = trim($request->query->getString('q'));
         /** @var list<NewsArticle> $latestNews */
-        $latestNews = $this->entityManager->getRepository(NewsArticle::class)->createQueryBuilder('article')
-            ->andWhere('article.isPublished = :published')
-            ->andWhere('article.publishedAt <= :now')
-            ->setParameter('published', true)
-            ->setParameter('now', $now)
-            ->orderBy('article.isPinned', 'DESC')
-            ->addOrderBy('article.publishedAt', 'DESC')
-            ->setMaxResults(3)
-            ->getQuery()
-            ->getResult();
+        $latestNews = $this->newsArticleSchemaInspector->isReady()
+            ? $this->entityManager->getRepository(NewsArticle::class)->createQueryBuilder('article')
+                ->andWhere('article.isPublished = :published')
+                ->andWhere('article.publishedAt <= :now')
+                ->setParameter('published', true)
+                ->setParameter('now', $now)
+                ->orderBy('article.isPinned', 'DESC')
+                ->addOrderBy('article.publishedAt', 'DESC')
+                ->setMaxResults(3)
+                ->getQuery()
+                ->getResult()
+            : [];
         $homeSupportWidget = $this->filterHomeSupportWidget(
             $this->systemSettings->getHomeSupportWidgetSettings(),
             (bool) $knowledgeBaseSettings['publicEnabled'],
@@ -115,20 +121,23 @@ final class HomeController extends AbstractController
         $incidentCount = (int) ($incidentStats['incidentCount'] ?? 0);
         $latestIncidentAt = $this->parseDateTimeImmutable($incidentStats['latestIncidentAt'] ?? null);
 
-        $newsRepository = $this->entityManager->getRepository(NewsArticle::class);
         /** @var list<NewsArticle> $plannedMaintenanceArticles */
-        $plannedMaintenanceArticles = $newsRepository->createQueryBuilder('article')
-            ->andWhere('article.isPublished = :published')
-            ->andWhere('article.publishedAt <= :now')
-            ->andWhere('article.category = :category')
-            ->setParameter('published', true)
-            ->setParameter('now', $now)
-            ->setParameter('category', NewsCategory::PLANNED_MAINTENANCE)
-            ->orderBy('article.isPinned', 'DESC')
-            ->addOrderBy('article.publishedAt', 'DESC')
-            ->addOrderBy('article.updatedAt', 'DESC')
-            ->getQuery()
-            ->getResult();
+        $plannedMaintenanceArticles = [];
+        if ($this->newsArticleSchemaInspector->isReady()) {
+            $newsRepository = $this->entityManager->getRepository(NewsArticle::class);
+            $plannedMaintenanceArticles = $newsRepository->createQueryBuilder('article')
+                ->andWhere('article.isPublished = :published')
+                ->andWhere('article.publishedAt <= :now')
+                ->andWhere('article.category = :category')
+                ->setParameter('published', true)
+                ->setParameter('now', $now)
+                ->setParameter('category', NewsCategory::PLANNED_MAINTENANCE)
+                ->orderBy('article.isPinned', 'DESC')
+                ->addOrderBy('article.publishedAt', 'DESC')
+                ->addOrderBy('article.updatedAt', 'DESC')
+                ->getQuery()
+                ->getResult();
+        }
         $activePlannedMaintenanceArticles = array_values(array_filter(
             $plannedMaintenanceArticles,
             fn (NewsArticle $article): bool => $this->isActiveOrUpcomingMaintenance($article, $now),
@@ -181,9 +190,14 @@ final class HomeController extends AbstractController
     private function formatRelativeTime(\DateTimeImmutable $at): string
     {
         $seconds = max(0, time() - $at->getTimestamp());
+        $isEnglish = 'en' === $this->requestStack->getCurrentRequest()?->getLocale();
 
         if ($seconds < 3600) {
             $minutes = max(1, (int) floor($seconds / 60));
+
+            if ($isEnglish) {
+                return sprintf('%d minute%s ago', $minutes, 1 === $minutes ? '' : 's');
+            }
 
             return sprintf('%d minut%s sedan', $minutes, 1 === $minutes ? '' : 'er');
         }
@@ -191,16 +205,22 @@ final class HomeController extends AbstractController
         if ($seconds < 86400) {
             $hours = max(1, (int) floor($seconds / 3600));
 
+            if ($isEnglish) {
+                return sprintf('%d hour%s ago', $hours, 1 === $hours ? '' : 's');
+            }
+
             return sprintf('%d timm%s sedan', $hours, 1 === $hours ? 'e' : 'ar');
         }
 
         if ($seconds < 172800) {
-            return 'igar';
+            return $isEnglish ? 'yesterday' : 'igar';
         }
 
         $days = (int) floor($seconds / 86400);
 
-        return sprintf('%d dagar sedan', $days);
+        return $isEnglish
+            ? sprintf('%d day%s ago', $days, 1 === $days ? '' : 's')
+            : sprintf('%d dagar sedan', $days);
     }
 
     private function parseDateTimeImmutable(mixed $value): ?\DateTimeImmutable

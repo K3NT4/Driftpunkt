@@ -87,7 +87,7 @@ final class TicketCommentNotificationTest extends WebTestCase
 
         $this->client->loginUser($customer);
         $this->client->enableProfiler();
-        $crawler = $this->client->request('GET', '/portal/customer');
+        $crawler = $this->client->request('GET', sprintf('/portal/customer/tickets/%d', $ticket->getId()));
         self::assertResponseIsSuccessful();
 
         $form = $crawler->filter(sprintf('form[action="/portal/customer/tickets/%d/comments"]', $ticket->getId()))->form([
@@ -95,7 +95,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/customer');
+        self::assertResponseRedirects(sprintf('/portal/customer/tickets/%d', $ticket->getId()));
         self::assertEmailCount(1);
 
         /** @var Email $email */
@@ -125,7 +125,7 @@ final class TicketCommentNotificationTest extends WebTestCase
 
         $this->client->loginUser($technician);
         $this->client->enableProfiler();
-        $crawler = $this->client->request('GET', '/portal/technician/arenden');
+        $crawler = $this->client->request('GET', sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
         self::assertResponseIsSuccessful();
 
         $form = $crawler->filter(sprintf('form[action="/portal/technician/tickets/%d/comments"]', $ticket->getId()))->form([
@@ -133,7 +133,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/technician/arenden');
+        self::assertResponseRedirects(sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
         self::assertEmailCount(0);
 
         $ticket = $this->entityManager->getRepository(Ticket::class)->find($ticket->getId());
@@ -156,7 +156,7 @@ final class TicketCommentNotificationTest extends WebTestCase
 
         $this->client->loginUser($technician);
         $this->client->enableProfiler();
-        $crawler = $this->client->request('GET', '/portal/technician/arenden');
+        $crawler = $this->client->request('GET', sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
         self::assertResponseIsSuccessful();
 
         $form = $crawler->filter(sprintf('form[action="/portal/technician/tickets/%d/comments"]', $ticket->getId()))->form([
@@ -165,7 +165,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/technician/arenden');
+        self::assertResponseRedirects(sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
         self::assertEmailCount(0);
 
         $ticket = $this->entityManager->getRepository(Ticket::class)->find($ticket->getId());
@@ -182,7 +182,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         self::ensureKernelShutdown();
         $customerClient = static::createClient();
         $customerClient->loginUser($customer);
-        $customerCrawler = $customerClient->request('GET', '/portal/customer');
+        $customerCrawler = $customerClient->request('GET', sprintf('/portal/customer/tickets/%d', $ticket->getId()));
         self::assertResponseIsSuccessful();
         self::assertStringNotContainsString('Internt: vi misstänker fel i upstream-konfigurationen.', $customerCrawler->html());
     }
@@ -444,6 +444,62 @@ final class TicketCommentNotificationTest extends WebTestCase
         self::assertStringContainsString('sharepoint-export.csv', $html);
         self::assertStringContainsString('Tekniker uppdaterade ärendet', $html);
         self::assertStringContainsString('Kortläsaren startades om och loggar samlades in.', $html);
+    }
+
+    public function testTechnicianTicketDetailShowsSlaTimeline(): void
+    {
+        [, $technician, , $ticket] = $this->createTicketFixture();
+
+        $slaPolicy = new SlaPolicy('Prioriterad 2/8', 2, 8);
+        $ticket->setSlaPolicy($slaPolicy);
+
+        $this->entityManager->persist($slaPolicy);
+        $this->entityManager->flush();
+
+        $this->backdateTicket($ticket, '-5 hours');
+
+        /** @var Ticket $ticket */
+        $ticket = $this->entityManager->getRepository(Ticket::class)->findOneBy(['reference' => 'DP-2001']);
+        self::assertNotNull($ticket);
+
+        $this->client->loginUser($technician);
+        $this->client->request('GET', sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
+        self::assertResponseIsSuccessful();
+
+        $html = $this->client->getResponse()->getContent() ?? '';
+        self::assertStringContainsString('SLA-tidslinje', $html);
+        self::assertStringContainsString('Prioriterad 2/8', $html);
+        self::assertStringContainsString('Första svar försenat', $html);
+        self::assertStringContainsString('Första svar senast', $html);
+        self::assertStringContainsString('Lösning senast', $html);
+    }
+
+    public function testTechnicianTicketDetailShowsWorkflowTimeline(): void
+    {
+        [, $technician, $customer, $ticket] = $this->createTicketFixture();
+
+        $createdLog = new TicketAuditLog($ticket, 'ticket_created', 'Ticket skapad med status Öppen.', $technician);
+        $statusLog = new TicketAuditLog($ticket, 'ticket_updated', 'status Ny -> Väntar på kund, tilldelning ingen -> Tina Tekniker', $technician);
+        $customerLog = new TicketAuditLog($ticket, 'customer_comment_added', 'Kunden har skickat ett nytt svar.', $customer);
+
+        $ticket->addAuditLog($createdLog);
+        $ticket->addAuditLog($statusLog);
+        $ticket->addAuditLog($customerLog);
+        $this->entityManager->persist($createdLog);
+        $this->entityManager->persist($statusLog);
+        $this->entityManager->persist($customerLog);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $this->client->request('GET', sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
+        self::assertResponseIsSuccessful();
+
+        $html = $this->client->getResponse()->getContent() ?? '';
+        self::assertStringContainsString('Arbetsflöde', $html);
+        self::assertStringContainsString('Status ändrades', $html);
+        self::assertStringContainsString('Från ny till väntar på kund.', $html);
+        self::assertStringContainsString('Kund uppdaterade ärendet', $html);
+        self::assertStringContainsString('Kalle Kund', $html);
     }
 
     public function testTechnicianCanCreateMultipleTicketsFromCsvImport(): void
@@ -854,7 +910,7 @@ final class TicketCommentNotificationTest extends WebTestCase
 
         $this->client->loginUser($creator);
         $this->client->enableProfiler();
-        $crawler = $this->client->request('GET', '/portal/technician');
+        $crawler = $this->client->request('GET', '/portal/technician/tickets/ny');
         self::assertResponseIsSuccessful();
 
         $form = $crawler->selectButton('Skapa ticket')->form([
@@ -874,7 +930,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/technician');
+        self::assertResponseRedirects('/portal/technician/arenden');
         self::assertEmailCount(1);
 
         $ticket = $this->entityManager->getRepository(Ticket::class)->findOneBy(['subject' => 'Policydefault ticket']);
@@ -922,7 +978,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $this->entityManager->flush();
 
         $this->client->loginUser($creator);
-        $crawler = $this->client->request('GET', '/portal/technician');
+        $crawler = $this->client->request('GET', '/portal/technician/tickets/ny');
         self::assertResponseIsSuccessful();
 
         $form = $crawler->selectButton('Skapa ticket')->form([
@@ -942,7 +998,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/technician');
+        self::assertResponseRedirects('/portal/technician/arenden');
 
         $ticket = $this->entityManager->getRepository(Ticket::class)->findOneBy(['subject' => 'Ingen policydefault']);
         self::assertNotNull($ticket);
@@ -1003,7 +1059,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $this->entityManager->flush();
 
         $this->client->loginUser($creator);
-        $crawler = $this->client->request('GET', '/portal/technician');
+        $crawler = $this->client->request('GET', '/portal/technician/tickets/ny');
         self::assertResponseIsSuccessful();
 
         $form = $crawler->selectButton('Skapa ticket')->form([
@@ -1025,7 +1081,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/technician');
+        self::assertResponseRedirects('/portal/technician/arenden');
 
         $ticket = $this->entityManager->getRepository(Ticket::class)->findOneBy(['subject' => 'VPN går ned']);
         self::assertNotNull($ticket);
@@ -1087,7 +1143,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $this->entityManager->flush();
 
         $this->client->loginUser($creator);
-        $crawler = $this->client->request('GET', '/portal/technician');
+        $crawler = $this->client->request('GET', '/portal/technician/tickets/ny');
         self::assertResponseIsSuccessful();
 
         $form = $crawler->selectButton('Skapa ticket')->form([
@@ -1108,7 +1164,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/technician');
+        self::assertResponseRedirects('/portal/technician/arenden');
 
         $ticket = $this->entityManager->getRepository(Ticket::class)->findOneBy(['subject' => 'Routingstyrd SLA-default']);
         self::assertNotNull($ticket);
@@ -1183,7 +1239,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $templateV2Id = $templateV2->getId();
 
         $this->client->loginUser($creator);
-        $crawler = $this->client->request('GET', '/portal/technician');
+        $crawler = $this->client->request('GET', '/portal/technician/tickets/ny');
         self::assertResponseIsSuccessful();
 
         $form = $crawler->selectButton('Skapa ticket')->form([
@@ -1205,7 +1261,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/technician');
+        self::assertResponseRedirects('/portal/technician/arenden');
 
         $ticket = $this->entityManager->getRepository(Ticket::class)->findOneBy(['subject' => 'Mallfamilj routas']);
         self::assertNotNull($ticket);
@@ -1266,7 +1322,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $this->entityManager->flush();
 
         $this->client->loginUser($creator);
-        $crawler = $this->client->request('GET', '/portal/technician');
+        $crawler = $this->client->request('GET', '/portal/technician/tickets/ny');
         self::assertResponseIsSuccessful();
 
         $form = $crawler->selectButton('Skapa ticket')->form([
@@ -1286,7 +1342,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/technician');
+        self::assertResponseRedirects('/portal/technician/arenden');
 
         $ticket = $this->entityManager->getRepository(Ticket::class)->findOneBy(['subject' => 'Kritisk VPN-incident']);
         self::assertNotNull($ticket);
@@ -1345,7 +1401,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $slaPolicyId = $slaPolicy->getId();
 
         $this->client->loginUser($creator);
-        $crawler = $this->client->request('GET', '/portal/technician');
+        $crawler = $this->client->request('GET', '/portal/technician/tickets/ny');
         self::assertResponseIsSuccessful();
 
         $form = $crawler->selectButton('Skapa ticket')->form([
@@ -1367,7 +1423,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/technician');
+        self::assertResponseRedirects('/portal/technician/arenden');
 
         $ticket = $this->entityManager->getRepository(Ticket::class)->findOneBy(['subject' => 'Mallstyrd SLA-ticket']);
         self::assertNotNull($ticket);
@@ -1415,7 +1471,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $systemSettings->setBool(SystemSettings::FEATURE_TICKET_TEMPLATE_CHECKLIST_PROGRESS_ENABLED, true);
 
         $this->client->loginUser($creator);
-        $crawler = $this->client->request('GET', '/portal/technician');
+        $crawler = $this->client->request('GET', sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
         self::assertResponseIsSuccessful();
         self::assertStringContainsString('0/2 klara', (string) $crawler->html());
 
@@ -1424,7 +1480,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/technician');
+        self::assertResponseRedirects(sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
         $this->client->followRedirect();
 
         $this->entityManager->clear();
@@ -1442,7 +1498,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         self::assertNotNull($auditLog);
         self::assertSame('Checklistan uppdaterades: 1 av 2 punkter klara.', $auditLog->getMessage());
 
-        $crawler = $this->client->request('GET', '/portal/technician');
+        $crawler = $this->client->request('GET', sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
         self::assertResponseIsSuccessful();
         $html = (string) $crawler->html();
         self::assertStringContainsString('1/2 klara', $html);
@@ -1550,117 +1606,41 @@ final class TicketCommentNotificationTest extends WebTestCase
         self::assertStringContainsString('Detta bör du ta först', $html);
         self::assertStringContainsString('DP-7012 · Äldre väntande ärende', $html);
         self::assertStringContainsString('Prioriterad återkoppling', $html);
-        self::assertStringContainsString('Prioriterad återkoppling', $html);
-        self::assertStringContainsString('Kräver svar från dig', $html);
-        self::assertStringContainsString('Vi arbetar med', $html);
-        self::assertStringContainsString('Klart senaste tiden', $html);
-        self::assertStringContainsString('2 väntar', $html);
-        self::assertStringContainsString('1 pågår', $html);
-        self::assertStringContainsString('1 klara', $html);
-        self::assertStringContainsString('Visa vid behov', $html);
         self::assertStringContainsString('DP-7011 · Kundöversikt', $html);
         self::assertStringContainsString('DP-7012 · Äldre väntande ärende', $html);
-        self::assertStringContainsString('last_ticket=DP-7012', $html);
-        self::assertStringContainsString('last_ticket=DP-7011', $html);
-        self::assertStringContainsString('#ticket-dp-7012-reply', $html);
-        self::assertStringContainsString('#ticket-dp-7011-reply', $html);
-        self::assertStringContainsString('id="ticket-dp-7011-reply"', $html);
         self::assertStringContainsString('Nytt idag', $html);
         self::assertStringContainsString('Väntat länge', $html);
         self::assertStringContainsString('Bra att ta nu medan dialogen är färsk.', $html);
         self::assertStringContainsString('Det här ärendet har väntat en längre stund på din återkoppling.', $html);
-        self::assertStringContainsString('Vi väntar fortfarande på din bekräftelse innan vi går vidare med felsökningen.', $html);
-        self::assertStringContainsString('Vi behöver att du bekräftar om felet kvarstår efter senaste testet.', $html);
         self::assertStringContainsString('Svara till tekniker', $html);
         self::assertTrue(strpos($html, 'DP-7012 · Äldre väntande ärende') < strpos($html, 'DP-7011 · Kundöversikt'));
-        self::assertStringContainsString('Arbetsstatus', $html);
-        self::assertStringContainsString('1/2 steg klara', $html);
-        self::assertStringContainsString('Ärendeaktivitet', $html);
-        self::assertStringContainsString('Ärendet skapades.', $html);
-        self::assertStringContainsString('Tekniker svarade i ärendet.', $html);
-        self::assertStringContainsString('Status ändrades till väntar på kund.', $html);
-        self::assertStringContainsString('Vi väntar på dig', $html);
-        self::assertStringContainsString('Din tur', $html);
-        self::assertStringContainsString('Hos oss nu', $html);
-        self::assertStringContainsString('Teknikerteamet har återkopplat och väntar på svar eller bekräftelse från dig.', $html);
-        self::assertStringContainsString('Vi behöver din återkoppling', $html);
-        self::assertStringContainsString('Skicka uppdatering', $html);
         self::assertStringNotContainsString('Mallplaybook', $html);
         self::assertStringNotContainsString('Bekräfta påverkan', $html);
         self::assertStringNotContainsString('Verifiera tjänst', $html);
-        self::assertStringNotContainsString('Spara checklista', $html);
-        self::assertStringNotContainsString('Tilldelad:', $html);
-        self::assertStringNotContainsString('Team:', $html);
-        self::assertStringNotContainsString('SLA:', $html);
 
-        $crawler = $this->client->request('GET', '/portal/customer?only_open=1');
+        $detailTicket = $this->entityManager->getRepository(Ticket::class)->findOneBy(['reference' => 'DP-7011']);
+        self::assertNotNull($detailTicket);
+
+        $detailCrawler = $this->client->request('GET', sprintf('/portal/customer/tickets/%d', $detailTicket->getId()));
         self::assertResponseIsSuccessful();
-        $html = (string) $crawler->html();
+        $detailHtml = (string) $detailCrawler->html();
 
-        self::assertStringContainsString('Visar aktiva ärenden nu.', $html);
-        self::assertStringContainsString('Visa alla', $html);
-        self::assertStringContainsString('DP-7011 · Kundöversikt', $html);
-        self::assertStringContainsString('DP-7012 · Äldre väntande ärende', $html);
-        self::assertStringContainsString('DP-7013', $html);
-        self::assertStringNotContainsString('DP-7014', $html);
-        self::assertStringNotContainsString('1 klara', $html);
-        self::assertStringNotContainsString('Visa vid behov', $html);
+        self::assertStringContainsString('Arbetsstatus', $detailHtml);
+        self::assertStringContainsString('1/2 steg klara', $detailHtml);
+        self::assertStringContainsString('Ärendeaktivitet', $detailHtml);
+        self::assertStringContainsString('Ärendet skapades.', $detailHtml);
+        self::assertStringContainsString('Tekniker svarade i ärendet.', $detailHtml);
+        self::assertStringContainsString('Status ändrades till väntar på kund.', $detailHtml);
+        self::assertStringContainsString('Vi behöver att du bekräftar om felet kvarstår efter senaste testet.', $detailHtml);
+        self::assertStringContainsString('Skicka uppdatering', $detailHtml);
+        self::assertStringNotContainsString('Mallplaybook', $detailHtml);
+        self::assertStringNotContainsString('Bekräfta påverkan', $detailHtml);
+        self::assertStringNotContainsString('Verifiera tjänst', $detailHtml);
+        self::assertStringNotContainsString('Spara checklista', $detailHtml);
+        self::assertStringNotContainsString('Tilldelad:', $detailHtml);
+        self::assertStringNotContainsString('Team:', $detailHtml);
+        self::assertStringNotContainsString('SLA:', $detailHtml);
 
-        $crawler = $this->client->request('GET', '/portal/customer');
-        self::assertResponseIsSuccessful();
-        $html = (string) $crawler->html();
-
-        self::assertStringContainsString('Visar aktiva ärenden nu.', $html);
-        self::assertStringContainsString('DP-7013', $html);
-        self::assertStringNotContainsString('DP-7014', $html);
-
-        $crawler = $this->client->request('GET', '/portal/customer?only_open=0');
-        self::assertResponseIsSuccessful();
-        $html = (string) $crawler->html();
-
-        self::assertStringContainsString('Visar både aktiva och avslutade ärenden.', $html);
-        self::assertStringContainsString('DP-7014', $html);
-        self::assertStringContainsString('1 klara', $html);
-
-        $crawler = $this->client->request('GET', '/portal/customer?last_ticket=DP-7013');
-        self::assertResponseIsSuccessful();
-        $html = (string) $crawler->html();
-
-        self::assertStringContainsString('Senaste vy', $html);
-        self::assertStringContainsString('DP-7013', $html);
-        self::assertStringContainsString('Pågående felsökning', $html);
-        self::assertStringContainsString('Öppna ärendet igen', $html);
-        self::assertStringContainsString('last_ticket=DP-7013', $html);
-
-        $crawler = $this->client->request('GET', '/portal/customer');
-        self::assertResponseIsSuccessful();
-        $html = (string) $crawler->html();
-
-        self::assertStringContainsString('Senaste vy', $html);
-        self::assertStringContainsString('DP-7013', $html);
-        self::assertStringContainsString('Pågående felsökning', $html);
-
-        $crawler = $this->client->request('GET', '/portal/customer?show_completed=1');
-        self::assertResponseIsSuccessful();
-        $html = (string) $crawler->html();
-
-        self::assertStringContainsString('Dölj klara', $html);
-        self::assertStringContainsString('class="customer-ticket-group" open', $html);
-        self::assertStringContainsString('DP-7014', $html);
-
-        $crawler = $this->client->request('GET', '/portal/customer');
-        self::assertResponseIsSuccessful();
-        $html = (string) $crawler->html();
-
-        self::assertStringContainsString('Dölj klara', $html);
-        self::assertStringContainsString('DP-7014', $html);
-
-        $crawler = $this->client->request('GET', '/portal/customer?show_completed=0');
-        self::assertResponseIsSuccessful();
-        $html = (string) $crawler->html();
-
-        self::assertStringContainsString('Visa klara direkt', $html);
-        self::assertStringContainsString('Visa vid behov', $html);
     }
 
     public function testConditionalIntakeFieldIsIgnoredWhenDependencyIsNotMet(): void
@@ -1697,7 +1677,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $this->entityManager->flush();
 
         $this->client->loginUser($creator);
-        $crawler = $this->client->request('GET', '/portal/technician');
+        $crawler = $this->client->request('GET', '/portal/technician/tickets/ny');
         self::assertResponseIsSuccessful();
 
         $form = $crawler->selectButton('Skapa ticket')->form([
@@ -1715,7 +1695,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/technician');
+        self::assertResponseRedirects('/portal/technician/arenden');
 
         $ticket = $this->entityManager->getRepository(Ticket::class)->findOneBy(['subject' => 'Testmiljö incident']);
         self::assertNotNull($ticket);
@@ -1735,7 +1715,7 @@ final class TicketCommentNotificationTest extends WebTestCase
 
         $this->client->loginUser($technician);
         $this->client->enableProfiler();
-        $crawler = $this->client->request('GET', '/portal/technician');
+        $crawler = $this->client->request('GET', sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
         self::assertResponseIsSuccessful();
 
         $form = $crawler->filter(sprintf('form[action="/portal/technician/tickets/%d"]', $ticket->getId()))->form([
@@ -1750,7 +1730,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/technician');
+        self::assertResponseRedirects(sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
         self::assertEmailCount(1);
 
         /** @var Email $email */
@@ -1823,24 +1803,18 @@ final class TicketCommentNotificationTest extends WebTestCase
         $this->entityManager->flush();
 
         $this->client->loginUser($technician);
-        $crawler = $this->client->request('GET', '/portal/technician?scope=mine&status=open&sort=reference_asc&page=2');
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?scope=mine&status=open&sort=reference_asc&page=2');
         self::assertResponseIsSuccessful();
 
         $html = $crawler->html();
         self::assertIsString($html);
-        self::assertStringContainsString('Mina (12)', $html);
-        self::assertStringContainsString('Öppen (12)', $html);
-        self::assertStringContainsString('Stängd (1)', $html);
-        self::assertStringContainsString('Kritisk (1)', $html);
-        self::assertStringContainsString('Hög (1)', $html);
-        self::assertStringContainsString('Mitt team (11)', $html);
-        self::assertStringContainsString('12 träffar, sida 2 av 2', $html);
+        self::assertStringContainsString('Mina ärenden', $html);
         self::assertStringContainsString('DP-3011', $html);
         self::assertStringContainsString('DP-3012', $html);
         self::assertStringNotContainsString('DP-3001', $html);
         self::assertStringNotContainsString('DP-3999', $html);
 
-        $priorityCrawler = $this->client->request('GET', '/portal/technician?priority=critical&sort=priority_desc');
+        $priorityCrawler = $this->client->request('GET', '/portal/technician/arenden?priority=critical&sort=priority_desc');
         self::assertResponseIsSuccessful();
         $priorityHtml = $priorityCrawler->html();
         self::assertIsString($priorityHtml);
@@ -1848,14 +1822,14 @@ final class TicketCommentNotificationTest extends WebTestCase
         self::assertStringContainsString('DP-3012', $priorityHtml);
         self::assertStringNotContainsString('DP-3011', $priorityHtml);
 
-        $requestTypeCrawler = $this->client->request('GET', '/portal/technician?request_type=incident&impact=critical_service');
+        $requestTypeCrawler = $this->client->request('GET', '/portal/technician/arenden?request_type=incident&impact=critical_service');
         self::assertResponseIsSuccessful();
         $requestTypeHtml = $requestTypeCrawler->html();
         self::assertIsString($requestTypeHtml);
         self::assertStringContainsString('DP-3012', $requestTypeHtml);
         self::assertStringNotContainsString('DP-3011', $requestTypeHtml);
 
-        $escalationCrawler = $this->client->request('GET', '/portal/technician?escalation=incident&sort=escalation_desc');
+        $escalationCrawler = $this->client->request('GET', '/portal/technician/arenden?escalation=incident&sort=escalation_desc');
         self::assertResponseIsSuccessful();
 
         $escalationHtml = $escalationCrawler->html();
@@ -1864,7 +1838,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         self::assertStringContainsString('DP-3012', $escalationHtml);
         self::assertStringNotContainsString('DP-3011', $escalationHtml);
 
-        $teamCrawler = $this->client->request('GET', '/portal/technician?team='.$opsTeam->getId().'&scope=my_team');
+        $teamCrawler = $this->client->request('GET', '/portal/technician/arenden?team='.$opsTeam->getId().'&scope=my_team');
         self::assertResponseIsSuccessful();
         $teamHtml = $teamCrawler->html();
         self::assertIsString($teamHtml);
@@ -1918,6 +1892,2076 @@ final class TicketCommentNotificationTest extends WebTestCase
         self::assertStringContainsString('SLA bruten</div>', $html);
         self::assertStringContainsString('>1</div>', $html);
         self::assertStringContainsString('DP-6201', $html);
+    }
+
+    public function testTechnicianOverviewCanSortByAttentionAndExplainWhy(): void
+    {
+        $company = new Company('Attention AB');
+        $technician = new User('attention-tech@example.test', 'Tove', 'Tekniker', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'AttentionPassword123'));
+        $technician->enableMfa();
+
+        $customer = new User('attention-customer@example.test', 'Karin', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'CustomerPassword123'));
+        $customer->setCompany($company);
+
+        $slaPolicy = (new SlaPolicy('Snabb SLA', 1, 8))
+            ->setFirstResponseWarningHours(1)
+            ->setResolutionWarningHours(2);
+
+        $breachedTicket = (new Ticket(
+            'DP-4101',
+            'Kritisk driftstörning',
+            'Ska få högst uppmärksamhet på grund av bruten SLA.',
+            TicketStatus::OPEN,
+            TicketVisibility::PRIVATE,
+            TicketPriority::CRITICAL,
+            TicketRequestType::INCIDENT,
+            TicketImpactLevel::CRITICAL_SERVICE,
+            TicketEscalationLevel::INCIDENT,
+        ))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician)
+            ->setSlaPolicy($slaPolicy);
+
+        $customerReplyTicket = (new Ticket(
+            'DP-4102',
+            'Behöver svar från tekniker',
+            'Kunden har svarat senast och väntar på återkoppling.',
+            TicketStatus::OPEN,
+            TicketVisibility::PRIVATE,
+            TicketPriority::HIGH,
+            TicketRequestType::INCIDENT,
+            TicketImpactLevel::TEAM,
+            TicketEscalationLevel::TEAM,
+        ))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician);
+        $customerReplyComment = new TicketComment($customerReplyTicket, $customer, 'Hej, problemet kvarstår fortfarande.');
+        $customerReplyTicket->addComment($customerReplyComment);
+
+        $unassignedTicket = (new Ticket(
+            'DP-4103',
+            'Ej tilldelad ticket',
+            'Det här ärendet saknar ansvarig tekniker.',
+            TicketStatus::NEW,
+            TicketVisibility::PRIVATE,
+            TicketPriority::NORMAL,
+            TicketRequestType::SERVICE_REQUEST,
+            TicketImpactLevel::SINGLE_USER,
+            TicketEscalationLevel::NONE,
+        ))
+            ->setCompany($company)
+            ->setRequester($customer);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($technician);
+        $this->entityManager->persist($customer);
+        $this->entityManager->persist($slaPolicy);
+        $this->entityManager->persist($breachedTicket);
+        $this->entityManager->persist($customerReplyTicket);
+        $this->entityManager->persist($customerReplyComment);
+        $this->entityManager->persist($unassignedTicket);
+        $this->entityManager->flush();
+
+        $this->backdateTicket($breachedTicket, '-3 days');
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?sort=attention_desc');
+        self::assertResponseIsSuccessful();
+
+        $html = $crawler->html();
+        self::assertIsString($html);
+        self::assertStringContainsString('Kräver uppmärksamhet först', $html);
+        self::assertStringContainsString('SLA bruten', $html);
+        self::assertStringContainsString('Kunden väntar', $html);
+        self::assertStringContainsString('Ej tilldelad', $html);
+
+        $breachedPosition = strpos($html, 'DP-4101');
+        $customerReplyPosition = strpos($html, 'DP-4102');
+        $unassignedPosition = strpos($html, 'DP-4103');
+
+        self::assertNotFalse($breachedPosition);
+        self::assertNotFalse($customerReplyPosition);
+        self::assertNotFalse($unassignedPosition);
+        self::assertLessThan($customerReplyPosition, $breachedPosition);
+        self::assertLessThan($unassignedPosition, $customerReplyPosition);
+    }
+
+    public function testTechnicianCanBulkTakeOverTickets(): void
+    {
+        $company = new Company('Bulk AB');
+        $team = new TechnicianTeam('Drift');
+        $technician = new User('bulk-tech@example.test', 'Bo', 'Tekniker', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'BulkPassword123'));
+        $technician->enableMfa();
+        $technician->setTechnicianTeam($team);
+
+        $otherTechnician = new User('bulk-other@example.test', 'Britt', 'Other', UserType::TECHNICIAN);
+        $otherTechnician->setPassword($this->passwordHasher->hashPassword($otherTechnician, 'OtherPassword123'));
+        $otherTechnician->enableMfa();
+
+        $customer = new User('bulk-customer@example.test', 'Kim', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'CustomerPassword123'));
+        $customer->setCompany($company);
+
+        $unassignedTicket = (new Ticket('DP-7101', 'Ej tilldelad', 'Ska tas over i bulk.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer);
+        $assignedTicket = (new Ticket('DP-7102', 'Annan tekniker', 'Ska ocksa tas over i bulk.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($otherTechnician);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($technician);
+        $this->entityManager->persist($otherTechnician);
+        $this->entityManager->persist($customer);
+        $this->entityManager->persist($unassignedTicket);
+        $this->entityManager->persist($assignedTicket);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden');
+        self::assertResponseIsSuccessful();
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'take_over',
+            'bulk_status' => TicketStatus::NEW->value,
+            'ticket_ids' => [(string) $unassignedTicket->getId(), (string) $assignedTicket->getId()],
+        ]);
+
+        self::assertResponseRedirects('/portal/technician/arenden');
+
+        /** @var Ticket $unassignedTicket */
+        $unassignedTicket = $this->entityManager->getRepository(Ticket::class)->find($unassignedTicket->getId());
+        /** @var Ticket $assignedTicket */
+        $assignedTicket = $this->entityManager->getRepository(Ticket::class)->find($assignedTicket->getId());
+        self::assertSame($technician->getId(), $unassignedTicket->getAssignee()?->getId());
+        self::assertSame($technician->getId(), $assignedTicket->getAssignee()?->getId());
+        self::assertSame($team->getId(), $unassignedTicket->getAssignedTeam()?->getId());
+        self::assertSame($team->getId(), $assignedTicket->getAssignedTeam()?->getId());
+    }
+
+    public function testTechnicianCanBulkChangeStatusForOwnTickets(): void
+    {
+        $company = new Company('Bulk Status AB');
+        $technician = new User('bulk-status@example.test', 'Bella', 'Status', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'BulkStatusPassword123'));
+        $technician->enableMfa();
+
+        $customer = new User('bulk-status-customer@example.test', 'Karl', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'CustomerPassword123'));
+        $customer->setCompany($company);
+
+        $ticketOne = (new Ticket('DP-7201', 'Forsta bulkstatus', 'Ska bli lost.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician);
+        $ticketTwo = (new Ticket('DP-7202', 'Andra bulkstatus', 'Ska ocksa bli lost.', TicketStatus::PENDING_CUSTOMER, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($technician);
+        $this->entityManager->persist($customer);
+        $this->entityManager->persist($ticketOne);
+        $this->entityManager->persist($ticketTwo);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?scope=mine');
+        self::assertResponseIsSuccessful();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('Status-förhandsvisning', $html);
+        self::assertStringContainsString('data-bulk-status-preview-main', $html);
+        self::assertStringContainsString('data-bulk-status-preview-warning', $html);
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'set_status',
+            'bulk_status' => TicketStatus::RESOLVED->value,
+            'bulk_internal_note' => 'Löst i bulk efter gemensam verifiering.',
+            'ticket_ids' => [(string) $ticketOne->getId(), (string) $ticketTwo->getId()],
+        ]);
+
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine');
+
+        $ticketOneId = $ticketOne->getId();
+        $ticketTwoId = $ticketTwo->getId();
+        $this->entityManager->clear();
+
+        /** @var Ticket $ticketOne */
+        $ticketOne = $this->entityManager->getRepository(Ticket::class)->find($ticketOneId);
+        /** @var Ticket $ticketTwo */
+        $ticketTwo = $this->entityManager->getRepository(Ticket::class)->find($ticketTwoId);
+        self::assertSame(TicketStatus::RESOLVED, $ticketOne->getStatus());
+        self::assertSame(TicketStatus::RESOLVED, $ticketTwo->getStatus());
+
+        $logs = $this->entityManager->getRepository(TicketAuditLog::class)->findBy(['action' => 'ticket_updated'], ['id' => 'DESC']);
+        self::assertNotEmpty($logs);
+        self::assertStringContainsString('status', $logs[0]->getMessage());
+    }
+
+    public function testTechnicianCanBulkChangePriorityAndEscalation(): void
+    {
+        $company = new Company('Bulk Triage AB');
+        $team = new TechnicianTeam('Triage');
+        $technician = new User('bulk-triage@example.test', 'Tina', 'Triage', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'BulkTriagePassword123'));
+        $technician->enableMfa();
+        $technician->setTechnicianTeam($team);
+
+        $customer = new User('bulk-triage-customer@example.test', 'Klara', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'CustomerPassword123'));
+        $customer->setCompany($company);
+
+        $ticketOne = (new Ticket('DP-7251', 'Första triage', 'Ska bli kritisk.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team)
+            ->setPriority(TicketPriority::NORMAL)
+            ->setEscalationLevel(TicketEscalationLevel::NONE);
+        $ticketTwo = (new Ticket('DP-7252', 'Andra triage', 'Ska också eskaleras.', TicketStatus::NEW, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team)
+            ->setPriority(TicketPriority::LOW)
+            ->setEscalationLevel(TicketEscalationLevel::TEAM);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($technician);
+        $this->entityManager->persist($customer);
+        $this->entityManager->persist($ticketOne);
+        $this->entityManager->persist($ticketTwo);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?scope=mine');
+        self::assertResponseIsSuccessful();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('Status-förhandsvisning', $html);
+        self::assertStringContainsString('data-bulk-status-preview-main', $html);
+        self::assertStringContainsString('data-bulk-status-preview-warning', $html);
+        self::assertStringContainsString('data-bulk-status-preview-outcome', $html);
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'set_priority',
+            'bulk_priority' => TicketPriority::CRITICAL->value,
+            'bulk_status' => TicketStatus::OPEN->value,
+            'ticket_ids' => [(string) $ticketOne->getId(), (string) $ticketTwo->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine');
+
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'set_escalation',
+            'bulk_escalation_level' => TicketEscalationLevel::INCIDENT->value,
+            'bulk_status' => TicketStatus::OPEN->value,
+            'ticket_ids' => [(string) $ticketOne->getId(), (string) $ticketTwo->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine');
+
+        $this->entityManager->clear();
+        /** @var Ticket $ticketOne */
+        $ticketOne = $this->entityManager->getRepository(Ticket::class)->find($ticketOne->getId());
+        /** @var Ticket $ticketTwo */
+        $ticketTwo = $this->entityManager->getRepository(Ticket::class)->find($ticketTwo->getId());
+        self::assertSame(TicketPriority::CRITICAL, $ticketOne->getPriority());
+        self::assertSame(TicketPriority::CRITICAL, $ticketTwo->getPriority());
+        self::assertSame(TicketEscalationLevel::INCIDENT, $ticketOne->getEscalationLevel());
+        self::assertSame(TicketEscalationLevel::INCIDENT, $ticketTwo->getEscalationLevel());
+
+        $logs = $this->entityManager->getRepository(TicketAuditLog::class)->findBy(['action' => 'ticket_updated'], ['id' => 'DESC']);
+        self::assertNotEmpty($logs);
+        self::assertStringContainsString('eskalering', $logs[0]->getMessage());
+    }
+
+    public function testTechnicianCanBulkChangeVisibilityAndRequestType(): void
+    {
+        $company = new Company('Bulk Klassning AB');
+        $team = new TechnicianTeam('Klassning');
+        $technician = new User('bulk-classify@example.test', 'Klara', 'Klassning', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'BulkClassifyPassword123'));
+        $technician->enableMfa();
+        $technician->setTechnicianTeam($team);
+
+        $customer = new User('bulk-classify-customer@example.test', 'Kim', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'CustomerPassword123'));
+        $customer->setCompany($company);
+
+        $ticketOne = (new Ticket('DP-7253', 'Första klassning', 'Ska bli delad service request.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team)
+            ->setRequestType(TicketRequestType::INCIDENT);
+        $ticketTwo = (new Ticket('DP-7254', 'Andra klassning', 'Ska också byta typ och synlighet.', TicketStatus::NEW, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team)
+            ->setRequestType(TicketRequestType::BILLING);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($technician);
+        $this->entityManager->persist($customer);
+        $this->entityManager->persist($ticketOne);
+        $this->entityManager->persist($ticketTwo);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?scope=mine');
+        self::assertResponseIsSuccessful();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('Kommentarsförhandsvisning', $html);
+        self::assertStringContainsString('data-bulk-comment-preview-main', $html);
+        self::assertStringContainsString('data-bulk-comment-preview-outcome', $html);
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'set_visibility',
+            'bulk_visibility' => TicketVisibility::COMPANY_SHARED->value,
+            'bulk_status' => TicketStatus::OPEN->value,
+            'ticket_ids' => [(string) $ticketOne->getId(), (string) $ticketTwo->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine');
+
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'set_request_type',
+            'bulk_request_type' => TicketRequestType::SERVICE_REQUEST->value,
+            'bulk_status' => TicketStatus::OPEN->value,
+            'ticket_ids' => [(string) $ticketOne->getId(), (string) $ticketTwo->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine');
+
+        $ticketOneId = $ticketOne->getId();
+        $ticketTwoId = $ticketTwo->getId();
+        $this->entityManager->clear();
+        /** @var Ticket $ticketOne */
+        $ticketOne = $this->entityManager->getRepository(Ticket::class)->find($ticketOneId);
+        /** @var Ticket $ticketTwo */
+        $ticketTwo = $this->entityManager->getRepository(Ticket::class)->find($ticketTwoId);
+        self::assertSame(TicketVisibility::COMPANY_SHARED, $ticketOne->getVisibility());
+        self::assertSame(TicketVisibility::COMPANY_SHARED, $ticketTwo->getVisibility());
+        self::assertSame(TicketRequestType::SERVICE_REQUEST, $ticketOne->getRequestType());
+        self::assertSame(TicketRequestType::SERVICE_REQUEST, $ticketTwo->getRequestType());
+
+        $logs = $this->entityManager->getRepository(TicketAuditLog::class)->findBy(['action' => 'ticket_updated'], ['id' => 'DESC']);
+        self::assertNotEmpty($logs);
+        self::assertStringContainsString('ärendetyp', $logs[0]->getMessage());
+    }
+
+    public function testTechnicianCanBulkChangeImpactAndCategory(): void
+    {
+        $company = new Company('Bulk Routing AB');
+        $team = new TechnicianTeam('Routing');
+        $technician = new User('bulk-routing@example.test', 'Ruben', 'Routing', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'BulkRoutingPassword123'));
+        $technician->enableMfa();
+        $technician->setTechnicianTeam($team);
+
+        $customer = new User('bulk-routing-customer@example.test', 'Kajsa', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'CustomerPassword123'));
+        $customer->setCompany($company);
+
+        $category = new TicketCategory('Nätverk');
+
+        $ticketOne = (new Ticket('DP-7255', 'Första routing', 'Ska få ny påverkan och kategori.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team)
+            ->setImpactLevel(TicketImpactLevel::SINGLE_USER);
+        $ticketTwo = (new Ticket('DP-7256', 'Andra routing', 'Ska också rättklassas.', TicketStatus::NEW, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team)
+            ->setImpactLevel(TicketImpactLevel::TEAM);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($technician);
+        $this->entityManager->persist($customer);
+        $this->entityManager->persist($category);
+        $this->entityManager->persist($ticketOne);
+        $this->entityManager->persist($ticketTwo);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?scope=mine');
+        self::assertResponseIsSuccessful();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('Kommentarsförhandsvisning', $html);
+        self::assertStringContainsString('data-bulk-comment-preview-main', $html);
+        self::assertStringContainsString('data-bulk-comment-preview-outcome', $html);
+        self::assertStringContainsString('data-bulk-comment-preview-warning', $html);
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'set_impact',
+            'bulk_impact_level' => TicketImpactLevel::CRITICAL_SERVICE->value,
+            'bulk_status' => TicketStatus::OPEN->value,
+            'ticket_ids' => [(string) $ticketOne->getId(), (string) $ticketTwo->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine');
+
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'set_category',
+            'bulk_category_id' => (string) $category->getId(),
+            'bulk_status' => TicketStatus::OPEN->value,
+            'ticket_ids' => [(string) $ticketOne->getId(), (string) $ticketTwo->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine');
+
+        $ticketOneId = $ticketOne->getId();
+        $ticketTwoId = $ticketTwo->getId();
+        $this->entityManager->clear();
+        /** @var Ticket $ticketOne */
+        $ticketOne = $this->entityManager->getRepository(Ticket::class)->find($ticketOneId);
+        /** @var Ticket $ticketTwo */
+        $ticketTwo = $this->entityManager->getRepository(Ticket::class)->find($ticketTwoId);
+        self::assertSame(TicketImpactLevel::CRITICAL_SERVICE, $ticketOne->getImpactLevel());
+        self::assertSame(TicketImpactLevel::CRITICAL_SERVICE, $ticketTwo->getImpactLevel());
+        self::assertSame($category->getName(), $ticketOne->getCategory()?->getName());
+        self::assertSame($category->getName(), $ticketTwo->getCategory()?->getName());
+
+        $logs = $this->entityManager->getRepository(TicketAuditLog::class)->findBy(['action' => 'ticket_updated'], ['id' => 'DESC']);
+        self::assertNotEmpty($logs);
+        self::assertStringContainsString('kategori', $logs[0]->getMessage());
+    }
+
+    public function testTechnicianCanBulkChangeSlaPolicy(): void
+    {
+        $company = new Company('Bulk SLA AB');
+        $team = new TechnicianTeam('Operations');
+        $technician = new User('bulk-sla@example.test', 'Stina', 'SLA', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'BulkSlaPassword123'));
+        $technician->enableMfa();
+        $technician->setTechnicianTeam($team);
+
+        $customer = new User('bulk-sla-customer@example.test', 'Linnea', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'CustomerPassword123'));
+        $customer->setCompany($company);
+
+        $oldSlaPolicy = new SlaPolicy('Bas 8/24', 8, 24);
+        $newSlaPolicy = new SlaPolicy('Snabb 2/8', 2, 8);
+
+        $ticketOne = (new Ticket('DP-7260', 'Första SLA-bytet', 'Ska flyttas till snabbare SLA.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team)
+            ->setSlaPolicy($oldSlaPolicy);
+        $ticketTwo = (new Ticket('DP-7261', 'Andra SLA-bytet', 'Ska få samma policy.', TicketStatus::NEW, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team)
+            ->setSlaPolicy($oldSlaPolicy);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($technician);
+        $this->entityManager->persist($customer);
+        $this->entityManager->persist($oldSlaPolicy);
+        $this->entityManager->persist($newSlaPolicy);
+        $this->entityManager->persist($ticketOne);
+        $this->entityManager->persist($ticketTwo);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?scope=mine');
+        self::assertResponseIsSuccessful();
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'set_sla_policy',
+            'bulk_sla_policy_id' => (string) $newSlaPolicy->getId(),
+            'bulk_status' => TicketStatus::OPEN->value,
+            'ticket_ids' => [(string) $ticketOne->getId(), (string) $ticketTwo->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine');
+
+        $ticketOneId = $ticketOne->getId();
+        $ticketTwoId = $ticketTwo->getId();
+        $newSlaPolicyId = $newSlaPolicy->getId();
+        $this->entityManager->clear();
+        /** @var Ticket $ticketOne */
+        $ticketOne = $this->entityManager->getRepository(Ticket::class)->find($ticketOneId);
+        /** @var Ticket $ticketTwo */
+        $ticketTwo = $this->entityManager->getRepository(Ticket::class)->find($ticketTwoId);
+        self::assertSame($newSlaPolicyId, $ticketOne->getSlaPolicy()?->getId());
+        self::assertSame($newSlaPolicyId, $ticketTwo->getSlaPolicy()?->getId());
+
+        $logs = $this->entityManager->getRepository(TicketAuditLog::class)->findBy(['action' => 'ticket_updated'], ['id' => 'DESC']);
+        self::assertNotEmpty($logs);
+        self::assertStringContainsString('sla', $logs[0]->getMessage());
+    }
+
+    public function testAdminCanBulkAssignTechnicianAndTeam(): void
+    {
+        $company = new Company('Bulk Admin AB');
+        $admin = new User('bulk-admin@example.test', 'Ada', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'BulkAdminPassword123'));
+        $admin->enableMfa();
+
+        $assignee = new User('bulk-assignee@example.test', 'Ture', 'Tech', UserType::TECHNICIAN);
+        $assignee->setPassword($this->passwordHasher->hashPassword($assignee, 'BulkAssignPassword123'));
+        $assignee->enableMfa();
+
+        $team = new TechnicianTeam('NOC');
+
+        $customer = new User('bulk-admin-customer@example.test', 'Kerstin', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'CustomerPassword123'));
+        $customer->setCompany($company);
+
+        $ticketOne = (new Ticket('DP-7301', 'Admin bulk ett', 'Ska fa ansvarig och team.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer);
+        $ticketTwo = (new Ticket('DP-7302', 'Admin bulk tva', 'Ska fa samma ansvarig och team.', TicketStatus::NEW, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($admin);
+        $this->entityManager->persist($assignee);
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($customer);
+        $this->entityManager->persist($ticketOne);
+        $this->entityManager->persist($ticketTwo);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden');
+        self::assertResponseIsSuccessful();
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'assign_assignee',
+            'bulk_assignee_id' => (string) $assignee->getId(),
+            'bulk_team_id' => '',
+            'bulk_status' => TicketStatus::NEW->value,
+            'ticket_ids' => [(string) $ticketOne->getId(), (string) $ticketTwo->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden');
+
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'assign_team',
+            'bulk_assignee_id' => '',
+            'bulk_team_id' => (string) $team->getId(),
+            'bulk_status' => TicketStatus::NEW->value,
+            'ticket_ids' => [(string) $ticketOne->getId(), (string) $ticketTwo->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden');
+
+        /** @var Ticket $ticketOne */
+        $ticketOne = $this->entityManager->getRepository(Ticket::class)->find($ticketOne->getId());
+        /** @var Ticket $ticketTwo */
+        $ticketTwo = $this->entityManager->getRepository(Ticket::class)->find($ticketTwo->getId());
+        self::assertSame($assignee->getId(), $ticketOne->getAssignee()?->getId());
+        self::assertSame($assignee->getId(), $ticketTwo->getAssignee()?->getId());
+        self::assertSame($team->getId(), $ticketOne->getAssignedTeam()?->getId());
+        self::assertSame($team->getId(), $ticketTwo->getAssignedTeam()?->getId());
+    }
+
+    public function testAdminCanBulkRerouteTicketsWithSlaDefaultTeam(): void
+    {
+        $company = new Company('Bulk Reroute AB');
+        $admin = new User('bulk-reroute-admin@example.test', 'Alma', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'BulkReroutePassword123'));
+        $admin->enableMfa();
+
+        $oldTeam = new TechnicianTeam('Helpdesk');
+        $targetTeam = new TechnicianTeam('NOC');
+
+        $customer = new User('bulk-reroute-customer@example.test', 'Siv', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'CustomerPassword123'));
+        $customer->setCompany($company);
+
+        $oldSlaPolicy = new SlaPolicy('Standard 8/24', 8, 24);
+        $newSlaPolicy = (new SlaPolicy('NOC 1/4', 1, 4))
+            ->setDefaultTeamEnabled(true)
+            ->setDefaultTeam($targetTeam);
+
+        $ticketOne = (new Ticket('DP-7310', 'Reroute ett', 'Ska routas om till nytt team.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignedTeam($oldTeam)
+            ->setSlaPolicy($oldSlaPolicy);
+        $ticketTwo = (new Ticket('DP-7311', 'Reroute två', 'Ska få samma omrouting.', TicketStatus::NEW, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignedTeam($oldTeam)
+            ->setSlaPolicy($oldSlaPolicy);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($admin);
+        $this->entityManager->persist($oldTeam);
+        $this->entityManager->persist($targetTeam);
+        $this->entityManager->persist($customer);
+        $this->entityManager->persist($oldSlaPolicy);
+        $this->entityManager->persist($newSlaPolicy);
+        $this->entityManager->persist($ticketOne);
+        $this->entityManager->persist($ticketTwo);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden');
+        self::assertResponseIsSuccessful();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('SLA-förhandsvisning', $html);
+        self::assertStringContainsString('data-bulk-sla-preview', $html);
+        self::assertStringContainsString('data-bulk-sla-preview-team-source', $html);
+        self::assertStringContainsString('data-bulk-sla-preview-action', $html);
+        self::assertStringContainsString('data-manual-team-name', $html);
+        self::assertStringContainsString('ingen standard', $html);
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'reroute_team_and_sla',
+            'bulk_team_id' => '',
+            'bulk_sla_policy_id' => (string) $newSlaPolicy->getId(),
+            'bulk_status' => TicketStatus::OPEN->value,
+            'ticket_ids' => [(string) $ticketOne->getId(), (string) $ticketTwo->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden');
+
+        $ticketOneId = $ticketOne->getId();
+        $ticketTwoId = $ticketTwo->getId();
+        $targetTeamId = $targetTeam->getId();
+        $newSlaPolicyId = $newSlaPolicy->getId();
+        $this->entityManager->clear();
+        /** @var Ticket $ticketOne */
+        $ticketOne = $this->entityManager->getRepository(Ticket::class)->find($ticketOneId);
+        /** @var Ticket $ticketTwo */
+        $ticketTwo = $this->entityManager->getRepository(Ticket::class)->find($ticketTwoId);
+        self::assertSame($targetTeamId, $ticketOne->getAssignedTeam()?->getId());
+        self::assertSame($targetTeamId, $ticketTwo->getAssignedTeam()?->getId());
+        self::assertSame($newSlaPolicyId, $ticketOne->getSlaPolicy()?->getId());
+        self::assertSame($newSlaPolicyId, $ticketTwo->getSlaPolicy()?->getId());
+
+        $logs = $this->entityManager->getRepository(TicketAuditLog::class)->findBy(['action' => 'ticket_updated'], ['id' => 'DESC']);
+        self::assertNotEmpty($logs);
+        self::assertStringContainsString('team', $logs[0]->getMessage());
+        self::assertStringContainsString('sla', $logs[0]->getMessage());
+    }
+
+    public function testAdminCanBulkRerouteTicketsAndOptionallySyncSlaDefaults(): void
+    {
+        $company = new Company('Bulk Reroute Sync AB');
+        $admin = new User('bulk-reroute-sync-admin@example.test', 'Aron', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'BulkRerouteSyncPassword123'));
+        $admin->enableMfa();
+
+        $oldTeam = new TechnicianTeam('Service Desk');
+        $targetTeam = new TechnicianTeam('Operations');
+
+        $customer = new User('bulk-reroute-sync-customer@example.test', 'Solveig', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'CustomerPassword123'));
+        $customer->setCompany($company);
+
+        $oldSlaPolicy = new SlaPolicy('Standard 8/24', 8, 24);
+        $newSlaPolicy = (new SlaPolicy('Operations 1/4', 1, 4))
+            ->setDefaultTeamEnabled(true)
+            ->setDefaultTeam($targetTeam)
+            ->setDefaultPriorityEnabled(true)
+            ->setDefaultPriority(TicketPriority::HIGH)
+            ->setDefaultEscalationEnabled(true)
+            ->setDefaultEscalationLevel(TicketEscalationLevel::TEAM);
+
+        $ticketOne = (new Ticket('DP-7312', 'Reroute sync av', 'Ska inte synka standarder först.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignedTeam($oldTeam)
+            ->setSlaPolicy($oldSlaPolicy)
+            ->setPriority(TicketPriority::LOW)
+            ->setEscalationLevel(TicketEscalationLevel::NONE);
+        $ticketTwo = (new Ticket('DP-7313', 'Reroute sync pa', 'Ska synka standarder nar rutan markeras.', TicketStatus::NEW, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignedTeam($oldTeam)
+            ->setSlaPolicy($oldSlaPolicy)
+            ->setPriority(TicketPriority::NORMAL)
+            ->setEscalationLevel(TicketEscalationLevel::LEAD);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($admin);
+        $this->entityManager->persist($oldTeam);
+        $this->entityManager->persist($targetTeam);
+        $this->entityManager->persist($customer);
+        $this->entityManager->persist($oldSlaPolicy);
+        $this->entityManager->persist($newSlaPolicy);
+        $this->entityManager->persist($ticketOne);
+        $this->entityManager->persist($ticketTwo);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden');
+        self::assertResponseIsSuccessful();
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'reroute_team_and_sla',
+            'bulk_team_id' => '',
+            'bulk_sla_policy_id' => (string) $newSlaPolicy->getId(),
+            'bulk_status' => TicketStatus::OPEN->value,
+            'ticket_ids' => [(string) $ticketOne->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden');
+
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'reroute_team_and_sla',
+            'bulk_team_id' => '',
+            'bulk_sla_policy_id' => (string) $newSlaPolicy->getId(),
+            'bulk_reroute_sync_sla_defaults' => '1',
+            'bulk_status' => TicketStatus::OPEN->value,
+            'ticket_ids' => [(string) $ticketTwo->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden');
+
+        $ticketOneId = $ticketOne->getId();
+        $ticketTwoId = $ticketTwo->getId();
+        $targetTeamId = $targetTeam->getId();
+        $newSlaPolicyId = $newSlaPolicy->getId();
+        $this->entityManager->clear();
+        /** @var Ticket $ticketOne */
+        $ticketOne = $this->entityManager->getRepository(Ticket::class)->find($ticketOneId);
+        /** @var Ticket $ticketTwo */
+        $ticketTwo = $this->entityManager->getRepository(Ticket::class)->find($ticketTwoId);
+
+        self::assertSame($targetTeamId, $ticketOne->getAssignedTeam()?->getId());
+        self::assertSame($newSlaPolicyId, $ticketOne->getSlaPolicy()?->getId());
+        self::assertSame(TicketPriority::LOW, $ticketOne->getPriority());
+        self::assertSame(TicketEscalationLevel::NONE, $ticketOne->getEscalationLevel());
+
+        self::assertSame($targetTeamId, $ticketTwo->getAssignedTeam()?->getId());
+        self::assertSame($newSlaPolicyId, $ticketTwo->getSlaPolicy()?->getId());
+        self::assertSame(TicketPriority::HIGH, $ticketTwo->getPriority());
+        self::assertSame(TicketEscalationLevel::TEAM, $ticketTwo->getEscalationLevel());
+    }
+
+    public function testAdminCanBulkRerouteTicketsAndOptionallySyncSlaAssignee(): void
+    {
+        $company = new Company('Bulk Reroute Assignee AB');
+        $admin = new User('bulk-reroute-assignee-admin@example.test', 'Astrid', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'BulkRerouteAssigneePassword123'));
+        $admin->enableMfa();
+
+        $oldTechnician = new User('bulk-reroute-old-tech@example.test', 'Olle', 'Old', UserType::TECHNICIAN);
+        $oldTechnician->setPassword($this->passwordHasher->hashPassword($oldTechnician, 'OldTechPassword123'));
+        $oldTechnician->enableMfa();
+
+        $targetTechnician = new User('bulk-reroute-target-tech@example.test', 'Tora', 'Target', UserType::TECHNICIAN);
+        $targetTechnician->setPassword($this->passwordHasher->hashPassword($targetTechnician, 'TargetTechPassword123'));
+        $targetTechnician->enableMfa();
+
+        $oldTeam = new TechnicianTeam('Field');
+        $targetTeam = new TechnicianTeam('Core');
+        $oldTechnician->setTechnicianTeam($oldTeam);
+        $targetTechnician->setTechnicianTeam($targetTeam);
+
+        $customer = new User('bulk-reroute-assignee-customer@example.test', 'Signe', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'CustomerPassword123'));
+        $customer->setCompany($company);
+
+        $oldSlaPolicy = new SlaPolicy('Standard 8/24', 8, 24);
+        $newSlaPolicy = (new SlaPolicy('Core 1/4', 1, 4))
+            ->setDefaultTeamEnabled(true)
+            ->setDefaultTeam($targetTeam)
+            ->setDefaultAssigneeEnabled(true)
+            ->setDefaultAssignee($targetTechnician);
+
+        $ticketOne = (new Ticket('DP-7314', 'Reroute assignee av', 'Ska behalla gammal ansvarig utan checkbox.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignedTeam($oldTeam)
+            ->setAssignee($oldTechnician)
+            ->setSlaPolicy($oldSlaPolicy);
+        $ticketTwo = (new Ticket('DP-7315', 'Reroute assignee pa', 'Ska fa SLA-standardansvarig med checkbox.', TicketStatus::NEW, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignedTeam($oldTeam)
+            ->setAssignee($oldTechnician)
+            ->setSlaPolicy($oldSlaPolicy);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($admin);
+        $this->entityManager->persist($oldTechnician);
+        $this->entityManager->persist($targetTechnician);
+        $this->entityManager->persist($oldTeam);
+        $this->entityManager->persist($targetTeam);
+        $this->entityManager->persist($customer);
+        $this->entityManager->persist($oldSlaPolicy);
+        $this->entityManager->persist($newSlaPolicy);
+        $this->entityManager->persist($ticketOne);
+        $this->entityManager->persist($ticketTwo);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden');
+        self::assertResponseIsSuccessful();
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'reroute_team_and_sla',
+            'bulk_team_id' => '',
+            'bulk_sla_policy_id' => (string) $newSlaPolicy->getId(),
+            'bulk_status' => TicketStatus::OPEN->value,
+            'ticket_ids' => [(string) $ticketOne->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden');
+
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'reroute_team_and_sla',
+            'bulk_team_id' => '',
+            'bulk_sla_policy_id' => (string) $newSlaPolicy->getId(),
+            'bulk_reroute_sync_sla_assignee' => '1',
+            'bulk_status' => TicketStatus::OPEN->value,
+            'ticket_ids' => [(string) $ticketTwo->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden');
+
+        $ticketOneId = $ticketOne->getId();
+        $ticketTwoId = $ticketTwo->getId();
+        $oldTechnicianId = $oldTechnician->getId();
+        $targetTechnicianId = $targetTechnician->getId();
+        $this->entityManager->clear();
+        /** @var Ticket $ticketOne */
+        $ticketOne = $this->entityManager->getRepository(Ticket::class)->find($ticketOneId);
+        /** @var Ticket $ticketTwo */
+        $ticketTwo = $this->entityManager->getRepository(Ticket::class)->find($ticketTwoId);
+
+        self::assertSame($oldTechnicianId, $ticketOne->getAssignee()?->getId());
+        self::assertSame($targetTechnicianId, $ticketTwo->getAssignee()?->getId());
+
+        $notifications = $this->entityManager->getRepository(NotificationLog::class)->findBy(['eventType' => 'ticket_assigned'], ['id' => 'DESC']);
+        self::assertNotEmpty($notifications);
+        self::assertSame($targetTechnicianId, $notifications[0]->getRecipient()?->getId());
+    }
+
+    public function testTechnicianCanSaveAndDeleteFilterPreset(): void
+    {
+        $technician = new User('preset-tech@example.test', 'Pia', 'Preset', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'PresetPassword123'));
+        $technician->enableMfa();
+
+        $this->entityManager->persist($technician);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        self::assertResponseIsSuccessful();
+
+        $saveForm = $crawler->filter('form[action="/portal/technician/filter-presets/save"]')->form([
+            'preset_label' => 'Min öppna högprio',
+        ]);
+        $this->client->submit($saveForm);
+        self::assertResponseRedirects('/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+
+        $this->client->followRedirect();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('Min öppna högprio', $html);
+
+        $crawler = new \Symfony\Component\DomCrawler\Crawler($html, 'http://localhost/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        $deleteForm = $crawler->filter('form[action$="/delete"]')->form();
+        $this->client->submit($deleteForm);
+        self::assertResponseRedirects('/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+
+        $this->client->followRedirect();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringNotContainsString('Min öppna högprio', $html);
+        self::assertStringContainsString('Inga sparade köer ännu.', $html);
+    }
+
+    public function testTechnicianCanClearAllFilterPresets(): void
+    {
+        $technician = new User('preset-clear-tech@example.test', 'Per', 'Preset', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'PresetPassword123'));
+        $technician->enableMfa();
+
+        $this->entityManager->persist($technician);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        self::assertResponseIsSuccessful();
+
+        $saveForm = $crawler->filter('form[action="/portal/technician/filter-presets/save"]')->form([
+            'preset_label' => 'Öppna högprio',
+        ]);
+        $this->client->submit($saveForm);
+        self::assertResponseRedirects('/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        $this->client->followRedirect();
+
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?status=new&sort=updated_desc');
+        self::assertResponseIsSuccessful();
+
+        $saveForm = $crawler->filter('form[action="/portal/technician/filter-presets/save"]')->form([
+            'preset_label' => 'Mina senaste',
+        ]);
+        $this->client->submit($saveForm);
+        self::assertResponseRedirects('/portal/technician/arenden?status=new&sort=updated_desc');
+
+        $this->client->followRedirect();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('Öppna högprio', $html);
+        self::assertStringContainsString('Mina senaste', $html);
+        self::assertStringContainsString('Rensa mina köer', $html);
+
+        $crawler = new \Symfony\Component\DomCrawler\Crawler($html, 'http://localhost/portal/technician/arenden?status=new&sort=updated_desc');
+        $clearForm = $crawler->filter('form[action="/portal/technician/filter-presets/clear"]')->eq(0)->form();
+        $this->client->submit($clearForm);
+        self::assertResponseRedirects('/portal/technician/arenden?status=new&sort=updated_desc');
+
+        $this->client->followRedirect();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringNotContainsString('Öppna högprio', $html);
+        self::assertStringNotContainsString('Mina senaste', $html);
+        self::assertStringNotContainsString('Rensa mina köer', $html);
+        self::assertStringContainsString('Inga sparade köer ännu.', $html);
+    }
+
+    public function testTechnicianCanShareTeamFilterPreset(): void
+    {
+        $team = new TechnicianTeam('Team Delning');
+        $owner = new User('team-preset-owner@example.test', 'Tina', 'Owner', UserType::TECHNICIAN);
+        $owner->setPassword($this->passwordHasher->hashPassword($owner, 'PresetPassword123'));
+        $owner->enableMfa();
+        $owner->setTechnicianTeam($team);
+
+        $teammate = new User('team-preset-mate@example.test', 'Tom', 'Mate', UserType::TECHNICIAN);
+        $teammate->setPassword($this->passwordHasher->hashPassword($teammate, 'PresetPassword123'));
+        $teammate->enableMfa();
+        $teammate->setTechnicianTeam($team);
+
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($owner);
+        $this->entityManager->persist($teammate);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($owner);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        self::assertResponseIsSuccessful();
+
+        $saveForm = $crawler->filter('form[action="/portal/technician/filter-presets/save"]')->form();
+        $this->client->request('POST', '/portal/technician/filter-presets/save', [
+            '_token' => $saveForm->get('_token')->getValue(),
+            'return_url' => '/portal/technician/arenden?status=open&priority=high&sort=attention_desc',
+            'q' => $saveForm->get('q')->getValue(),
+            'status' => $saveForm->get('status')->getValue(),
+            'priority' => $saveForm->get('priority')->getValue(),
+            'request_type' => $saveForm->get('request_type')->getValue(),
+            'impact' => $saveForm->get('impact')->getValue(),
+            'escalation' => $saveForm->get('escalation')->getValue(),
+            'team' => $saveForm->get('team')->getValue(),
+            'visibility' => $saveForm->get('visibility')->getValue(),
+            'assignee' => $saveForm->get('assignee')->getValue(),
+            'scope' => 'my_team',
+            'sort' => $saveForm->get('sort')->getValue(),
+            'page' => $saveForm->get('page')->getValue(),
+            'preset_label' => 'Teamets högprio',
+            'preset_description' => 'Används i morgonrundan för teamets öppna incidenter.',
+            'preset_tag' => 'Jour',
+            'preset_tone' => 'amber',
+            'preset_scope' => 'team',
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+
+        $this->client->followRedirect();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('Teamköer för Team Delning', $html);
+        self::assertStringContainsString('Teamets högprio', $html);
+        self::assertStringContainsString('Används i morgonrundan för teamets öppna incidenter.', $html);
+        self::assertStringContainsString('Jour', $html);
+        self::assertStringContainsString('skapad av Tina Owner', $html);
+        self::assertStringContainsString('>Rensa<', $html);
+
+        $this->client->loginUser($teammate);
+        $this->client->request('GET', '/portal/technician/arenden');
+        self::assertResponseIsSuccessful();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('Teamköer för Team Delning', $html);
+        self::assertStringContainsString('Teamets högprio', $html);
+        self::assertStringContainsString('Används i morgonrundan för teamets öppna incidenter.', $html);
+        self::assertStringContainsString('Jour', $html);
+        self::assertStringContainsString('skapad av Tina Owner', $html);
+        self::assertStringNotContainsString('Rensa teamköer', $html);
+    }
+
+    public function testAdminCanClearAllTeamFilterPresets(): void
+    {
+        $team = new TechnicianTeam('Admin Team');
+        $owner = new User('team-preset-admin-owner@example.test', 'Tina', 'Owner', UserType::TECHNICIAN);
+        $owner->setPassword($this->passwordHasher->hashPassword($owner, 'PresetPassword123'));
+        $owner->enableMfa();
+        $owner->setTechnicianTeam($team);
+
+        $admin = new User('team-preset-admin@example.test', 'Ada', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'PresetPassword123'));
+        $admin->enableMfa();
+        $admin->setTechnicianTeam($team);
+
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($owner);
+        $this->entityManager->persist($admin);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($owner);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        self::assertResponseIsSuccessful();
+
+        $saveForm = $crawler->filter('form[action="/portal/technician/filter-presets/save"]')->form();
+        $this->client->request('POST', '/portal/technician/filter-presets/save', [
+            '_token' => $saveForm->get('_token')->getValue(),
+            'return_url' => '/portal/technician/arenden?status=open&priority=high&sort=attention_desc',
+            'q' => $saveForm->get('q')->getValue(),
+            'status' => $saveForm->get('status')->getValue(),
+            'priority' => $saveForm->get('priority')->getValue(),
+            'request_type' => $saveForm->get('request_type')->getValue(),
+            'impact' => $saveForm->get('impact')->getValue(),
+            'escalation' => $saveForm->get('escalation')->getValue(),
+            'team' => $saveForm->get('team')->getValue(),
+            'visibility' => $saveForm->get('visibility')->getValue(),
+            'assignee' => $saveForm->get('assignee')->getValue(),
+            'scope' => 'my_team',
+            'sort' => $saveForm->get('sort')->getValue(),
+            'page' => $saveForm->get('page')->getValue(),
+            'preset_label' => 'Adminrensning',
+            'preset_scope' => 'team',
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        $this->client->followRedirect();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden');
+        self::assertResponseIsSuccessful();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('Adminrensning', $html);
+        self::assertStringContainsString('Rensa teamköer', $html);
+
+        $crawler = new \Symfony\Component\DomCrawler\Crawler($html, 'http://localhost/portal/technician/arenden');
+        $clearForm = $crawler->filter('form[action="/portal/technician/filter-presets/clear"]')->eq(0)->form();
+        $this->client->submit($clearForm);
+        self::assertResponseRedirects('/portal/technician/arenden');
+
+        $this->client->followRedirect();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringNotContainsString('Adminrensning', $html);
+    }
+
+    public function testTeamPresetOwnerCanTransferOwnership(): void
+    {
+        $team = new TechnicianTeam('Transfer Team');
+        $owner = new User('team-preset-transfer-owner@example.test', 'Tina', 'Owner', UserType::TECHNICIAN);
+        $owner->setPassword($this->passwordHasher->hashPassword($owner, 'PresetPassword123'));
+        $owner->enableMfa();
+        $owner->setTechnicianTeam($team);
+
+        $recipient = new User('team-preset-transfer-recipient@example.test', 'Robin', 'Recipient', UserType::TECHNICIAN);
+        $recipient->setPassword($this->passwordHasher->hashPassword($recipient, 'PresetPassword123'));
+        $recipient->enableMfa();
+        $recipient->setTechnicianTeam($team);
+
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($owner);
+        $this->entityManager->persist($recipient);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($owner);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        self::assertResponseIsSuccessful();
+
+        $saveForm = $crawler->filter('form[action="/portal/technician/filter-presets/save"]')->form();
+        $this->client->request('POST', '/portal/technician/filter-presets/save', [
+            '_token' => $saveForm->get('_token')->getValue(),
+            'return_url' => '/portal/technician/arenden?status=open&priority=high&sort=attention_desc',
+            'q' => $saveForm->get('q')->getValue(),
+            'status' => $saveForm->get('status')->getValue(),
+            'priority' => $saveForm->get('priority')->getValue(),
+            'request_type' => $saveForm->get('request_type')->getValue(),
+            'impact' => $saveForm->get('impact')->getValue(),
+            'escalation' => $saveForm->get('escalation')->getValue(),
+            'team' => $saveForm->get('team')->getValue(),
+            'visibility' => $saveForm->get('visibility')->getValue(),
+            'assignee' => $saveForm->get('assignee')->getValue(),
+            'scope' => 'my_team',
+            'sort' => $saveForm->get('sort')->getValue(),
+            'page' => $saveForm->get('page')->getValue(),
+            'preset_label' => 'Ägarbyte',
+            'preset_scope' => 'team',
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+
+        $this->client->followRedirect();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('skapad av Tina Owner', $html);
+        self::assertStringContainsString('Byt ägare', $html);
+
+        $crawler = new \Symfony\Component\DomCrawler\Crawler($html, 'http://localhost/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        $transferForm = $crawler->filter('form[action*="/transfer-owner"]')->eq(0)->form([
+            'new_owner_id' => (string) $recipient->getId(),
+        ]);
+        $this->client->submit($transferForm);
+        self::assertResponseRedirects('/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+
+        $this->client->followRedirect();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('skapad av Robin Recipient', $html);
+
+        $this->client->loginUser($owner);
+        $this->client->request('GET', '/portal/technician/arenden');
+        self::assertResponseIsSuccessful();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('skapad av Robin Recipient', $html);
+        self::assertStringNotContainsString('Byt ägare', $html);
+
+        $this->client->loginUser($recipient);
+        $this->client->request('GET', '/portal/technician/arenden');
+        self::assertResponseIsSuccessful();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('skapad av Robin Recipient', $html);
+        self::assertStringContainsString('Byt ägare', $html);
+    }
+
+    public function testTeamPresetOwnerCanFavoritePreset(): void
+    {
+        $team = new TechnicianTeam('Favorit Team');
+        $owner = new User('team-preset-favorite-owner@example.test', 'Fanny', 'Favorit', UserType::TECHNICIAN);
+        $owner->setPassword($this->passwordHasher->hashPassword($owner, 'PresetPassword123'));
+        $owner->enableMfa();
+        $owner->setTechnicianTeam($team);
+
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($owner);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($owner);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        self::assertResponseIsSuccessful();
+
+        $saveForm = $crawler->filter('form[action="/portal/technician/filter-presets/save"]')->form();
+
+        $this->client->request('POST', '/portal/technician/filter-presets/save', [
+            '_token' => $saveForm->get('_token')->getValue(),
+            'return_url' => '/portal/technician/arenden?status=open&priority=high&sort=attention_desc',
+            'q' => $saveForm->get('q')->getValue(),
+            'status' => $saveForm->get('status')->getValue(),
+            'priority' => $saveForm->get('priority')->getValue(),
+            'request_type' => $saveForm->get('request_type')->getValue(),
+            'impact' => $saveForm->get('impact')->getValue(),
+            'escalation' => $saveForm->get('escalation')->getValue(),
+            'team' => $saveForm->get('team')->getValue(),
+            'visibility' => $saveForm->get('visibility')->getValue(),
+            'assignee' => $saveForm->get('assignee')->getValue(),
+            'scope' => 'my_team',
+            'sort' => $saveForm->get('sort')->getValue(),
+            'page' => $saveForm->get('page')->getValue(),
+            'preset_label' => 'Zulu kö',
+            'preset_scope' => 'team',
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        $this->client->followRedirect();
+
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        self::assertResponseIsSuccessful();
+        $saveForm = $crawler->filter('form[action="/portal/technician/filter-presets/save"]')->form();
+
+        $this->client->request('POST', '/portal/technician/filter-presets/save', [
+            '_token' => $saveForm->get('_token')->getValue(),
+            'return_url' => '/portal/technician/arenden?status=open&priority=high&sort=attention_desc',
+            'q' => $saveForm->get('q')->getValue(),
+            'status' => $saveForm->get('status')->getValue(),
+            'priority' => $saveForm->get('priority')->getValue(),
+            'request_type' => $saveForm->get('request_type')->getValue(),
+            'impact' => $saveForm->get('impact')->getValue(),
+            'escalation' => $saveForm->get('escalation')->getValue(),
+            'team' => $saveForm->get('team')->getValue(),
+            'visibility' => $saveForm->get('visibility')->getValue(),
+            'assignee' => $saveForm->get('assignee')->getValue(),
+            'scope' => 'my_team',
+            'sort' => $saveForm->get('sort')->getValue(),
+            'page' => $saveForm->get('page')->getValue(),
+            'preset_label' => 'Alpha kö',
+            'preset_scope' => 'team',
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+
+        $this->client->followRedirect();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertLessThan(
+            strpos($html, 'Zulu kö'),
+            strpos($html, 'Alpha kö'),
+            'Alphabetisk ordning ska gälla innan favoritmarkering.',
+        );
+
+        $crawler = new \Symfony\Component\DomCrawler\Crawler($html, 'http://localhost/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        $favoriteForm = $crawler->filter('form[action*="/toggle-favorite"]')->eq(1)->form();
+        $this->client->submit($favoriteForm);
+        self::assertResponseRedirects('/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+
+        $this->client->followRedirect();
+        $this->client->request('GET', '/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('Favorit', $html);
+        self::assertStringContainsString('Ta bort favorit', $html);
+        self::assertLessThan(
+            strpos($html, 'Alpha kö'),
+            strpos($html, 'Zulu kö'),
+            'Favoritkön ska ligga överst efter markering.',
+        );
+
+        $crawler = new \Symfony\Component\DomCrawler\Crawler($html, 'http://localhost/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        $favoriteForm = $crawler->filter('form[action*="/toggle-favorite"]')->eq(1)->form();
+        $this->client->submit($favoriteForm);
+        self::assertResponseRedirects('/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        $this->client->followRedirect();
+
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        self::assertResponseIsSuccessful();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        $favoriteForm = (new \Symfony\Component\DomCrawler\Crawler($html, 'http://localhost/portal/technician/arenden?status=open&priority=high&sort=attention_desc'))
+            ->filter('form[action*="/toggle-favorite"]')
+            ->eq(1)
+            ->form();
+        $this->client->submit($favoriteForm);
+        self::assertResponseRedirects('/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+
+        $this->client->followRedirect();
+        $this->client->request('GET', '/portal/technician/arenden?status=open&priority=high&sort=attention_desc');
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertLessThan(
+            strpos($html, 'Alpha kö'),
+            strpos($html, 'Zulu kö'),
+            'Favoritkö ska fortsatt ligga före icke-favoriter efter ommarkering.',
+        );
+    }
+
+    public function testTeamPresetOwnerCanReorderFavoritePresets(): void
+    {
+        $team = new TechnicianTeam('Favoritordning Team');
+        $owner = new User('team-preset-order-owner@example.test', 'Frida', 'Ordning', UserType::TECHNICIAN);
+        $owner->setPassword($this->passwordHasher->hashPassword($owner, 'PresetPassword123'));
+        $owner->enableMfa();
+        $owner->setTechnicianTeam($team);
+
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($owner);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($owner);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?status=open&sort=attention_desc');
+        self::assertResponseIsSuccessful();
+        $saveForm = $crawler->filter('form[action="/portal/technician/filter-presets/save"]')->form();
+
+        foreach (['Alpha kö', 'Zulu kö'] as $label) {
+            $this->client->request('POST', '/portal/technician/filter-presets/save', [
+                '_token' => $saveForm->get('_token')->getValue(),
+                'return_url' => '/portal/technician/arenden?status=open&sort=attention_desc',
+                'q' => $saveForm->get('q')->getValue(),
+                'status' => $saveForm->get('status')->getValue(),
+                'priority' => $saveForm->get('priority')->getValue(),
+                'request_type' => $saveForm->get('request_type')->getValue(),
+                'impact' => $saveForm->get('impact')->getValue(),
+                'escalation' => $saveForm->get('escalation')->getValue(),
+                'team' => $saveForm->get('team')->getValue(),
+                'visibility' => $saveForm->get('visibility')->getValue(),
+                'assignee' => $saveForm->get('assignee')->getValue(),
+                'scope' => 'my_team',
+                'sort' => $saveForm->get('sort')->getValue(),
+                'page' => $saveForm->get('page')->getValue(),
+                'preset_label' => $label,
+                'preset_scope' => 'team',
+            ]);
+            self::assertResponseRedirects('/portal/technician/arenden?status=open&sort=attention_desc');
+            $this->client->followRedirect();
+            $crawler = $this->client->request('GET', '/portal/technician/arenden?status=open&sort=attention_desc');
+            self::assertResponseIsSuccessful();
+        }
+
+        $html = $this->client->getResponse()->getContent() ?? '';
+        $crawler = new \Symfony\Component\DomCrawler\Crawler($html, 'http://localhost/portal/technician/arenden?status=open&sort=attention_desc');
+        $favoriteForms = $crawler->filter('form[action*="/toggle-favorite"]');
+        $this->client->submit($favoriteForms->eq(0)->form());
+        self::assertResponseRedirects('/portal/technician/arenden?status=open&sort=attention_desc');
+        $this->client->followRedirect();
+
+        $html = $this->client->getResponse()->getContent() ?? '';
+        $crawler = new \Symfony\Component\DomCrawler\Crawler($html, 'http://localhost/portal/technician/arenden?status=open&sort=attention_desc');
+        $favoriteForms = $crawler->filter('form[action*="/toggle-favorite"]');
+        $this->client->submit($favoriteForms->eq(1)->form());
+        self::assertResponseRedirects('/portal/technician/arenden?status=open&sort=attention_desc');
+
+        $this->client->followRedirect();
+        $this->client->request('GET', '/portal/technician/arenden?status=open&sort=attention_desc');
+        $html = $this->client->getResponse()->getContent() ?? '';
+        self::assertIsString($html);
+        $teamSection = explode('Snabbköer', strstr($html, 'Teamköer för Favoritordning Team') ?: $html)[0];
+        self::assertLessThan(
+            strpos($teamSection, 'Zulu kö'),
+            strpos($teamSection, 'Alpha kö'),
+            'Senast favoritmarkerade kö visas först innan manuell omordning.',
+        );
+
+        $crawler = new \Symfony\Component\DomCrawler\Crawler($html, 'http://localhost/portal/technician/arenden?status=open&sort=attention_desc');
+        $moveUpForm = $crawler->filter('form[action*="/move-favorite"]')->eq(2)->form();
+        $this->client->submit($moveUpForm);
+        self::assertResponseRedirects('/portal/technician/arenden?status=open&sort=attention_desc');
+
+        $this->client->followRedirect();
+        $this->client->request('GET', '/portal/technician/arenden?status=open&sort=attention_desc');
+        $html = $this->client->getResponse()->getContent() ?? '';
+        self::assertIsString($html);
+        $teamSection = explode('Snabbköer', strstr($html, 'Teamköer för Favoritordning Team') ?: $html)[0];
+        self::assertLessThan(
+            strpos($teamSection, 'Alpha kö'),
+            strpos($teamSection, 'Zulu kö'),
+            'Den flyttade favoriten ska kunna hamna först.',
+        );
+    }
+
+    public function testTechnicianCanBulkAddInternalNote(): void
+    {
+        $company = new Company('Bulk Note AB');
+        $team = new TechnicianTeam('Ops');
+        $technician = new User('bulk-note@example.test', 'Boris', 'Note', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'BulkNotePassword123'));
+        $technician->enableMfa();
+        $technician->setTechnicianTeam($team);
+
+        $customer = new User('bulk-note-customer@example.test', 'Klara', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'CustomerPassword123'));
+        $customer->setCompany($company);
+
+        $ticketOne = (new Ticket('DP-7401', 'Bulknote ett', 'Ska få intern anteckning.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team);
+        $ticketTwo = (new Ticket('DP-7402', 'Bulknote två', 'Ska också få intern anteckning.', TicketStatus::PENDING_CUSTOMER, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($technician);
+        $this->entityManager->persist($customer);
+        $this->entityManager->persist($ticketOne);
+        $this->entityManager->persist($ticketTwo);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?scope=mine');
+        self::assertResponseIsSuccessful();
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'add_internal_note',
+            'bulk_internal_note' => 'Samordnas med kvällspasset innan nästa uppdatering.',
+            'bulk_status' => TicketStatus::OPEN->value,
+            'ticket_ids' => [(string) $ticketOne->getId(), (string) $ticketTwo->getId()],
+        ]);
+
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine');
+
+        $this->entityManager->clear();
+
+        /** @var Ticket $ticketOne */
+        $ticketOne = $this->entityManager->getRepository(Ticket::class)->find($ticketOne->getId());
+        /** @var Ticket $ticketTwo */
+        $ticketTwo = $this->entityManager->getRepository(Ticket::class)->find($ticketTwo->getId());
+        self::assertCount(1, $ticketOne->getComments());
+        self::assertCount(1, $ticketTwo->getComments());
+        self::assertTrue($ticketOne->getComments()->first()->isInternal());
+        self::assertTrue($ticketTwo->getComments()->first()->isInternal());
+        self::assertSame('Samordnas med kvällspasset innan nästa uppdatering.', $ticketOne->getComments()->first()->getBody());
+        self::assertSame('Samordnas med kvällspasset innan nästa uppdatering.', $ticketTwo->getComments()->first()->getBody());
+        self::assertSame(TicketStatus::OPEN, $ticketOne->getStatus());
+        self::assertSame(TicketStatus::PENDING_CUSTOMER, $ticketTwo->getStatus());
+
+        $logs = $this->entityManager->getRepository(TicketAuditLog::class)->findBy(['action' => 'internal_comment_added'], ['id' => 'DESC']);
+        self::assertGreaterThanOrEqual(2, \count($logs));
+        self::assertStringContainsString('Intern kommentar tillagd via bulkåtgärd.', $logs[0]->getMessage());
+    }
+
+    public function testTechnicianCanBulkSendCustomerReply(): void
+    {
+        $company = new Company('Bulk Reply AB');
+        $team = new TechnicianTeam('Support');
+        $technician = new User('bulk-reply@example.test', 'Bella', 'Reply', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'BulkReplyPassword123'));
+        $technician->enableMfa();
+        $technician->setTechnicianTeam($team);
+
+        $customerOne = new User('bulk-reply-one@example.test', 'Klara', 'Kund', UserType::CUSTOMER);
+        $customerOne->setPassword($this->passwordHasher->hashPassword($customerOne, 'CustomerPassword123'));
+        $customerOne->setCompany($company);
+
+        $customerTwo = new User('bulk-reply-two@example.test', 'Kalle', 'Kund', UserType::CUSTOMER);
+        $customerTwo->setPassword($this->passwordHasher->hashPassword($customerTwo, 'CustomerPassword123'));
+        $customerTwo->setCompany($company);
+
+        $ticketOne = (new Ticket('DP-7501', 'Bulksvar ett', 'Ska få kunduppdatering.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customerOne)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team);
+        $ticketTwo = (new Ticket('DP-7502', 'Bulksvar två', 'Ska också få kunduppdatering.', TicketStatus::NEW, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customerTwo)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($technician);
+        $this->entityManager->persist($customerOne);
+        $this->entityManager->persist($customerTwo);
+        $this->entityManager->persist($ticketOne);
+        $this->entityManager->persist($ticketTwo);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $this->client->enableProfiler();
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?scope=mine');
+        self::assertResponseIsSuccessful();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('Kommentarsförhandsvisning', $html);
+        self::assertStringContainsString('data-bulk-comment-preview-warning', $html);
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'add_customer_reply',
+            'bulk_customer_reply' => 'Vi har felsökt klart och behöver att ni bekräftar resultatet av senaste testet.',
+            'bulk_status' => TicketStatus::OPEN->value,
+            'ticket_ids' => [(string) $ticketOne->getId(), (string) $ticketTwo->getId()],
+        ]);
+
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine');
+
+        $this->entityManager->clear();
+        /** @var Ticket $ticketOne */
+        $ticketOne = $this->entityManager->getRepository(Ticket::class)->find($ticketOne->getId());
+        /** @var Ticket $ticketTwo */
+        $ticketTwo = $this->entityManager->getRepository(Ticket::class)->find($ticketTwo->getId());
+        self::assertCount(1, $ticketOne->getComments());
+        self::assertCount(1, $ticketTwo->getComments());
+        self::assertFalse($ticketOne->getComments()->first()->isInternal());
+        self::assertFalse($ticketTwo->getComments()->first()->isInternal());
+        self::assertSame(TicketStatus::PENDING_CUSTOMER, $ticketOne->getStatus());
+        self::assertSame(TicketStatus::PENDING_CUSTOMER, $ticketTwo->getStatus());
+
+        $logs = $this->entityManager->getRepository(NotificationLog::class)->findBy(['eventType' => 'customer_waiting_reply']);
+        self::assertCount(2, $logs);
+        self::assertTrue($logs[0]->isSent());
+
+        $auditLogs = $this->entityManager->getRepository(TicketAuditLog::class)->findBy(['action' => 'customer_visible_comment_added'], ['id' => 'DESC']);
+        self::assertGreaterThanOrEqual(2, \count($auditLogs));
+        self::assertStringContainsString('Kundsynlig kommentar tillagd via bulkåtgärd.', $auditLogs[0]->getMessage());
+    }
+
+    public function testTechnicianCanBulkUpdateEntireFilteredSelection(): void
+    {
+        $company = new Company('Bulk Filter AB');
+        $team = new TechnicianTeam('Filterteam');
+        $technician = new User('bulk-filter@example.test', 'Filip', 'Filter', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'BulkFilterPassword123'));
+        $technician->enableMfa();
+        $technician->setTechnicianTeam($team);
+
+        $customer = new User('bulk-filter-customer@example.test', 'Kira', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'CustomerPassword123'));
+        $customer->setCompany($company);
+        $admin = new User('bulk-filter-admin@example.test', 'Ada', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'BulkAdminPassword123'));
+        $admin->enableMfa();
+        $admin->setTechnicianTeam($team);
+        $adminAssignee = new User('bulk-filter-admin-assignee@example.test', 'Alex', 'Assign', UserType::TECHNICIAN);
+        $adminAssignee->setPassword($this->passwordHasher->hashPassword($adminAssignee, 'BulkAssignPassword123'));
+        $adminAssignee->enableMfa();
+        $adminAssignee->setTechnicianTeam($team);
+        $adminCategory = new TicketCategory('Bulkminne kategori');
+        $adminSla = (new SlaPolicy('Bulkminne SLA', 2, 8))
+            ->setDefaultTeamEnabled(true)
+            ->setDefaultTeam($team)
+            ->setDefaultAssigneeEnabled(true)
+            ->setDefaultAssignee($adminAssignee);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($technician);
+        $this->entityManager->persist($customer);
+        $this->entityManager->persist($admin);
+        $this->entityManager->persist($adminAssignee);
+        $this->entityManager->persist($adminCategory);
+        $this->entityManager->persist($adminSla);
+
+        $openTickets = [];
+        for ($index = 1; $index <= 11; ++$index) {
+            $ticket = (new Ticket(sprintf('DP-77%02d', $index), sprintf('Filterticket %d', $index), 'Ska uppdateras via hela filtreringen.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+                ->setCompany($company)
+                ->setRequester($customer)
+                ->setAssignee($technician)
+                ->setAssignedTeam($team);
+            $this->entityManager->persist($ticket);
+            $openTickets[] = $ticket;
+        }
+
+        $closedTicket = (new Ticket('DP-7799', 'Stängd filterticket', 'Ska inte träffas av open-filtret.', TicketStatus::CLOSED, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team);
+        $this->entityManager->persist($closedTicket);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?scope=mine&status=open');
+        self::assertResponseIsSuccessful();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('Använd hela filtreringen (11 träffar)', $html);
+        self::assertStringContainsString('data-bulk-selection-preview-text', $html);
+        self::assertStringContainsString('Markera alla öppna på sidan', $html);
+        self::assertStringContainsString('Markera alla väntar på kund', $html);
+        self::assertStringContainsString('Markera alla högprio på sidan', $html);
+        self::assertStringContainsString('Markera alla teameskalerade', $html);
+        self::assertStringContainsString('Markera alla ej tilldelade', $html);
+        self::assertStringContainsString('Markera alla i mitt team', $html);
+        self::assertStringContainsString('data-ticket-status="open"', $html);
+        self::assertStringContainsString('data-ticket-priority=', $html);
+        self::assertStringContainsString('data-ticket-escalation=', $html);
+        self::assertStringContainsString('data-ticket-assignee=', $html);
+        self::assertStringContainsString('data-ticket-team=', $html);
+        self::assertStringContainsString('data-current-team=', $html);
+        self::assertStringContainsString('data-bulk-selection-preview-mode', $html);
+        self::assertStringContainsString('data-bulk-selection-preview-action', $html);
+        self::assertStringContainsString('Senaste urval: Manuella markeringar på sidan.', $html);
+        self::assertStringContainsString('Bulkåtgärd: Ta över till mig för 0 markerade ärenden i manuella markeringar på sidan.', $html);
+        self::assertStringContainsString('<option value="take_over" selected>', $html);
+        self::assertStringContainsString('const affectedCount = selectFiltered?.checked ? totalFiltered : selectedCount;', $html);
+        self::assertStringContainsString('const affectedLabel = selectFiltered?.checked', $html);
+        self::assertStringContainsString('ändra status till ${selectedOptionText(bulkStatusSelect) || \'vald status\'}', $html);
+        self::assertStringContainsString("actionLabel += ' och skicka kunduppdatering';", $html);
+        self::assertStringContainsString("actionLabel += ' med intern notering';", $html);
+        self::assertStringContainsString('ändra prioritet till ${selectedOptionText(bulkPrioritySelect) || \'vald prioritet\'}', $html);
+        self::assertStringContainsString('Bulk körs just nu på markerade rader på den här sidan.', $html);
+        self::assertStringContainsString('data-bulk-select-filtered', $html);
+        self::assertStringContainsString('Markeringar på sidan används inte i det läget.', $html);
+        self::assertMatchesRegularExpression('/type="checkbox"[^>]*name="bulk_remember_drafts"[^>]*checked/', $html);
+        self::assertStringContainsString('Rensa utkast nu', $html);
+        self::assertStringContainsString('Utkaststatus', $html);
+        self::assertStringContainsString('Inga sparade utkast just nu. Formuläret är rent.', $html);
+        self::assertStringContainsString('Utkastminne är påslaget för den här användaren.', $html);
+        self::assertStringContainsString('const syncDraftStatus = () => {', $html);
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'add_internal_note',
+            'bulk_selection_mode' => 'filtered',
+            'bulk_internal_note' => 'Hela filtreringen uppdaterades i ett steg.',
+            'bulk_remember_drafts' => '1',
+            'bulk_status' => TicketStatus::OPEN->value,
+            'bulk_use_filtered_selection' => '1',
+            'selection_q' => '',
+            'selection_status' => 'open',
+            'selection_priority' => 'all',
+            'selection_request_type' => 'all',
+            'selection_impact' => 'all',
+            'selection_escalation' => 'all',
+            'selection_team' => 'all',
+            'selection_visibility' => 'all',
+            'selection_assignee' => 'all',
+            'selection_scope' => 'mine',
+            'selection_sort' => 'priority_desc',
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine&status=open');
+
+        $this->client->request('GET', '/portal/technician/arenden?scope=mine&status=open');
+        self::assertResponseIsSuccessful();
+        $rememberedHtml = $this->client->getResponse()->getContent();
+        self::assertIsString($rememberedHtml);
+        self::assertStringContainsString('name="bulk_selection_mode" value="filtered"', $rememberedHtml);
+        self::assertStringContainsString('data-bulk-initial-mode="filtered"', $rememberedHtml);
+        self::assertStringContainsString('Senaste urval: Hela aktuella filtreringen.', $rememberedHtml);
+        self::assertStringContainsString('Bulkåtgärd: Lägg intern anteckning för 11 ärenden i hela aktuella filtreringen.', $rememberedHtml);
+        self::assertStringContainsString('<option value="add_internal_note" selected>', $rememberedHtml);
+        self::assertStringContainsString('Bulk körs på hela aktuella filtreringen: 11 ärenden. Markeringar på sidan används inte i det läget.', $rememberedHtml);
+        self::assertStringContainsString('>Hela filtreringen uppdaterades i ett steg.</textarea>', $rememberedHtml);
+        self::assertStringContainsString('Utkast sparat: intern anteckning finns i formuläret just nu.', $rememberedHtml);
+
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'add_internal_note',
+            'bulk_selection_mode' => 'status:open',
+            'bulk_internal_note' => 'Snabburval öppna på sidan.',
+            'bulk_remember_drafts' => '1',
+            'bulk_status' => TicketStatus::OPEN->value,
+            'ticket_ids' => [(string) $openTickets[0]->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine&status=open');
+
+        $this->client->request('GET', '/portal/technician/arenden?scope=mine&status=open');
+        self::assertResponseIsSuccessful();
+        $rememberedQuickHtml = $this->client->getResponse()->getContent();
+        self::assertIsString($rememberedQuickHtml);
+        self::assertStringContainsString('name="bulk_selection_mode" value="status:open"', $rememberedQuickHtml);
+        self::assertStringContainsString('data-bulk-initial-mode="status:open"', $rememberedQuickHtml);
+        self::assertStringContainsString('Senaste urval: Öppna ärenden på sidan.', $rememberedQuickHtml);
+        self::assertStringContainsString('Bulkåtgärd: Lägg intern anteckning för', $rememberedQuickHtml);
+        self::assertStringContainsString('<option value="add_internal_note" selected>', $rememberedQuickHtml);
+        self::assertStringContainsString('markerade ärenden i öppna ärenden på sidan.', $rememberedQuickHtml);
+        self::assertStringContainsString('>Snabburval öppna på sidan.</textarea>', $rememberedQuickHtml);
+
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'set_status',
+            'bulk_selection_mode' => 'manual',
+            'bulk_status' => TicketStatus::RESOLVED->value,
+            'bulk_internal_note' => 'Statusminne test.',
+            'bulk_remember_drafts' => '1',
+            'ticket_ids' => [(string) $openTickets[1]->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine&status=open');
+
+        $this->client->request('GET', '/portal/technician/arenden?scope=mine&status=open');
+        self::assertResponseIsSuccessful();
+        $rememberedStatusHtml = $this->client->getResponse()->getContent();
+        self::assertIsString($rememberedStatusHtml);
+        self::assertStringContainsString('<option value="set_status" selected>', $rememberedStatusHtml);
+        self::assertStringContainsString('<option value="resolved" selected>', $rememberedStatusHtml);
+        self::assertStringContainsString('Bulkåtgärd: Ändra status till Löst för 0 markerade ärenden i manuella markeringar på sidan.', $rememberedStatusHtml);
+
+        $this->client->loginUser($admin);
+        $adminCrawler = $this->client->request('GET', '/portal/technician/arenden?scope=mine&status=open');
+        self::assertResponseIsSuccessful();
+        $adminForm = $adminCrawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $adminForm->get('_token')->getValue(),
+            'return_url' => $adminForm->get('return_url')->getValue(),
+            'bulk_action' => 'assign_assignee',
+            'bulk_assignee_id' => (string) $adminAssignee->getId(),
+            'bulk_category_id' => (string) $adminCategory->getId(),
+            'bulk_sla_policy_id' => (string) $adminSla->getId(),
+            'bulk_status' => TicketStatus::OPEN->value,
+            'bulk_remember_drafts' => '1',
+            'ticket_ids' => [(string) $openTickets[2]->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine&status=open');
+
+        $this->client->request('GET', '/portal/technician/arenden?scope=mine&status=open');
+        self::assertResponseIsSuccessful();
+        $rememberedAdminHtml = $this->client->getResponse()->getContent();
+        self::assertIsString($rememberedAdminHtml);
+        self::assertStringContainsString('<option value="assign_assignee" selected>', $rememberedAdminHtml);
+        self::assertStringContainsString(sprintf('<option value="%d" selected>%s</option>', $adminAssignee->getId(), $adminAssignee->getDisplayName()), $rememberedAdminHtml);
+        self::assertStringContainsString(sprintf('<option value="%d" selected>%s</option>', $adminCategory->getId(), $adminCategory->getName()), $rememberedAdminHtml);
+        self::assertStringContainsString(sprintf('value="%d" selected', $adminSla->getId()), $rememberedAdminHtml);
+        self::assertStringContainsString('Bulkåtgärd: Tilldela tekniker '.$adminAssignee->getDisplayName(), $rememberedAdminHtml);
+
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $adminForm->get('_token')->getValue(),
+            'return_url' => $adminForm->get('return_url')->getValue(),
+            'bulk_action' => 'add_customer_reply',
+            'bulk_customer_reply' => 'Utkastet ska ligga kvar efter omladdning.',
+            'bulk_remember_drafts' => '1',
+            'ticket_ids' => [(string) $openTickets[3]->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine&status=open');
+
+        $this->client->request('GET', '/portal/technician/arenden?scope=mine&status=open');
+        self::assertResponseIsSuccessful();
+        $rememberedDraftHtml = $this->client->getResponse()->getContent();
+        self::assertIsString($rememberedDraftHtml);
+        self::assertStringContainsString('<option value="add_customer_reply" selected>', $rememberedDraftHtml);
+        self::assertStringContainsString('>Utkastet ska ligga kvar efter omladdning.</textarea>', $rememberedDraftHtml);
+        self::assertStringContainsString('name="bulk_remember_drafts"', $rememberedDraftHtml);
+        self::assertStringContainsString('Utkast sparat: kunduppdatering finns i formuläret just nu.', $rememberedDraftHtml);
+
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $adminForm->get('_token')->getValue(),
+            'return_url' => $adminForm->get('return_url')->getValue(),
+            'bulk_action' => 'add_customer_reply',
+            'bulk_remember_drafts' => '0',
+            'bulk_customer_reply' => 'Det här utkastet ska rensas direkt.',
+            'ticket_ids' => [(string) $openTickets[4]->getId()],
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine&status=open');
+
+        $this->client->request('GET', '/portal/technician/arenden?scope=mine&status=open');
+        self::assertResponseIsSuccessful();
+        $rememberedClearedDraftHtml = $this->client->getResponse()->getContent();
+        self::assertIsString($rememberedClearedDraftHtml);
+        self::assertStringContainsString('<option value="add_customer_reply" selected>', $rememberedClearedDraftHtml);
+        self::assertStringContainsString('name="bulk_customer_reply"', $rememberedClearedDraftHtml);
+        self::assertStringNotContainsString('>Det här utkastet ska rensas direkt.</textarea>', $rememberedClearedDraftHtml);
+        self::assertStringContainsString('Inga sparade utkast just nu. Formuläret är rent.', $rememberedClearedDraftHtml);
+        self::assertStringContainsString('Utkastminne är avstängt. Ny text sparas inte mellan omladdningar.', $rememberedClearedDraftHtml);
+
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $adminForm->get('_token')->getValue(),
+            'return_url' => $adminForm->get('return_url')->getValue(),
+            'bulk_action' => 'add_internal_note',
+            'bulk_internal_note' => 'Det här ska rensas via knappen.',
+            'bulk_customer_reply' => 'Även kundutkastet ska bort.',
+            'bulk_remember_drafts' => '1',
+            'bulk_clear_drafts' => '1',
+        ]);
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine&status=open');
+
+        $this->client->request('GET', '/portal/technician/arenden?scope=mine&status=open');
+        self::assertResponseIsSuccessful();
+        $clearedByButtonHtml = $this->client->getResponse()->getContent();
+        self::assertIsString($clearedByButtonHtml);
+        self::assertStringNotContainsString('>Det här ska rensas via knappen.</textarea>', $clearedByButtonHtml);
+        self::assertStringNotContainsString('>Även kundutkastet ska bort.</textarea>', $clearedByButtonHtml);
+        self::assertStringContainsString('Inga sparade utkast just nu. Formuläret är rent.', $clearedByButtonHtml);
+
+        $this->client->loginUser($technician);
+        $this->entityManager->clear();
+        foreach ($openTickets as $index => $ticket) {
+            /** @var Ticket $reloaded */
+            $reloaded = $this->entityManager->getRepository(Ticket::class)->find($ticket->getId());
+            self::assertCount($index < 2 || $index === 3 || $index === 4 ? 2 : 1, $reloaded->getComments());
+        }
+
+        /** @var Ticket $closedTicket */
+        $closedTicket = $this->entityManager->getRepository(Ticket::class)->find($closedTicket->getId());
+        self::assertCount(0, $closedTicket->getComments());
+    }
+
+    public function testBulkResolveRequiresClosingNoteOrCustomerUpdate(): void
+    {
+        $company = new Company('Bulk Resolve Guard AB');
+        $team = new TechnicianTeam('Guard');
+        $technician = new User('bulk-resolve-guard@example.test', 'Gina', 'Guard', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'BulkGuardPassword123'));
+        $technician->enableMfa();
+        $technician->setTechnicianTeam($team);
+
+        $customer = new User('bulk-resolve-guard-customer@example.test', 'Kurt', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'CustomerPassword123'));
+        $customer->setCompany($company);
+
+        $ticket = (new Ticket('DP-7601', 'Guardad bulkstatus', 'Ska kräva slutnotering.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($technician);
+        $this->entityManager->persist($customer);
+        $this->entityManager->persist($ticket);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?scope=mine');
+        self::assertResponseIsSuccessful();
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'set_status',
+            'bulk_status' => TicketStatus::RESOLVED->value,
+            'bulk_internal_note' => '',
+            'bulk_customer_reply' => '',
+            'ticket_ids' => [(string) $ticket->getId()],
+        ]);
+
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine');
+        $this->client->followRedirect();
+        $html = $this->client->getResponse()->getContent() ?? '';
+        self::assertStringContainsString('När flera ärenden löses eller stängs samtidigt behöver du skriva en intern slutnotering eller en kunduppdatering.', $html);
+
+        /** @var Ticket $ticket */
+        $ticket = $this->entityManager->getRepository(Ticket::class)->find($ticket->getId());
+        self::assertSame(TicketStatus::OPEN, $ticket->getStatus());
+        self::assertCount(0, $ticket->getComments());
+    }
+
+    public function testTechnicianCanBulkResolveWithCustomerUpdate(): void
+    {
+        $company = new Company('Bulk Resolve Update AB');
+        $team = new TechnicianTeam('Resolve');
+        $technician = new User('bulk-resolve-update@example.test', 'Rita', 'Resolve', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'BulkResolvePassword123'));
+        $technician->enableMfa();
+        $technician->setTechnicianTeam($team);
+
+        $customerOne = new User('bulk-resolve-update-one@example.test', 'Kim', 'Kund', UserType::CUSTOMER);
+        $customerOne->setPassword($this->passwordHasher->hashPassword($customerOne, 'CustomerPassword123'));
+        $customerOne->setCompany($company);
+
+        $customerTwo = new User('bulk-resolve-update-two@example.test', 'Kia', 'Kund', UserType::CUSTOMER);
+        $customerTwo->setPassword($this->passwordHasher->hashPassword($customerTwo, 'CustomerPassword123'));
+        $customerTwo->setCompany($company);
+
+        $ticketOne = (new Ticket('DP-7602', 'Bulkresolve ett', 'Ska lösas med kunduppdatering.', TicketStatus::OPEN, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customerOne)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team);
+        $ticketTwo = (new Ticket('DP-7603', 'Bulkresolve två', 'Ska också lösas med kunduppdatering.', TicketStatus::NEW, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customerTwo)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($technician);
+        $this->entityManager->persist($customerOne);
+        $this->entityManager->persist($customerTwo);
+        $this->entityManager->persist($ticketOne);
+        $this->entityManager->persist($ticketTwo);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $this->client->enableProfiler();
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?scope=mine');
+        self::assertResponseIsSuccessful();
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('Kommentarsförhandsvisning', $html);
+        self::assertStringContainsString('data-bulk-comment-preview-main', $html);
+        self::assertStringContainsString('data-bulk-comment-preview-outcome', $html);
+        self::assertStringContainsString('data-bulk-comment-preview-warning', $html);
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'set_status',
+            'bulk_status' => TicketStatus::RESOLVED->value,
+            'bulk_internal_note' => '',
+            'bulk_customer_reply' => 'Vi har nu avslutat arbetet och återkommer bara om något nytt skulle dyka upp.',
+            'ticket_ids' => [(string) $ticketOne->getId(), (string) $ticketTwo->getId()],
+        ]);
+
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine');
+
+        /** @var Ticket $ticketOne */
+        $ticketOne = $this->entityManager->getRepository(Ticket::class)->find($ticketOne->getId());
+        /** @var Ticket $ticketTwo */
+        $ticketTwo = $this->entityManager->getRepository(Ticket::class)->find($ticketTwo->getId());
+        self::assertSame(TicketStatus::RESOLVED, $ticketOne->getStatus());
+        self::assertSame(TicketStatus::RESOLVED, $ticketTwo->getStatus());
+        self::assertCount(1, $ticketOne->getComments());
+        self::assertCount(1, $ticketTwo->getComments());
+        self::assertFalse($ticketOne->getComments()->first()->isInternal());
+        self::assertFalse($ticketTwo->getComments()->first()->isInternal());
+
+        $notificationLogs = $this->entityManager->getRepository(NotificationLog::class)->findBy(['eventType' => 'customer_ticket_update']);
+        self::assertCount(2, $notificationLogs);
+        self::assertTrue($notificationLogs[0]->isSent());
+        self::assertTrue($notificationLogs[1]->isSent());
+
+        $auditLogs = $this->entityManager->getRepository(TicketAuditLog::class)->findBy(['action' => 'customer_visible_comment_added'], ['id' => 'DESC']);
+        self::assertGreaterThanOrEqual(2, \count($auditLogs));
+        self::assertStringContainsString('Kundsynlig kommentar tillagd via bulkåtgärd.', $auditLogs[0]->getMessage());
+    }
+
+    public function testBulkReopenRequiresInternalReason(): void
+    {
+        $company = new Company('Bulk Reopen Guard AB');
+        $team = new TechnicianTeam('Reopen');
+        $technician = new User('bulk-reopen-guard@example.test', 'Rebecka', 'Guard', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'BulkReopenPassword123'));
+        $technician->enableMfa();
+        $technician->setTechnicianTeam($team);
+
+        $customer = new User('bulk-reopen-guard-customer@example.test', 'Kerstin', 'Kund', UserType::CUSTOMER);
+        $customer->setPassword($this->passwordHasher->hashPassword($customer, 'CustomerPassword123'));
+        $customer->setCompany($company);
+
+        $ticket = (new Ticket('DP-7604', 'Återöppna bulk', 'Ska kräva intern orsak.', TicketStatus::RESOLVED, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customer)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($technician);
+        $this->entityManager->persist($customer);
+        $this->entityManager->persist($ticket);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?scope=mine');
+        self::assertResponseIsSuccessful();
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'set_status',
+            'bulk_status' => TicketStatus::OPEN->value,
+            'bulk_internal_note' => '',
+            'bulk_customer_reply' => '',
+            'ticket_ids' => [(string) $ticket->getId()],
+        ]);
+
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine');
+        $this->client->followRedirect();
+        $html = $this->client->getResponse()->getContent() ?? '';
+        self::assertStringContainsString('När lösta eller stängda ärenden återöppnas i bulk behöver du skriva en intern orsak.', $html);
+
+        $this->entityManager->clear();
+        /** @var Ticket $ticket */
+        $ticket = $this->entityManager->getRepository(Ticket::class)->find($ticket->getId());
+        self::assertSame(TicketStatus::RESOLVED, $ticket->getStatus());
+        self::assertCount(0, $ticket->getComments());
+    }
+
+    public function testTechnicianCanBulkReopenWithInternalReason(): void
+    {
+        $company = new Company('Bulk Reopen Reason AB');
+        $team = new TechnicianTeam('Reopen Team');
+        $technician = new User('bulk-reopen-reason@example.test', 'Ronja', 'Reason', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'BulkReopenReason123'));
+        $technician->enableMfa();
+        $technician->setTechnicianTeam($team);
+
+        $customerOne = new User('bulk-reopen-reason-one@example.test', 'Kai', 'Kund', UserType::CUSTOMER);
+        $customerOne->setPassword($this->passwordHasher->hashPassword($customerOne, 'CustomerPassword123'));
+        $customerOne->setCompany($company);
+
+        $customerTwo = new User('bulk-reopen-reason-two@example.test', 'Kia', 'Kund', UserType::CUSTOMER);
+        $customerTwo->setPassword($this->passwordHasher->hashPassword($customerTwo, 'CustomerPassword123'));
+        $customerTwo->setCompany($company);
+
+        $ticketOne = (new Ticket('DP-7605', 'Återöppna ett', 'Ska återöppnas med intern orsak.', TicketStatus::RESOLVED, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customerOne)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team);
+        $ticketTwo = (new Ticket('DP-7606', 'Återöppna två', 'Ska också återöppnas med intern orsak.', TicketStatus::CLOSED, TicketVisibility::PRIVATE))
+            ->setCompany($company)
+            ->setRequester($customerTwo)
+            ->setAssignee($technician)
+            ->setAssignedTeam($team);
+
+        $this->entityManager->persist($company);
+        $this->entityManager->persist($team);
+        $this->entityManager->persist($technician);
+        $this->entityManager->persist($customerOne);
+        $this->entityManager->persist($customerTwo);
+        $this->entityManager->persist($ticketOne);
+        $this->entityManager->persist($ticketTwo);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($technician);
+        $crawler = $this->client->request('GET', '/portal/technician/arenden?scope=mine');
+        self::assertResponseIsSuccessful();
+
+        $form = $crawler->filter('form[action="/portal/technician/tickets/bulk-update"]')->form();
+        $this->client->request('POST', '/portal/technician/tickets/bulk-update', [
+            '_token' => $form->get('_token')->getValue(),
+            'return_url' => $form->get('return_url')->getValue(),
+            'bulk_action' => 'set_status',
+            'bulk_status' => TicketStatus::OPEN->value,
+            'bulk_internal_note' => 'Återöppnas efter ny information från driftövervakningen.',
+            'bulk_customer_reply' => '',
+            'ticket_ids' => [(string) $ticketOne->getId(), (string) $ticketTwo->getId()],
+        ]);
+
+        self::assertResponseRedirects('/portal/technician/arenden?scope=mine');
+
+        $this->entityManager->clear();
+        /** @var Ticket $ticketOne */
+        $ticketOne = $this->entityManager->getRepository(Ticket::class)->find($ticketOne->getId());
+        /** @var Ticket $ticketTwo */
+        $ticketTwo = $this->entityManager->getRepository(Ticket::class)->find($ticketTwo->getId());
+        self::assertSame(TicketStatus::OPEN, $ticketOne->getStatus());
+        self::assertSame(TicketStatus::OPEN, $ticketTwo->getStatus());
+        self::assertCount(1, $ticketOne->getComments());
+        self::assertCount(1, $ticketTwo->getComments());
+        self::assertTrue($ticketOne->getComments()->first()->isInternal());
+        self::assertTrue($ticketTwo->getComments()->first()->isInternal());
+        self::assertSame('Återöppnas efter ny information från driftövervakningen.', $ticketOne->getComments()->first()->getBody());
+
+        $logs = $this->entityManager->getRepository(TicketAuditLog::class)->findBy(['action' => 'internal_comment_added'], ['id' => 'DESC']);
+        self::assertGreaterThanOrEqual(2, \count($logs));
+        self::assertStringContainsString('Intern kommentar tillagd via bulkåtgärd.', $logs[0]->getMessage());
     }
 
     public function testTicketKeepsUsingLockedIntakeTemplateVersionOnUpdate(): void
@@ -1976,7 +4020,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $legacyTemplateId = $legacyTemplate->getId();
 
         $this->client->loginUser($technician);
-        $crawler = $this->client->request('GET', '/portal/technician');
+        $crawler = $this->client->request('GET', sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
         self::assertResponseIsSuccessful();
 
         $updateFormNode = $crawler->filter(sprintf('form[action="/portal/technician/tickets/%d"]', $ticket->getId()));
@@ -1999,7 +4043,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($updateForm);
 
-        self::assertResponseRedirects('/portal/technician');
+        self::assertResponseRedirects(sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
 
         $this->entityManager->clear();
         $ticket = $this->entityManager->getRepository(Ticket::class)->findOneBy(['reference' => 'DP-2099']);
@@ -2031,7 +4075,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         file_put_contents($tempFile, 'Test skarmbildsinnehall');
 
         $this->client->loginUser($customer);
-        $crawler = $this->client->request('GET', '/portal/customer');
+        $crawler = $this->client->request('GET', sprintf('/portal/customer/tickets/%d', $ticket->getId()));
         self::assertResponseIsSuccessful();
         $html = (string) $crawler->html();
         self::assertStringContainsString('Bilagor', $html);
@@ -2046,7 +4090,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $form['attachment']->upload($tempFile);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/customer');
+        self::assertResponseRedirects(sprintf('/portal/customer/tickets/%d', $ticket->getId()));
         $this->client->followRedirect();
 
         $this->entityManager->clear();
@@ -2055,7 +4099,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         self::assertFalse($attachment->isExternal());
         self::assertSame(basename($tempFile), $attachment->getDisplayName());
 
-        $crawler = $this->client->request('GET', '/portal/customer');
+        $crawler = $this->client->request('GET', sprintf('/portal/customer/tickets/%d', $ticket->getId()));
         self::assertResponseIsSuccessful();
         $html = (string) $crawler->html();
         self::assertStringContainsString('Bilageöversikt', $html);
@@ -2069,7 +4113,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         self::assertStringContainsString('attachment;', (string) $this->client->getResponse()->headers->get('content-disposition'));
         self::assertSame('Test skarmbildsinnehall', file_get_contents((string) $attachment->getFilePath()));
 
-        $crawler = $this->client->request('GET', '/portal/customer');
+        $crawler = $this->client->request('GET', sprintf('/portal/customer/tickets/%d', $ticket->getId()));
         self::assertResponseIsSuccessful();
         $form = $crawler->filter(sprintf('form[action="/portal/customer/tickets/%d/comments"]', $ticket->getId()))->form([
             'body' => 'Här är storfilslänken.',
@@ -2078,7 +4122,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/customer');
+        self::assertResponseRedirects(sprintf('/portal/customer/tickets/%d', $ticket->getId()));
         $this->client->followRedirect();
 
         $this->entityManager->clear();
@@ -2128,7 +4172,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         file_put_contents($renamedFile, 'blocked');
 
         $this->client->loginUser($customer);
-        $crawler = $this->client->request('GET', '/portal/customer');
+        $crawler = $this->client->request('GET', sprintf('/portal/customer/tickets/%d', $ticket->getId()));
         self::assertResponseIsSuccessful();
 
         $form = $crawler->filter(sprintf('form[action="/portal/customer/tickets/%d/comments"]', $ticket->getId()))->form([
@@ -2137,7 +4181,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $form['attachment']->upload($renamedFile);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/customer');
+        self::assertResponseRedirects(sprintf('/portal/customer/tickets/%d', $ticket->getId()));
         $crawler = $this->client->followRedirect();
         self::assertResponseIsSuccessful();
         self::assertStringContainsString('Filtypen är inte tillåten. Tillåtna filtyper är: png, pdf.', (string) $crawler->html());
@@ -2169,7 +4213,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         file_put_contents($tempFile, base64_decode($pngBase64, true));
 
         $this->client->loginUser($customer);
-        $crawler = $this->client->request('GET', '/portal/customer');
+        $crawler = $this->client->request('GET', sprintf('/portal/customer/tickets/%d', $ticket->getId()));
         self::assertResponseIsSuccessful();
 
         $form = $crawler->filter(sprintf('form[action="/portal/customer/tickets/%d/comments"]', $ticket->getId()))->form([
@@ -2178,7 +4222,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $form['attachment']->upload($tempFile);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/customer');
+        self::assertResponseRedirects(sprintf('/portal/customer/tickets/%d', $ticket->getId()));
         $crawler = $this->client->followRedirect();
         self::assertResponseIsSuccessful();
         $html = (string) $crawler->html();
@@ -2230,7 +4274,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $this->entityManager->flush();
 
         $this->client->loginUser($technician);
-        $crawler = $this->client->request('GET', '/portal/technician');
+        $crawler = $this->client->request('GET', sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
         self::assertResponseIsSuccessful();
 
         $form = $crawler->filter(sprintf('form[action="/portal/technician/tickets/%d"]', $ticket->getId()))->form([
@@ -2245,7 +4289,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/technician');
+        self::assertResponseRedirects(sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
         $crawler = $this->client->followRedirect();
         self::assertResponseIsSuccessful();
         $html = (string) $crawler->html();
@@ -2304,7 +4348,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $this->entityManager->flush();
 
         $this->client->loginUser($technician);
-        $crawler = $this->client->request('GET', '/portal/technician');
+        $crawler = $this->client->request('GET', sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
         self::assertResponseIsSuccessful();
 
         $form = $crawler->filter(sprintf('form[action="/portal/technician/tickets/%d"]', $ticket->getId()))->form([
@@ -2319,7 +4363,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        self::assertResponseRedirects('/portal/technician');
+        self::assertResponseRedirects(sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
         $this->client->followRedirect();
 
         $this->entityManager->clear();
