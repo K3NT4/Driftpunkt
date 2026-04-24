@@ -103,6 +103,39 @@ final class HomepageNewsAndSettingsTest extends WebTestCase
         self::assertStringContainsString('Första raden.', $detailsCrawler->html());
     }
 
+    public function testPublicNewsPagesFallbackWhenUserSchemaIsMissingMfaSecret(): void
+    {
+        $author = new User('news-fallback@example.test', 'Nina', 'Nyhet', UserType::ADMIN);
+        $author->setPassword($this->passwordHasher->hashPassword($author, 'Supersakert123'));
+
+        $article = new NewsArticle('Schemafallback', 'Visar nyhet utan forfattarrelation.', "Rad ett.\nRad tva.");
+        $article->setAuthor($author);
+        $article->publish();
+
+        $this->entityManager->persist($author);
+        $this->entityManager->persist($article);
+        $this->entityManager->flush();
+
+        $this->entityManager->getConnection()->executeStatement('ALTER TABLE users DROP COLUMN mfa_secret');
+        $this->entityManager->clear();
+
+        $homeCrawler = $this->client->request('GET', '/');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Schemafallback', $homeCrawler->html());
+        self::assertStringContainsString('Driftpunkt', $homeCrawler->html());
+
+        $newsCrawler = $this->client->request('GET', '/nyheter');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Schemafallback', $newsCrawler->html());
+
+        $detailsCrawler = $this->client->request('GET', '/nyheter/'.$article->getId());
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Rad ett.', $detailsCrawler->html());
+
+        $statusCrawler = $this->client->request('GET', '/driftstatus');
+        self::assertResponseIsSuccessful();
+    }
+
     public function testLanguageSwitcherPersistsEnglishLocaleAcrossRedirect(): void
     {
         $crawler = $this->client->request('GET', '/sprak/en?returnTo=%2F');
@@ -173,6 +206,85 @@ final class HomepageNewsAndSettingsTest extends WebTestCase
         self::assertStringContainsString('php bin/phpunit', $crawler->html());
     }
 
+    public function testNewsArticleBodySupportsSuccessCallouts(): void
+    {
+        $author = new User('news-success@example.test', 'Nina', 'Nyhet', UserType::ADMIN);
+        $author->setPassword($this->passwordHasher->hashPassword($author, 'Supersakert123'));
+
+        $article = new NewsArticle(
+            'Incident lost',
+            'Visar success-callout i artikeln.',
+            ":::success Lage aterstallt\nTjansten fungerar igen.\n:::",
+        );
+        $article->setAuthor($author);
+        $article->publish();
+
+        $this->entityManager->persist($author);
+        $this->entityManager->persist($article);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/nyheter/'.$article->getId());
+
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('article-callout success', $crawler->html());
+        self::assertStringContainsString('<strong>Lage aterstallt</strong>', $crawler->html());
+        self::assertStringContainsString('Tjansten fungerar igen.', $crawler->html());
+    }
+
+    public function testNewsArticleBodySupportsFaqAndVersionBlocks(): void
+    {
+        $author = new User('news-faq@example.test', 'Nina', 'Nyhet', UserType::ADMIN);
+        $author->setPassword($this->passwordHasher->hashPassword($author, 'Supersakert123'));
+
+        $article = new NewsArticle(
+            'Release med FAQ',
+            'Visar FAQ-block och versionsrad.',
+            "+++ 2.4.0 | Produktionssatt\n\n??? Hur paverkas jag?\nIngen manuell insats kravs efter releasen.\n???",
+        );
+        $article->setAuthor($author);
+        $article->publish();
+
+        $this->entityManager->persist($author);
+        $this->entityManager->persist($article);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/nyheter/'.$article->getId());
+
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('article-version', $crawler->html());
+        self::assertStringContainsString('2.4.0', $crawler->html());
+        self::assertStringContainsString('Produktionssatt', $crawler->html());
+        self::assertStringContainsString('article-faq', $crawler->html());
+        self::assertStringContainsString('Hur paverkas jag?', $crawler->html());
+        self::assertStringContainsString('Ingen manuell insats kravs efter releasen.', $crawler->html());
+    }
+
+    public function testNewsArticleBodySupportsTables(): void
+    {
+        $author = new User('news-table@example.test', 'Nina', 'Nyhet', UserType::ADMIN);
+        $author->setPassword($this->passwordHasher->hashPassword($author, 'Supersakert123'));
+
+        $article = new NewsArticle(
+            'Release med tabell',
+            'Visar tabellblock i artikeln.',
+            "| Omrade | Status | Kommentar |\n| --- | --- | --- |\n| Portal | Klar | Ingen manuell atgard kravs |\n| API | Pa gar | Uppfoljning efter deploy |",
+        );
+        $article->setAuthor($author);
+        $article->publish();
+
+        $this->entityManager->persist($author);
+        $this->entityManager->persist($article);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/nyheter/'.$article->getId());
+
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('article-table-wrap', $crawler->html());
+        self::assertStringContainsString('<th>Omrade</th>', $crawler->html());
+        self::assertStringContainsString('<td>Portal</td>', $crawler->html());
+        self::assertStringContainsString('Ingen manuell atgard kravs', $crawler->html());
+    }
+
     public function testNewsArticleBodySupportsInlineImageBlocks(): void
     {
         $author = new User('news-image@example.test', 'Nina', 'Nyhet', UserType::ADMIN);
@@ -234,6 +346,34 @@ final class HomepageNewsAndSettingsTest extends WebTestCase
         self::assertSame(5, $settings->getMaintenanceNoticeSettings()['lookaheadDays']);
     }
 
+    public function testAdminCanUpdateMfaPolicySettings(): void
+    {
+        $admin = new User('admin-mfa-policy@example.test', 'Ada', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'Supersakert123'));
+        $admin->enableMfa();
+        $this->entityManager->persist($admin);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/settings-content');
+        self::assertResponseIsSuccessful();
+
+        $form = $crawler->selectButton('Spara MFA-inställningar')->form([
+            'mfa_customer_enabled' => '1',
+            'mfa_technician_enabled' => '1',
+        ]);
+        unset($form['mfa_admin_enabled']);
+        $this->client->submit($form);
+
+        self::assertResponseRedirects('/portal/admin/settings-content');
+        $this->client->followRedirect();
+
+        $settings = static::getContainer()->get(SystemSettings::class);
+        self::assertTrue($settings->getMfaSettings()['customerEnabled']);
+        self::assertTrue($settings->getMfaSettings()['technicianEnabled']);
+        self::assertFalse($settings->getMfaSettings()['adminEnabled']);
+    }
+
     public function testAdminNewsPageShowsTechnicianNewsPermissionToggle(): void
     {
         $admin = new User('admin-news-toggle@example.test', 'Ada', 'Admin', UserType::ADMIN);
@@ -254,10 +394,28 @@ final class HomepageNewsAndSettingsTest extends WebTestCase
         self::assertStringContainsString('Bildblock', $crawler->html());
         self::assertStringContainsString('CTA-knapp', $crawler->html());
         self::assertStringContainsString('Kodblock', $crawler->html());
+        self::assertStringContainsString('Klart-ruta', $crawler->html());
+        self::assertStringContainsString('FAQ-block', $crawler->html());
+        self::assertStringContainsString('Versionsrad', $crawler->html());
+        self::assertStringContainsString('Tabell', $crawler->html());
+        self::assertStringContainsString('Kort kod', $crawler->html());
         self::assertStringContainsString('Snabbmallar', $crawler->html());
+        self::assertStringContainsString('Kopiera sektion', $crawler->html());
+        self::assertStringContainsString('Påverkan', $crawler->html());
+        self::assertStringContainsString('Åtgärder', $crawler->html());
+        self::assertStringContainsString('Nästa uppdatering', $crawler->html());
+        self::assertStringContainsString('Kända fel', $crawler->html());
         self::assertStringContainsString('Release notes', $crawler->html());
         self::assertStringContainsString('Driftstörning', $crawler->html());
+        self::assertStringContainsString('Löst incident', $crawler->html());
         self::assertStringContainsString('Planerat underhåll', $crawler->html());
+        self::assertStringContainsString('Redaktörsstöd', $crawler->html());
+        self::assertStringContainsString('Sammanfattning', $crawler->html());
+        self::assertStringContainsString('Lästid', $crawler->html());
+        self::assertStringContainsString('Autosparning redo', $crawler->html());
+        self::assertStringContainsString('data-autosave-status', $crawler->html());
+        self::assertStringContainsString('Återställ utkast', $crawler->html());
+        self::assertStringContainsString('Rensa lokalt utkast', $crawler->html());
         self::assertStringContainsString('smarta standardvärden för publicering, prioritet och underhållsfönster', $crawler->html());
     }
 
@@ -280,10 +438,20 @@ final class HomepageNewsAndSettingsTest extends WebTestCase
         self::assertStringContainsString('Addon avstängt: <strong>News Editor Plus</strong>', $crawler->html());
         self::assertStringContainsString('Basredigering:', $crawler->html());
         self::assertStringNotContainsString('Snabbmallar', $crawler->html());
+        self::assertStringNotContainsString('Kopiera sektion', $crawler->html());
         self::assertStringNotContainsString('Checklista', $crawler->html());
         self::assertStringNotContainsString('Bildblock', $crawler->html());
         self::assertStringNotContainsString('CTA-knapp', $crawler->html());
         self::assertStringNotContainsString('Kodblock', $crawler->html());
+        self::assertStringNotContainsString('Klart-ruta', $crawler->html());
+        self::assertStringNotContainsString('data-editor-action="faq"', $crawler->html());
+        self::assertStringNotContainsString('data-editor-action="version"', $crawler->html());
+        self::assertStringNotContainsString('data-editor-action="table"', $crawler->html());
+        self::assertStringNotContainsString('data-news-section="impact"', $crawler->html());
+        self::assertStringContainsString('Autosparning redo', $crawler->html());
+        self::assertStringContainsString('Återställ utkast', $crawler->html());
+        self::assertStringContainsString('Rensa lokalt utkast', $crawler->html());
+        self::assertStringNotContainsString('Kort kod', $crawler->html());
     }
 
     public function testTechnicianNewsPageRequiresAdminPermissionFlag(): void

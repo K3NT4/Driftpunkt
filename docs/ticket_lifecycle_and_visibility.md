@@ -1,6 +1,6 @@
 # Ticketlivscykel och visibility
 
-## Statusar i den har versionen
+## Statusar i den här versionen
 
 - `new`
 - `open`
@@ -12,25 +12,25 @@
 
 ### `new`
 
-Nytt arende som precis skapats eller importerats.
+Nytt ärende som precis skapats eller importerats.
 
 ### `open`
 
-Aktivt arende hos intern hantering. Det ar ocksa den status som normalt atertas nar kund svarar.
+Aktivt ärende hos intern hantering. Det är också den status som normalt återtas när kund svarar.
 
 ### `pending_customer`
 
-Arendet vantar pa kundens aterkoppling. Detta anvands bland annat nar tekniker skriver kundsynlig kommentar.
+Ärendet väntar på kundens återkoppling. Detta används bland annat när tekniker skriver kundsynlig kommentar.
 
 ### `resolved`
 
-Arendet bedoms lost men ar inte nodvandigtvis definitivt stangt.
+Ärendet bedöms löst men är inte nödvändigtvis definitivt stängt.
 
 ### `closed`
 
-Arendet ar definitivt avslutat. `closedAt` sattes nar ticketet blir `closed` och rensas om ticketet oppnas igen.
+Ärendet är definitivt avslutat. `closedAt` sattes när ticketet blir `closed` och rensas om ticketet öppnas igen.
 
-## Visibilitynivaer
+## Visibilitynivåer
 
 - `private`
 - `company_shared`
@@ -38,28 +38,28 @@ Arendet ar definitivt avslutat. `closedAt` sattes nar ticketet blir `closed` och
 
 ### `private`
 
-Synligt for requester och interna roller.
+Synligt för requester och interna roller.
 
 ### `company_shared`
 
-Synligt for requester, andra kunder i samma foretag och interna roller.
+Synligt för requester, andra kunder i samma företag och interna roller.
 
 ### `internal_only`
 
-Synligt bara for interna roller. Anvands bland annat for interna tickets och stoppade draftfloden.
+Synligt bara för interna roller. Används bland annat för interna tickets och stoppade draftflöden.
 
-## Vanliga overgangar
+## Vanliga övergångar
 
 ### Ticket skapas
 
 Kan ske via:
 
 - teknikerportal
-- adminflode
+- adminflöde
 - import
 - inkommande e-post
 
-Startstatus ar normalt `new` eller `open`.
+Startstatus är normalt `new` eller `open`.
 
 ### Kund kommenterar
 
@@ -73,31 +73,31 @@ Startstatus ar normalt `new` eller `open`.
 - status blir normalt `pending_customer`
 - notifiering kan skickas till requester
 
-### Tekniker eller admin markerar lost
+### Tekniker eller admin markerar löst
 
 - status blir `resolved`
-- arendet kan fortsatt ha uppfoljning eller senare stangas
+- ärendet kan fortsatt ha uppföljning eller senare stängas
 
-### Ticket stangs
+### Ticket stängs
 
 - status blir `closed`
-- `closedAt` satts
-- ticketet kan fortfarande ligga kvar for historik, export och eventuell bilagearkivering
+- `closedAt` sätts
+- ticketet kan fortfarande ligga kvar för historik, export och eventuell bilagearkivering
 
-## E-postfloden och lifecycle
+## E-postflöden och lifecycle
 
 Inkommande mail kan ge fyra typer av utfall:
 
-- ny kommentar pa befintligt ticket
+- ny kommentar på befintligt ticket
 - nytt aktivt ticket
 - nytt ticket i draftgranskning
 - avvisat inkommande mail
 
-Nar draftgranskning avvisas stangs draftticketet och goras `internal_only`.
+När draftgranskning avvisas stängs draftticketet och görs `internal_only`.
 
-## Arbetsregler som ar viktiga att forsta
+## Arbetsregler som är viktiga att förstå
 
-- visibility avgor kundsynlighet, inte bara status
-- status avgor arbetslage, inte alltid synlighet
-- ett stangt ticket kan fortfarande vara tillgangligt for historik och export
-- foretagsdelning kraver bade ratt relation och ratt visibility
+- visibility avgör kundsynlighet, inte bara status
+- status avgör arbetsläge, inte alltid synlighet
+- ett stängt ticket kan fortfarande vara tillgängligt för historik och export
+- företagsdelning kräver både rätt relation och rätt visibility

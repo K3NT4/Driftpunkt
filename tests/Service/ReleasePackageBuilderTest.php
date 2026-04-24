@@ -17,6 +17,7 @@ final class ReleasePackageBuilderTest extends TestCase
         $this->projectDir = sys_get_temp_dir().'/driftpunkt-release-builder-'.bin2hex(random_bytes(4));
         mkdir($this->projectDir.'/bin', 0777, true);
         mkdir($this->projectDir.'/config/packages', 0777, true);
+        mkdir($this->projectDir.'/deploy/nas', 0777, true);
         mkdir($this->projectDir.'/deploy/systemd', 0777, true);
         mkdir($this->projectDir.'/docs', 0777, true);
         mkdir($this->projectDir.'/migrations', 0777, true);
@@ -38,6 +39,8 @@ final class ReleasePackageBuilderTest extends TestCase
         file_put_contents($this->projectDir.'/symfony.lock', "{}\n");
         file_put_contents($this->projectDir.'/bin/console', "#!/usr/bin/env php\n<?php\n");
         file_put_contents($this->projectDir.'/config/packages/framework.yaml', "framework:\n");
+        file_put_contents($this->projectDir.'/deploy/nas/.env', "MARIADB_PASSWORD=secret\n");
+        file_put_contents($this->projectDir.'/deploy/nas/.env.example', "MARIADB_PASSWORD=change-me\n");
         file_put_contents($this->projectDir.'/deploy/systemd/driftpunkt.service', "[Service]\n");
         file_put_contents($this->projectDir.'/docs/release.md', "release\n");
         file_put_contents($this->projectDir.'/migrations/Version20260419000000.php', "<?php\n");
@@ -67,15 +70,19 @@ final class ReleasePackageBuilderTest extends TestCase
         $upgradeEntries = $this->listArchiveEntries($packages[0]['path']);
         self::assertContains('driftpunkt-upgrade-9.9.9/src/Kernel.php', $upgradeEntries);
         self::assertContains('driftpunkt-upgrade-9.9.9/deploy/systemd/driftpunkt.service', $upgradeEntries);
+        self::assertContains('driftpunkt-upgrade-9.9.9/deploy/nas/.env.example', $upgradeEntries);
         self::assertContains('driftpunkt-upgrade-9.9.9/release-metadata.json', $upgradeEntries);
-        self::assertNotContains('driftpunkt-upgrade-9.9.9/vendor/autoload.php', $upgradeEntries);
+        self::assertContains('driftpunkt-upgrade-9.9.9/vendor/autoload.php', $upgradeEntries);
+        self::assertNotContains('driftpunkt-upgrade-9.9.9/deploy/nas/.env', $upgradeEntries);
         self::assertNotContains('driftpunkt-upgrade-9.9.9/var/cache/dev.txt', $upgradeEntries);
 
         $installEntries = $this->listArchiveEntries($packages[1]['path']);
         self::assertContains('driftpunkt-install-9.9.9/vendor/autoload.php', $installEntries);
         self::assertContains('driftpunkt-install-9.9.9/composer', $installEntries);
         self::assertContains('driftpunkt-install-9.9.9/compose.yaml', $installEntries);
+        self::assertContains('driftpunkt-install-9.9.9/deploy/nas/.env.example', $installEntries);
         self::assertContains('driftpunkt-install-9.9.9/release-metadata.json', $installEntries);
+        self::assertNotContains('driftpunkt-install-9.9.9/deploy/nas/.env', $installEntries);
         self::assertNotContains('driftpunkt-install-9.9.9/var/cache/dev.txt', $installEntries);
     }
 

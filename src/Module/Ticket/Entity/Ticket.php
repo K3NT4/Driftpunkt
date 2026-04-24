@@ -43,6 +43,9 @@ class Ticket
     #[ORM\Column(type: 'text')]
     private string $summary;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $resolutionSummary = null;
+
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(onDelete: 'SET NULL', nullable: true)]
     private ?TicketCategory $category = null;
@@ -189,6 +192,19 @@ class Ticket
     public function setSummary(string $summary): self
     {
         $this->summary = trim($summary);
+
+        return $this;
+    }
+
+    public function getResolutionSummary(): ?string
+    {
+        return $this->resolutionSummary;
+    }
+
+    public function setResolutionSummary(?string $resolutionSummary): self
+    {
+        $normalized = null !== $resolutionSummary ? trim($resolutionSummary) : null;
+        $this->resolutionSummary = '' !== (string) $normalized ? $normalized : null;
 
         return $this;
     }

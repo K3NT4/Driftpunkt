@@ -70,12 +70,16 @@ final class PostUpdateTaskRunnerTest extends TestCase
         self::assertSame('completed', $run['status']);
         self::assertTrue($run['succeeded']);
         self::assertCount(2, $run['taskResults']);
-        self::assertCount(2, $executor->commands);
+        self::assertCount(1, $executor->commands);
+        self::assertCount(2, $launcher->launches);
+        self::assertSame('cache_clear', $run['taskResults'][1]['id']);
+        self::assertStringContainsString('fristående bakgrundssteg', $run['taskResults'][1]['output']);
 
         $recentRuns = $runner->listRecentRuns();
         self::assertCount(1, $recentRuns);
         self::assertSame($run['id'], $recentRuns[0]['id']);
         self::assertSame(['composer_install', 'cache_clear'], $recentRuns[0]['selectedTasks']);
+        self::assertFileExists($this->projectDir.'/var/post_update_runs/'.$run['id'].'.json');
     }
 
     public function testItStopsWhenTaskFails(): void

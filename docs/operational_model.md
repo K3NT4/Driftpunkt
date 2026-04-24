@@ -2,15 +2,15 @@
 
 Detta dokument beskriver hur Driftpunkt drivs som applikation i vardagen.
 
-## Driftsansvar i nulaget
+## Driftsansvar i nuläget
 
-En fungerande installation forutsatter att nagon ansvarar for:
+En fungerande installation förutsätter att någon ansvarar för:
 
 - databas och backup
 - schemalagda kommandon
-- mailpolling eller annat ingestinflode
-- underhallslage vid uppdatering
-- uppfoljning av bakgrundsjobb och loggar
+- mailpolling eller annat ingestinflöde
+- underhållsläge vid uppdatering
+- uppföljning av bakgrundsjobb och loggar
 
 ## Viktiga schemalagda jobb
 
@@ -39,14 +39,14 @@ php bin/console app:database-maintenance:run <job-id>
 php bin/console app:post-update:run <run-id>
 ```
 
-## Underhallslage
+## Underhållsläge
 
-Underhallslage kan:
+Underhållsläge kan:
 
 - aktiveras direkt
-- schemalaggas
-- visas publikt via status/underhallsrelaterade ytor
-- blockera inloggningar medan arbete pagar
+- schemaläggas
+- visas publikt via status/underhållsrelaterade ytor
+- blockera inloggningar medan arbete pågår
 
 CLI:
 
@@ -58,14 +58,14 @@ php bin/console app:maintenance disable
 
 ## Databasdrift
 
-Admin kan skapa backup, aterlasa och optimera databasen via portalen. Databasjobb har separata loggspår och kan koras i bakgrunden.
+Admin kan skapa backup, återläsa och optimera databasen via portalen. Databasjobb har separata loggspår och kan köras i bakgrunden.
 
 ## Koduppdateringar
 
-Driftpunkt har egen modell for:
+Driftpunkt har egen modell för:
 
 - staging av uppdateringspaket
-- backup fore kodbyte
+- backup före kodbyte
 - applicering av paket
 - post-update tasks som exempelvis `composer install`, migrationer och cache clear
 
@@ -82,12 +82,12 @@ Det skapas:
 - installationspaket
 - uppgraderingspaket
 
-## Minimum for fungerande drift
+## Minimum för fungerande drift
 
-For att kalla en installation fungerande i drift bor foljande vara uppsatt:
+För att kalla en installation fungerande i drift bör följande vara uppsatt:
 
 - migrerad databas
 - minst ett administrativt konto
-- fungerande mailkonfiguration om e-postfloden ska anvandas
-- schemalaggning for polling och SLA-kontroll
-- rutiner for backup och restore
+- fungerande mailkonfiguration om e-postflöden ska användas
+- schemaläggning för polling och SLA-kontroll
+- rutiner för backup och restore

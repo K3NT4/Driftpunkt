@@ -53,8 +53,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private bool $mfaEnabled = false;
 
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $mfaSecret = null;
+
     #[ORM\Column]
     private bool $emailNotificationsEnabled = true;
+
+    #[ORM\Column]
+    private bool $passwordChangeRequired = false;
 
     #[ORM\ManyToOne(targetEntity: Company::class, inversedBy: 'users')]
     #[ORM\JoinColumn(onDelete: 'SET NULL', nullable: true)]
@@ -224,6 +230,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    public function getMfaSecret(): ?string
+    {
+        return $this->mfaSecret;
+    }
+
+    public function setMfaSecret(?string $mfaSecret): self
+    {
+        $normalizedSecret = null !== $mfaSecret ? strtoupper(trim($mfaSecret)) : null;
+        $this->mfaSecret = '' !== (string) $normalizedSecret ? $normalizedSecret : null;
+
+        return $this;
+    }
+
+    public function clearMfaSecret(): self
+    {
+        $this->mfaSecret = null;
+
+        return $this;
+    }
+
     public function isEmailNotificationsEnabled(): bool
     {
         return $this->emailNotificationsEnabled;
@@ -239,6 +265,25 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function disableEmailNotifications(): self
     {
         $this->emailNotificationsEnabled = false;
+
+        return $this;
+    }
+
+    public function isPasswordChangeRequired(): bool
+    {
+        return $this->passwordChangeRequired;
+    }
+
+    public function requirePasswordChange(): self
+    {
+        $this->passwordChangeRequired = true;
+
+        return $this;
+    }
+
+    public function clearPasswordChangeRequired(): self
+    {
+        $this->passwordChangeRequired = false;
 
         return $this;
     }

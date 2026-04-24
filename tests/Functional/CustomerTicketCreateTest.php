@@ -258,6 +258,215 @@ final class CustomerTicketCreateTest extends WebTestCase
         self::assertSame(['Skrivare återställd', 'VPN nere för ekonomi'], $listTexts);
     }
 
+    public function testParentCompanyCustomerCanSeeSharedTicketsFromSubsidiary(): void
+    {
+        $parentCompany = new Company('HV Holding AB');
+        $childCompany = new Company('Fika Drift AB');
+        $childCompany->setParentCompany($parentCompany);
+        $childCompany->setAllowParentCompanyAccessToSharedTickets(true);
+
+        $parentCustomer = new User('parent-customer@example.test', 'Helena', 'Holding', UserType::CUSTOMER);
+        $parentCustomer->setPassword($this->passwordHasher->hashPassword($parentCustomer, 'CustomerPassword123'));
+        $parentCustomer->setCompany($parentCompany);
+
+        $childRequester = new User('child-requester@example.test', 'Filip', 'Fika', UserType::CUSTOMER);
+        $childRequester->setPassword($this->passwordHasher->hashPassword($childRequester, 'CustomerPassword123'));
+        $childRequester->setCompany($childCompany);
+
+        $sharedChildTicket = new Ticket(
+            'HV-3001',
+            'Kassasystemet ligger nere',
+            'Dotterbolaget behöver hjälp med sitt kassasystem.',
+            TicketStatus::OPEN,
+            TicketVisibility::COMPANY_SHARED,
+        );
+        $sharedChildTicket->setRequester($childRequester);
+        $sharedChildTicket->setCompany($childCompany);
+
+        $this->entityManager->persist($parentCompany);
+        $this->entityManager->persist($childCompany);
+        $this->entityManager->persist($parentCustomer);
+        $this->entityManager->persist($childRequester);
+        $this->entityManager->persist($sharedChildTicket);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($parentCustomer);
+
+        $crawler = $this->client->request('GET', '/portal/customer/tickets');
+        self::assertResponseIsSuccessful();
+        $html = (string) $crawler->html();
+        self::assertStringContainsString('Kassasystemet ligger nere', $html);
+        self::assertStringContainsString('Delat inom ert företag', $html);
+
+        $this->client->request('GET', sprintf('/portal/customer/tickets/%d', $sharedChildTicket->getId()));
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Kassasystemet ligger nere', (string) $this->client->getResponse()->getContent());
+    }
+
+    public function testParentCompanyCustomerCannotSeeSubsidiarySharedTicketWhenParentAccessIsDisabled(): void
+    {
+        $parentCompany = new Company('HV Blocked AB');
+        $childCompany = new Company('Zebra Drift AB');
+        $childCompany->setParentCompany($parentCompany);
+
+        $parentCustomer = new User('blocked-parent@example.test', 'Bodil', 'Blocked', UserType::CUSTOMER);
+        $parentCustomer->setPassword($this->passwordHasher->hashPassword($parentCustomer, 'CustomerPassword123'));
+        $parentCustomer->setCompany($parentCompany);
+
+        $childRequester = new User('blocked-child@example.test', 'Zelda', 'Child', UserType::CUSTOMER);
+        $childRequester->setPassword($this->passwordHasher->hashPassword($childRequester, 'CustomerPassword123'));
+        $childRequester->setCompany($childCompany);
+
+        $sharedChildTicket = new Ticket(
+            'HV-3003',
+            'Det här ska inte synas uppåt',
+            'Underbolaget har inte delat sina företagsärenden med moderbolaget.',
+            TicketStatus::OPEN,
+            TicketVisibility::COMPANY_SHARED,
+        );
+        $sharedChildTicket->setRequester($childRequester);
+        $sharedChildTicket->setCompany($childCompany);
+
+        $this->entityManager->persist($parentCompany);
+        $this->entityManager->persist($childCompany);
+        $this->entityManager->persist($parentCustomer);
+        $this->entityManager->persist($childRequester);
+        $this->entityManager->persist($sharedChildTicket);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($parentCustomer);
+
+        $crawler = $this->client->request('GET', '/portal/customer/tickets');
+        self::assertResponseIsSuccessful();
+        self::assertStringNotContainsString('Det här ska inte synas uppåt', (string) $crawler->html());
+
+        $this->client->request('GET', sprintf('/portal/customer/tickets/%d', $sharedChildTicket->getId()));
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testParentCompanyCustomerCannotSeeSubsidiarySharedTicketWhenGlobalParentVisibilityIsDisabled(): void
+    {
+        $this->systemSettings->setBool(SystemSettings::FEATURE_COMPANY_HIERARCHY_PARENT_CAN_SEE_CHILD_SHARED_TICKETS, false);
+
+        $parentCompany = new Company('HV Global Off AB');
+        $childCompany = new Company('Matte Drift AB');
+        $childCompany->setParentCompany($parentCompany);
+        $childCompany->setAllowParentCompanyAccessToSharedTickets(true);
+
+        $parentCustomer = new User('global-off-parent@example.test', 'Greta', 'Globaloff', UserType::CUSTOMER);
+        $parentCustomer->setPassword($this->passwordHasher->hashPassword($parentCustomer, 'CustomerPassword123'));
+        $parentCustomer->setCompany($parentCompany);
+
+        $childRequester = new User('global-off-child@example.test', 'Mats', 'Drift', UserType::CUSTOMER);
+        $childRequester->setPassword($this->passwordHasher->hashPassword($childRequester, 'CustomerPassword123'));
+        $childRequester->setCompany($childCompany);
+
+        $sharedChildTicket = new Ticket(
+            'HV-3004',
+            'Global policy blockerar uppåt',
+            'Det här ska blockeras av admininställningen.',
+            TicketStatus::OPEN,
+            TicketVisibility::COMPANY_SHARED,
+        );
+        $sharedChildTicket->setRequester($childRequester);
+        $sharedChildTicket->setCompany($childCompany);
+
+        $this->entityManager->persist($parentCompany);
+        $this->entityManager->persist($childCompany);
+        $this->entityManager->persist($parentCustomer);
+        $this->entityManager->persist($childRequester);
+        $this->entityManager->persist($sharedChildTicket);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($parentCustomer);
+        $this->client->request('GET', sprintf('/portal/customer/tickets/%d', $sharedChildTicket->getId()));
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testSubsidiaryCustomerCanSeeParentSharedTicketWhenAdminAllowsIt(): void
+    {
+        $this->systemSettings->setBool(SystemSettings::FEATURE_COMPANY_HIERARCHY_CHILD_CAN_SEE_PARENT_SHARED_TICKETS, true);
+
+        $parentCompany = new Company('HV Parent Visible AB');
+        $childCompany = new Company('Sirap Visible AB');
+        $childCompany->setParentCompany($parentCompany);
+
+        $parentRequester = new User('parent-visible-requester@example.test', 'Pelle', 'Parent', UserType::CUSTOMER);
+        $parentRequester->setPassword($this->passwordHasher->hashPassword($parentRequester, 'CustomerPassword123'));
+        $parentRequester->setCompany($parentCompany);
+
+        $childCustomer = new User('child-visible-customer@example.test', 'Siv', 'Child', UserType::CUSTOMER);
+        $childCustomer->setPassword($this->passwordHasher->hashPassword($childCustomer, 'CustomerPassword123'));
+        $childCustomer->setCompany($childCompany);
+
+        $sharedParentTicket = new Ticket(
+            'HV-3005',
+            'Moderbolagets gemensamma driftinfo',
+            'Det här ska synas nedåt när admin har tillåtit det.',
+            TicketStatus::OPEN,
+            TicketVisibility::COMPANY_SHARED,
+        );
+        $sharedParentTicket->setRequester($parentRequester);
+        $sharedParentTicket->setCompany($parentCompany);
+
+        $this->entityManager->persist($parentCompany);
+        $this->entityManager->persist($childCompany);
+        $this->entityManager->persist($parentRequester);
+        $this->entityManager->persist($childCustomer);
+        $this->entityManager->persist($sharedParentTicket);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($childCustomer);
+
+        $crawler = $this->client->request('GET', '/portal/customer/tickets');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Moderbolagets gemensamma driftinfo', (string) $crawler->html());
+
+        $this->client->request('GET', sprintf('/portal/customer/tickets/%d', $sharedParentTicket->getId()));
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testSubsidiaryCustomerCannotSeeParentCompanySharedTicket(): void
+    {
+        $parentCompany = new Company('HV Parent Services AB');
+        $childCompany = new Company('Sirap Drift AB');
+        $childCompany->setParentCompany($parentCompany);
+
+        $parentRequester = new User('parent-requester@example.test', 'Petra', 'Parent', UserType::CUSTOMER);
+        $parentRequester->setPassword($this->passwordHasher->hashPassword($parentRequester, 'CustomerPassword123'));
+        $parentRequester->setCompany($parentCompany);
+
+        $childCustomer = new User('child-customer@example.test', 'Sara', 'Subsidiary', UserType::CUSTOMER);
+        $childCustomer->setPassword($this->passwordHasher->hashPassword($childCustomer, 'CustomerPassword123'));
+        $childCustomer->setCompany($childCompany);
+
+        $sharedParentTicket = new Ticket(
+            'HV-3002',
+            'Moderbolagets avtal ska uppdateras',
+            'Det här delade ärendet ska inte automatiskt synas nedåt i koncernen.',
+            TicketStatus::OPEN,
+            TicketVisibility::COMPANY_SHARED,
+        );
+        $sharedParentTicket->setRequester($parentRequester);
+        $sharedParentTicket->setCompany($parentCompany);
+
+        $this->entityManager->persist($parentCompany);
+        $this->entityManager->persist($childCompany);
+        $this->entityManager->persist($parentRequester);
+        $this->entityManager->persist($childCustomer);
+        $this->entityManager->persist($sharedParentTicket);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($childCustomer);
+
+        $crawler = $this->client->request('GET', '/portal/customer/tickets');
+        self::assertResponseIsSuccessful();
+        self::assertStringNotContainsString('Moderbolagets avtal ska uppdateras', (string) $crawler->html());
+
+        $this->client->request('GET', sprintf('/portal/customer/tickets/%d', $sharedParentTicket->getId()));
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testCustomerCanCreateTicketWithAttachmentWhenFeatureIsEnabled(): void
     {
         [, $customer, $category] = $this->seedCustomerPortalFixture('attachment-customer@example.test');

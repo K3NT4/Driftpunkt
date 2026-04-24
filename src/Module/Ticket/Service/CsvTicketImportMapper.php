@@ -121,6 +121,7 @@ final class CsvTicketImportMapper
             }
 
             $ticket->setClosedAt($this->resolveClosedAt($ticketRow, $fieldMapping, $ticket));
+            $ticket->setResolutionSummary($this->mappedValue($ticketRow, $fieldMapping, 'resolution_body'));
 
             $import = new ExternalTicketImport($ticket, $sourceSystem, $sourceLabel);
             $import
@@ -264,6 +265,7 @@ final class CsvTicketImportMapper
 
             $title = $this->mappedValue($row, $fieldMapping, 'event_title');
             $body = $this->mappedValue($row, $fieldMapping, 'event_body');
+            $resolutionBody = $this->mappedValue($row, $fieldMapping, 'resolution_body');
             $eventType = $this->mappedValue($row, $fieldMapping, 'event_type');
             $eventDate = $this->mappedValue($row, $fieldMapping, 'event_date');
 
@@ -288,6 +290,17 @@ final class CsvTicketImportMapper
                 ->setMetadata($this->rowMetadata($row, $fieldMapping));
 
             $events[] = $event;
+
+            if ('' !== $resolutionBody) {
+                $resolutionEvent = new ExternalTicketEvent('resolution', 'Lösning', $occurredAt ?? new \DateTimeImmutable());
+                $resolutionEvent
+                    ->setBody($resolutionBody)
+                    ->setActorName($this->mappedValue($row, $fieldMapping, 'event_actor_name'))
+                    ->setActorEmail($this->mappedValue($row, $fieldMapping, 'event_actor_email'))
+                    ->setMetadata($this->rowMetadata($row, $fieldMapping));
+
+                $events[] = $resolutionEvent;
+            }
         }
 
         usort(

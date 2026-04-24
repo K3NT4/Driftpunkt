@@ -58,6 +58,7 @@ final class AppRuntime
      *     name: string,
      *     logoPath: string,
      *     footerText: string,
+     *     iconPath: string,
      *     appVersion: string,
      *     githubUrl: string,
      *     copyrightLabel: string
@@ -72,6 +73,7 @@ final class AppRuntime
             'name' => $branding['name'],
             'logoPath' => $branding['logoPath'],
             'footerText' => $branding['footerText'],
+            'iconPath' => $branding['logoPath'],
             'appVersion' => (string) ($application['version'] ?? 'lokal'),
             'githubUrl' => self::DRIFTPUNKT_PUBLIC_GITHUB_URL,
             'copyrightLabel' => sprintf('© %s Driftpunkt', date('Y')),
@@ -517,6 +519,10 @@ final class AppRuntime
         $calloutType = null;
         $calloutTitle = null;
         $calloutLines = [];
+        $faqQuestion = null;
+        $faqLines = [];
+        $tableLines = [];
+        $tableHasSeparator = false;
         $codeFenceLines = [];
         $insideCodeFence = false;
 
@@ -608,6 +614,68 @@ final class AppRuntime
             $calloutLines = [];
         };
 
+        $flushFaq = function () use (&$html, &$faqQuestion, &$faqLines): void {
+            if (null === $faqQuestion || [] === $faqLines) {
+                $faqQuestion = null;
+                $faqLines = [];
+
+                return;
+            }
+
+            $bodyLines = array_values(array_filter(
+                array_map(static fn (string $line): string => trim($line), $faqLines),
+                static fn (string $line): bool => '' !== $line,
+            ));
+            $bodyHtml = [] !== $bodyLines
+                ? sprintf('<p>%s</p>', implode('<br>', array_map([$this, 'renderInlineArticleMarkup'], $bodyLines)))
+                : '';
+
+            $html[] = sprintf(
+                '<details class="article-faq"><summary>%s</summary>%s</details>',
+                $this->renderInlineArticleMarkup($faqQuestion),
+                $bodyHtml,
+            );
+
+            $faqQuestion = null;
+            $faqLines = [];
+        };
+
+        $flushTable = function () use (&$html, &$tableLines, &$tableHasSeparator): void {
+            if ([] === $tableLines) {
+                $tableHasSeparator = false;
+
+                return;
+            }
+
+            if ($tableHasSeparator && \count($tableLines) >= 2) {
+                $header = $tableLines[0];
+                $rows = array_slice($tableLines, 1);
+                $headerHtml = implode('', array_map(
+                    fn (string $cell): string => sprintf('<th>%s</th>', $this->renderInlineArticleMarkup($cell)),
+                    $header,
+                ));
+                $bodyHtml = implode('', array_map(
+                    fn (array $row): string => sprintf(
+                        '<tr>%s</tr>',
+                        implode('', array_map(
+                            fn (string $cell): string => sprintf('<td>%s</td>', $this->renderInlineArticleMarkup($cell)),
+                            $row,
+                        )),
+                    ),
+                    $rows,
+                ));
+
+                $html[] = sprintf(
+                    '<div class="article-table-wrap"><table class="article-table"><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>',
+                    $headerHtml,
+                    $bodyHtml,
+                );
+            }
+
+            $tableLines = [];
+            $tableHasSeparator = false;
+        };
+
         $flushCodeFence = function () use (&$html, &$codeFenceLines, &$insideCodeFence): void {
             if (!$insideCodeFence && [] === $codeFenceLines) {
                 return;
@@ -642,11 +710,23 @@ final class AppRuntime
                 continue;
             }
 
+            if (null !== $faqQuestion) {
+                if ('???' === $trimmed) {
+                    $flushFaq();
+                    continue;
+                }
+
+                $faqLines[] = $line;
+                continue;
+            }
+
             if ('' === $trimmed) {
                 $flushParagraph();
                 $flushList();
                 $flushChecklist();
                 $flushBlockquote();
+                $flushFaq();
+                $flushTable();
                 continue;
             }
 
@@ -655,6 +735,8 @@ final class AppRuntime
                 $flushList();
                 $flushChecklist();
                 $flushBlockquote();
+                $flushFaq();
+                $flushTable();
                 $insideCodeFence = true;
                 $codeFenceLines = [];
                 continue;
@@ -665,9 +747,21 @@ final class AppRuntime
                 $flushList();
                 $flushChecklist();
                 $flushBlockquote();
+                $flushFaq();
+                $flushTable();
                 $calloutType = $matches[1];
                 $calloutTitle = $matches[2] ?? null;
                 $calloutLines = [];
+                continue;
+            }
+
+            if (preg_match('/^\?\?\?\s+(.+)$/', $trimmed, $matches) === 1) {
+                $flushParagraph();
+                $flushList();
+                $flushChecklist();
+                $flushBlockquote();
+                $faqQuestion = $matches[1];
+                $faqLines = [];
                 continue;
             }
 
@@ -676,7 +770,24 @@ final class AppRuntime
                 $flushList();
                 $flushChecklist();
                 $flushBlockquote();
+                $flushFaq();
+                $flushTable();
                 $html[] = '<hr>';
+                continue;
+            }
+
+            if (preg_match('/^\+\+\+\s+(.+?)(?:\s+\|\s+(.+))?$/', $trimmed, $matches) === 1) {
+                $flushParagraph();
+                $flushList();
+                $flushChecklist();
+                $flushBlockquote();
+                $flushFaq();
+                $flushTable();
+                $version = $this->renderInlineArticleMarkup($matches[1]);
+                $label = isset($matches[2]) && '' !== trim($matches[2])
+                    ? sprintf('<span>%s</span>', $this->renderInlineArticleMarkup($matches[2]))
+                    : '';
+                $html[] = sprintf('<div class="article-version"><strong>%s</strong>%s</div>', $version, $label);
                 continue;
             }
 
@@ -685,16 +796,43 @@ final class AppRuntime
                 $flushList();
                 $flushChecklist();
                 $flushBlockquote();
+                $flushFaq();
+                $flushTable();
                 $level = strlen($matches[1]);
                 $html[] = sprintf('<h%d>%s</h%d>', $level, $this->renderInlineArticleMarkup($matches[2]), $level);
                 continue;
             }
+
+            if (preg_match('/^\|(.+)\|$/', $trimmed) === 1) {
+                $flushParagraph();
+                $flushList();
+                $flushChecklist();
+                $flushBlockquote();
+                $flushFaq();
+
+                if (preg_match('/^\|(?:\s*:?-{3,}:?\s*\|)+$/', $trimmed) === 1) {
+                    if ([] !== $tableLines) {
+                        $tableHasSeparator = true;
+                    }
+                    continue;
+                }
+
+                $cells = array_map(
+                    static fn (string $cell): string => trim($cell),
+                    explode('|', trim($trimmed, '|')),
+                );
+                $tableLines[] = $cells;
+                continue;
+            }
+
+            $flushTable();
 
             if (preg_match('/^!\[(.*?)\]\((https?:\/\/[^\s)]+)\)$/', $trimmed, $matches) === 1) {
                 $flushParagraph();
                 $flushList();
                 $flushChecklist();
                 $flushBlockquote();
+                $flushFaq();
                 $alt = htmlspecialchars(trim($matches[1]), \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
                 $url = htmlspecialchars($matches[2], \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
                 $caption = '' !== trim($matches[1])
@@ -714,6 +852,7 @@ final class AppRuntime
                 $flushList();
                 $flushChecklist();
                 $flushBlockquote();
+                $flushFaq();
                 $label = $this->renderInlineArticleMarkup($matches[1]);
                 $url = htmlspecialchars($matches[2], \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
                 $html[] = sprintf(
@@ -774,6 +913,8 @@ final class AppRuntime
         }
 
         $flushCallout();
+        $flushFaq();
+        $flushTable();
         $flushCodeFence();
         $flushParagraph();
         $flushList();

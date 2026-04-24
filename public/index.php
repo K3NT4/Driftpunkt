@@ -2,6 +2,7 @@
 
 use App\Kernel;
 
+require_once dirname(__DIR__).'/config/bootstrap_env.php';
 require_once dirname(__DIR__).'/vendor/autoload_runtime.php';
 
 return static function (array $context) {

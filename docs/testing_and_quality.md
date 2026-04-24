@@ -1,31 +1,31 @@
 # Testning och kvalitet
 
-Denna version har en aktiv testsvit som framfor allt verifierar centrala anvandar- och driftfloden.
+Denna version har en aktiv testsvit som framför allt verifierar centrala användar- och driftflöden.
 
-## Kor tester lokalt
+## Kör tester lokalt
 
 ```bash
 php bin/phpunit
 ```
 
-## Vad testsviten redan tacker
+## Vad testsviten redan täcker
 
-- adminfloden for identitet, team, innehall och driftarbete
-- mailfloden, inklusive draftgranskning och mailboxpolling
+- adminflöden för identitet, team, innehåll och driftarbete
+- mailflöden, inklusive draftgranskning och mailboxpolling
 - inkommande mail till tickets och kommentarer
 - kund- och teknikerdialog kring tickets
-- losenordsaterstallning
-- underhallslage
-- startsida, nyheter och systeminstallningar
+- lösenordsåterställning
+- underhållsläge
+- startsida, nyheter och systeminställningar
 - SLA-kommandon
-- databasbackup, restore och jobbko
+- databasbackup, restore och jobbkö
 - post-update tasks
 - releasepaket
 - biljettreferenser och `closedAt`-beteende
 
-## Vad testerna betyder for denna version
+## Vad testerna betyder för denna version
 
-Testerna visar att Driftpunkt inte bara ar ett UI-skal, utan en applikation med verifierade arbetsfloden inom:
+Testerna visar att Driftpunkt inte bara är ett UI-skal, utan en applikation med verifierade arbetsflöden inom:
 
 - identitet
 - ticketing
@@ -35,22 +35,22 @@ Testerna visar att Driftpunkt inte bara ar ett UI-skal, utan en applikation med 
 
 ## Nuvarande teststatus i detta snapshot
 
-Vid lokal korning den 19 april 2026 med `php bin/phpunit`:
+Vid lokal körning den 19 april 2026 med `php bin/phpunit`:
 
-- 137 tester korades
+- 137 tester kördes
 - stora delar av sviten passerade
-- sviten avslutades inte gront
-- felbilden lag framfor allt i `TicketCommentNotificationTest`
+- sviten avslutades inte grönt
+- felbilden låg framför allt i `TicketCommentNotificationTest`
 
-Det betyder att kodbasen har bred funktionell tackning, men att hela snapshoten inte bor beskrivas som fullt verifierad releasekandidat utan vidare buggrattning.
+Det betyder att kodbasen har bred funktionell täckning, men att hela snapshoten inte bör beskrivas som fullt verifierad releasekandidat utan vidare buggrättning.
 
 ## Rekommenderad kvalitetsrutin
 
-Fore varje intern release bor vi minst:
+Före varje intern release bör vi minst:
 
-1. kora hela testsviten
+1. köra hela testsviten
 2. verifiera migrationer
-3. verifiera inloggning for minst en kund- och en intern roll
-4. testa ett inkommande mailflode
-5. testa backup eller restore i kontrollerad miljo
-6. sakerstall att hela testsviten ar gron innan extern release
+3. verifiera inloggning för minst en kund- och en intern roll
+4. testa ett inkommande mailflöde
+5. testa backup eller restore i kontrollerad miljö
+6. säkerställ att hela testsviten är grön innan extern release

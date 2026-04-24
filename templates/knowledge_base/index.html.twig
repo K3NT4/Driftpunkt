@@ -12,33 +12,33 @@
     {{ parent() }}
     <style>
         :root {
-            --knowledge-text: #283474;
-            --knowledge-text-soft: #54618e;
-            --knowledge-line: rgba(177, 186, 241, 0.42);
-            --knowledge-surface: rgba(255, 255, 255, 0.8);
-            --knowledge-surface-strong: rgba(255, 255, 255, 0.9);
-            --knowledge-shadow: 0 24px 60px rgba(87, 101, 177, 0.16);
-            --knowledge-blue: #2f59df;
-            --knowledge-purple: #7f42df;
-            --knowledge-green: #3aa16b;
-            --knowledge-orange: #f59b41;
+            --knowledge-text: #20315f;
+            --knowledge-text-soft: #5c6a8d;
+            --knowledge-line: rgba(156, 174, 225, 0.38);
+            --knowledge-surface: rgba(255, 255, 255, 0.84);
+            --knowledge-surface-strong: rgba(255, 255, 255, 0.94);
+            --knowledge-shadow: 0 24px 54px rgba(58, 77, 138, 0.14);
+            --knowledge-blue: #355fdb;
+            --knowledge-blue-soft: #eef3ff;
+            --knowledge-green: #2f9461;
+            --knowledge-amber: #d9912a;
+            --knowledge-violet: #6f5ce7;
         }
 
         body.knowledge-base-page {
             background:
-                radial-gradient(circle at 18% 14%, rgba(148, 162, 255, 0.48), transparent 28%),
-                radial-gradient(circle at 86% 12%, rgba(255, 222, 212, 0.66), transparent 24%),
-                radial-gradient(circle at 50% 100%, rgba(103, 110, 255, 0.3), transparent 24%),
-                linear-gradient(180deg, #7785d6 0%, #a9aff0 16%, #cbc7f5 38%, #d8d0f7 52%, #c7c8f8 67%, #a4aff0 100%);
+                radial-gradient(circle at 14% 12%, rgba(120, 141, 255, 0.32), transparent 24%),
+                radial-gradient(circle at 86% 10%, rgba(255, 222, 193, 0.44), transparent 22%),
+                radial-gradient(circle at 50% 100%, rgba(120, 128, 255, 0.2), transparent 26%),
+                linear-gradient(180deg, #8a98e5 0%, #bac3f5 22%, #d8dcfb 54%, #c8d4f7 100%);
             color: var(--knowledge-text);
         }
 
         body.knowledge-base-page::before {
             background:
-                radial-gradient(ellipse at 18% 32%, rgba(255, 255, 255, 0.36), transparent 26%),
-                radial-gradient(ellipse at 55% 46%, rgba(255, 255, 255, 0.4), transparent 34%),
-                radial-gradient(ellipse at 82% 68%, rgba(255, 255, 255, 0.28), transparent 24%),
-                linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+                radial-gradient(ellipse at 18% 30%, rgba(255, 255, 255, 0.22), transparent 24%),
+                radial-gradient(ellipse at 56% 42%, rgba(255, 255, 255, 0.28), transparent 30%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
             mask-image: none;
             opacity: 1;
         }
@@ -63,7 +63,7 @@
 
         .knowledge-page-wrap {
             margin: 0 auto;
-            padding: 0 0 1rem;
+            padding: 0 0 1.5rem;
         }
 
         .knowledge-customer-layout {
@@ -248,7 +248,7 @@
             min-height: 68px;
             padding: 0.8rem 0;
             background:
-                linear-gradient(180deg, rgba(79, 88, 170, 0.92), rgba(71, 80, 156, 0.88)),
+                linear-gradient(180deg, rgba(57, 75, 152, 0.92), rgba(67, 88, 173, 0.88)),
                 linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
             color: #fff;
             border-bottom: 1px solid rgba(255, 255, 255, 0.16);
@@ -336,7 +336,7 @@
 
         .knowledge-statusbar {
             margin: 0 calc(50% - 50vw);
-            background: rgba(236, 226, 255, 0.28);
+            background: rgba(243, 247, 255, 0.42);
             border-top: 1px solid rgba(255, 255, 255, 0.12);
             border-bottom: 1px solid rgba(113, 117, 195, 0.16);
         }
@@ -350,15 +350,15 @@
         }
 
         .knowledge-status-dot {
-            width: 1rem;
-            height: 1rem;
+            width: 1.4rem;
+            height: 1.4rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             border-radius: 999px;
-            background: rgba(92, 118, 230, 0.16);
+            background: rgba(92, 118, 230, 0.14);
             color: #4e63c7;
-            font-size: 0.72rem;
+            font-size: 0.62rem;
             font-weight: 700;
         }
 
@@ -368,8 +368,7 @@
 
         .knowledge-hero {
             position: relative;
-            padding: 5.7rem 0 2rem;
-            text-align: center;
+            padding: 3.4rem 0 0;
         }
 
         .knowledge-hero::before,
@@ -385,24 +384,24 @@
         }
 
         .knowledge-hero::before {
-            top: 1rem;
-            height: 196px;
+            top: 0.3rem;
+            height: 220px;
             background:
-                radial-gradient(ellipse at center, rgba(255, 255, 255, 0.64) 0%, rgba(255, 255, 255, 0.18) 58%, transparent 78%);
-            opacity: 0.95;
+                radial-gradient(ellipse at center, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.16) 58%, transparent 78%);
+            opacity: 0.92;
         }
 
         .knowledge-hero::after {
-            top: 2.4rem;
-            height: 138px;
+            top: 1.7rem;
+            height: 148px;
             background:
-                radial-gradient(ellipse at center, rgba(255, 255, 255, 0.46) 0%, rgba(255, 255, 255, 0.1) 60%, transparent 80%);
+                radial-gradient(ellipse at center, rgba(255, 255, 255, 0.36) 0%, rgba(255, 255, 255, 0.08) 60%, transparent 80%);
         }
 
         .knowledge-hero-wave {
             position: absolute;
-            inset: 2.9rem 0 auto;
-            height: 166px;
+            inset: 1.7rem 0 auto;
+            height: 176px;
             overflow: hidden;
             pointer-events: none;
         }
@@ -434,13 +433,14 @@
         .knowledge-hero-content {
             position: relative;
             z-index: 1;
+            display: grid;
+            gap: 1.4rem;
         }
 
         .knowledge-eyebrow {
             display: inline-flex;
             align-items: center;
             gap: 0.45rem;
-            margin-bottom: 1rem;
             padding: 0.52rem 0.9rem;
             border-radius: 999px;
             background: rgba(255, 255, 255, 0.58);
@@ -449,11 +449,18 @@
             box-shadow: 0 12px 28px rgba(103, 116, 197, 0.14);
         }
 
+        .knowledge-hero-intro {
+            display: grid;
+            gap: 1rem;
+            justify-items: center;
+            text-align: center;
+        }
+
         .knowledge-title {
             position: relative;
-            margin: 0 0 0.75rem;
+            margin: 0;
             color: #243174;
-            font-size: clamp(2.95rem, 5.1vw, 4.4rem);
+            font-size: clamp(3rem, 5vw, 4.35rem);
             line-height: 1.02;
             letter-spacing: -0.04em;
         }
@@ -464,27 +471,40 @@
             margin: 0 auto;
             color: #44517e;
             font-size: clamp(1.08rem, 1.8vw, 1.45rem);
-            line-height: 1.65;
+            line-height: 1.62;
         }
 
+        .knowledge-hero-panel,
         .knowledge-search-card,
         .knowledge-section,
-        .knowledge-empty {
-            margin-top: 1rem;
+        .knowledge-empty,
+        .knowledge-sidebar-card {
             padding: 1.4rem;
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.84) 0%, rgba(249, 247, 255, 0.76) 100%);
             border: 1px solid var(--knowledge-line);
-            border-radius: 20px;
+            border-radius: 24px;
             box-shadow: var(--knowledge-shadow);
             backdrop-filter: blur(16px);
         }
 
+        .knowledge-hero-panel {
+            display: grid;
+            gap: 1.15rem;
+            max-width: 1180px;
+            margin: 0 auto;
+        }
+
         .knowledge-search-card {
-            padding: 1.25rem;
+            padding: 0;
+            background: transparent;
+            border: 0;
+            box-shadow: none;
+            backdrop-filter: none;
         }
 
         .knowledge-search-card-head,
-        .knowledge-section-head {
+        .knowledge-section-head,
+        .knowledge-sidebar-head {
             display: flex;
             justify-content: space-between;
             gap: 1rem;
@@ -506,15 +526,15 @@
         }
 
         .knowledge-heading-icon {
-            width: 1.65rem;
-            height: 1.65rem;
+            width: 2rem;
+            height: 2rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             border-radius: 999px;
             font-size: 0.84rem;
             color: #fff;
-            background: linear-gradient(180deg, #69a8ff, #4172e0);
+            background: linear-gradient(180deg, #6d99ff, #416de0);
         }
 
         .knowledge-search-form {
@@ -526,11 +546,11 @@
 
         .knowledge-search-input {
             width: 100%;
-            min-height: 3.05rem;
-            padding: 0.82rem 1rem;
+            min-height: 3.55rem;
+            padding: 0.82rem 1.1rem;
             border-radius: 999px;
             border: 1px solid rgba(136, 147, 214, 0.32);
-            background: rgba(255, 255, 255, 0.72);
+            background: rgba(255, 255, 255, 0.86);
             color: #243174;
             font: inherit;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
@@ -541,8 +561,8 @@
         }
 
         .knowledge-search-button {
-            min-width: 110px;
-            min-height: 3.05rem;
+            min-width: 136px;
+            min-height: 3.55rem;
             border-radius: 999px;
             border: 1px solid rgba(255, 255, 255, 0.2);
             background: linear-gradient(180deg, #5782ff 0%, #355fdb 100%);
@@ -550,12 +570,101 @@
             box-shadow: 0 12px 24px rgba(66, 99, 211, 0.26);
         }
 
-        .knowledge-grid {
+        .knowledge-search-notes,
+        .knowledge-overview-grid,
+        .knowledge-content-shell {
             display: grid;
             gap: 1rem;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
+        .knowledge-search-notes {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .knowledge-search-note,
+        .knowledge-overview-card,
+        .knowledge-nav-link,
+        .knowledge-tip-card,
+        .knowledge-article-card,
+        .knowledge-faq-list details {
+            border: 1px solid rgba(191, 198, 239, 0.42);
+            background: rgba(255, 255, 255, 0.7);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+
+        .knowledge-search-note {
+            display: grid;
+            gap: 0.35rem;
+            padding: 1rem 1.05rem;
+            border-radius: 18px;
+        }
+
+        .knowledge-search-note strong,
+        .knowledge-overview-card strong,
+        .knowledge-nav-link strong,
+        .knowledge-tip-card strong,
+        .knowledge-article-card h3,
+        .knowledge-sidebar-card h3 {
+            color: #233267;
+        }
+
+        .knowledge-search-note span,
+        .knowledge-overview-card p,
+        .knowledge-nav-link span,
+        .knowledge-sidebar-card p,
+        .knowledge-section p,
+        .knowledge-empty p,
+        .knowledge-search-card p,
+        .knowledge-article-card p {
+            color: #4c5b7b;
+            line-height: 1.65;
+        }
+
+        .knowledge-overview-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .knowledge-overview-card {
+            display: grid;
+            gap: 0.45rem;
+            padding: 1.1rem;
+            border-radius: 20px;
+        }
+
+        .knowledge-overview-value {
+            font-size: clamp(1.7rem, 2.4vw, 2.25rem);
+            line-height: 1;
+            font-weight: 800;
+            color: #233267;
+            letter-spacing: -0.04em;
+        }
+
+        .knowledge-overview-label {
+            font-size: 0.92rem;
+            color: #607094;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+        }
+
+        .knowledge-content-shell {
+            margin-top: 1.2rem;
+            grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.75fr);
+            align-items: start;
+        }
+
+        .knowledge-main-stack,
+        .knowledge-sidebar {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .knowledge-sidebar {
+            position: sticky;
+            top: 1rem;
+        }
+
+        .knowledge-nav-list,
         .knowledge-card-list,
         .knowledge-faq-list,
         .knowledge-article-list {
@@ -564,14 +673,48 @@
             margin-top: 1rem;
         }
 
+        .knowledge-nav-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.9rem;
+            padding: 1rem 1.05rem;
+            border-radius: 18px;
+            text-decoration: none;
+        }
+
+        .knowledge-nav-link:hover {
+            border-color: rgba(88, 113, 224, 0.42);
+            transform: translateY(-1px);
+            transition: transform 140ms ease, border-color 140ms ease;
+        }
+
+        .knowledge-nav-link-badge {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2rem;
+            height: 2rem;
+            padding: 0 0.65rem;
+            border-radius: 999px;
+            background: var(--knowledge-blue-soft);
+            color: #355fdb;
+            font-size: 0.84rem;
+            font-weight: 800;
+        }
+
+        .knowledge-grid {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .knowledge-tip-card,
         .knowledge-article-card,
         .knowledge-faq-list details {
             padding: 1rem 1.05rem;
-            border-radius: 16px;
-            border: 1px solid rgba(191, 198, 239, 0.42);
-            background: rgba(255, 255, 255, 0.66);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+            border-radius: 18px;
         }
 
         .knowledge-tip-card {
@@ -583,8 +726,8 @@
         .knowledge-tip-icon,
         .knowledge-faq-icon {
             flex: 0 0 auto;
-            width: 1.95rem;
-            height: 1.95rem;
+            width: 2.1rem;
+            height: 2.1rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -601,6 +744,11 @@
         .knowledge-faq-icon {
             background: linear-gradient(180deg, rgba(132, 155, 255, 0.22), rgba(74, 104, 221, 0.16));
             color: #5168c9;
+        }
+
+        .knowledge-guide-icon {
+            background: linear-gradient(180deg, rgba(246, 191, 111, 0.22), rgba(235, 154, 44, 0.14));
+            color: var(--knowledge-amber);
         }
 
         .knowledge-faq-list summary {
@@ -640,6 +788,13 @@
             line-height: 1.7;
         }
 
+        .knowledge-article-card-header {
+            display: flex;
+            gap: 0.85rem;
+            align-items: flex-start;
+            margin-bottom: 0.7rem;
+        }
+
         .knowledge-article-card h3,
         .knowledge-section h2,
         .knowledge-search-card h2 {
@@ -652,16 +807,20 @@
             font-size: 0.92rem;
         }
 
-        .knowledge-article-card p,
-        .knowledge-section p,
-        .knowledge-empty p,
-        .knowledge-search-card p {
-            color: #4a516d;
-            line-height: 1.7;
+        .knowledge-audience-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.34rem 0.7rem;
+            border-radius: 999px;
+            background: rgba(111, 92, 231, 0.1);
+            color: var(--knowledge-violet);
+            font-size: 0.78rem;
+            font-weight: 800;
         }
 
-        .knowledge-article-card h3 {
-            margin-bottom: 0.55rem;
+        .knowledge-text-preview {
+            margin: 0;
         }
 
         .knowledge-meta-pill {
@@ -670,9 +829,34 @@
             gap: 0.45rem;
             padding: 0.26rem 0.62rem;
             border-radius: 999px;
-            background: #f7ecc6;
+            background: rgba(255, 245, 219, 0.92);
             color: #917137;
             font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .knowledge-empty {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .knowledge-empty-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+        }
+
+        .knowledge-empty-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 2.5rem;
+            padding: 0.55rem 0.95rem;
+            border-radius: 999px;
+            text-decoration: none;
+            color: #3457c7;
+            background: rgba(235, 241, 255, 0.9);
+            border: 1px solid rgba(164, 181, 234, 0.55);
             font-weight: 700;
         }
 
@@ -706,6 +890,20 @@
             z-index: 1;
         }
 
+        .knowledge-footer-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.9rem;
+            align-items: center;
+        }
+
+        .knowledge-sidebar-card ul {
+            margin: 0;
+            padding-left: 1.1rem;
+            color: #4c5b7b;
+            line-height: 1.7;
+        }
+
         @media (max-width: 900px) {
             .knowledge-customer-layout {
                 width: calc(100% - 1rem);
@@ -716,6 +914,9 @@
                 position: static;
             }
 
+            .knowledge-search-notes,
+            .knowledge-overview-grid,
+            .knowledge-content-shell,
             .knowledge-grid {
                 grid-template-columns: 1fr;
             }
@@ -736,13 +937,14 @@
             .knowledge-topbar-nav,
             .knowledge-statusbar-inner,
             .knowledge-search-card-head,
-            .knowledge-section-head {
+            .knowledge-section-head,
+            .knowledge-sidebar-head {
                 flex-direction: column;
                 align-items: stretch;
             }
 
             .knowledge-hero {
-                padding-top: 4.8rem;
+                padding-top: 2.6rem;
             }
         }
     </style>
@@ -769,6 +971,7 @@
 {% endblock %}
 
 {% block body %}
+    {% set totalKnowledgeHits = entries.tips|length + entries.faq|length + entries.articles|length %}
     <div class="knowledge-page-wrap">
         <div class="knowledge-topbar">
             <div class="knowledge-topbar-inner">
@@ -803,141 +1006,254 @@
         <section class="knowledge-hero">
             <div class="knowledge-hero-wave" aria-hidden="true"></div>
             <div class="knowledge-hero-content">
-                <div class="knowledge-eyebrow">{{ pageMode == 'customer' ? t('knowledge.hero.customer') : t('knowledge.hero.public') }}</div>
-                <h1 class="knowledge-title">{{ pageTitle }}</h1>
-                <p class="knowledge-subtitle">{{ pageSubtitle }}</p>
-            </div>
-        </section>
-
-        <section id="knowledge-search" class="knowledge-search-card">
-            <div class="knowledge-search-card-head">
-                <div>
-                    <div class="knowledge-heading">
-                        <span class="knowledge-heading-icon">⌕</span>
-                        <h2>{{ t('knowledge.search.title') }}</h2>
-                    </div>
-                    <p style="margin: 0.2rem 0 0;">{{ pageMode == 'customer' ? t('knowledge.search.customer_copy') : t('knowledge.search.public_copy') }}</p>
+                <div class="knowledge-hero-intro">
+                    <div class="knowledge-eyebrow">{{ pageMode == 'customer' ? t('knowledge.hero.customer') : t('knowledge.hero.public') }}</div>
+                    <h1 class="knowledge-title">{{ pageTitle }}</h1>
+                    <p class="knowledge-subtitle">{{ pageSubtitle }}</p>
                 </div>
-                {% set totalKnowledgeHits = entries.tips|length + entries.faq|length + entries.articles|length %}
-                <span class="knowledge-meta-pill">{{ totalKnowledgeHits == 1 ? t('knowledge.count', {'%count%': totalKnowledgeHits}) : t('knowledge.count_plural', {'%count%': totalKnowledgeHits}) }}</span>
+
+                <section id="knowledge-search" class="knowledge-hero-panel">
+                    <div class="knowledge-search-card">
+                        <div class="knowledge-search-card-head">
+                            <div>
+                                <div class="knowledge-heading">
+                                    <span class="knowledge-heading-icon">⌕</span>
+                                    <h2>{{ t('knowledge.search.title') }}</h2>
+                                </div>
+                                <p style="margin: 0.2rem 0 0;">{{ pageMode == 'customer' ? t('knowledge.search.customer_copy') : t('knowledge.search.public_copy') }}</p>
+                            </div>
+                            <span class="knowledge-meta-pill">{{ totalKnowledgeHits == 1 ? t('knowledge.count', {'%count%': totalKnowledgeHits}) : t('knowledge.count_plural', {'%count%': totalKnowledgeHits}) }}</span>
+                        </div>
+                        <form method="get" action="{{ path(searchRoute) }}" class="knowledge-search-form">
+                            <input class="knowledge-search-input" type="text" name="q" value="{{ searchQuery }}" placeholder="{{ t('knowledge.search.placeholder') }}">
+                            <button class="button knowledge-search-button" type="submit">{{ t('search.search_aria') }}</button>
+                        </form>
+                    </div>
+
+                    <div class="knowledge-search-notes">
+                        <div class="knowledge-search-note">
+                            <strong>{{ t('knowledge.summary.guides_title') }}</strong>
+                            <span>{{ t('knowledge.summary.guides_copy') }}</span>
+                        </div>
+                        <div class="knowledge-search-note">
+                            <strong>{{ t('knowledge.summary.faq_title') }}</strong>
+                            <span>{{ t('knowledge.summary.faq_copy') }}</span>
+                        </div>
+                        <div class="knowledge-search-note">
+                            <strong>{{ t('knowledge.summary.tips_title') }}</strong>
+                            <span>{{ t('knowledge.summary.tips_copy') }}</span>
+                        </div>
+                    </div>
+
+                    <div class="knowledge-overview-grid">
+                        <div class="knowledge-overview-card">
+                            <span class="knowledge-overview-label">{{ t('knowledge.overview.total') }}</span>
+                            <span class="knowledge-overview-value">{{ totalKnowledgeHits }}</span>
+                            <p style="margin: 0;">{{ t('knowledge.overview.total_copy') }}</p>
+                        </div>
+                        <div class="knowledge-overview-card">
+                            <span class="knowledge-overview-label">{{ t('knowledge.section.guides') }}</span>
+                            <span class="knowledge-overview-value">{{ entries.articles|length }}</span>
+                            <p style="margin: 0;">{{ t('knowledge.overview.guides_copy') }}</p>
+                        </div>
+                        <div class="knowledge-overview-card">
+                            <span class="knowledge-overview-label">{{ t('knowledge.section.faq') }}</span>
+                            <span class="knowledge-overview-value">{{ entries.faq|length }}</span>
+                            <p style="margin: 0;">{{ t('knowledge.overview.faq_copy') }}</p>
+                        </div>
+                        <div class="knowledge-overview-card">
+                            <span class="knowledge-overview-label">{{ t('knowledge.section.tips') }}</span>
+                            <span class="knowledge-overview-value">{{ entries.tips|length }}</span>
+                            <p style="margin: 0;">{{ t('knowledge.overview.tips_copy') }}</p>
+                        </div>
+                    </div>
+                </section>
             </div>
-            <form method="get" action="{{ path(searchRoute) }}" class="knowledge-search-form">
-                <input class="knowledge-search-input" type="text" name="q" value="{{ searchQuery }}" placeholder="{{ t('knowledge.search.placeholder') }}">
-                <button class="button knowledge-search-button" type="submit">{{ t('search.search_aria') }}</button>
-            </form>
         </section>
 
-        {% if entries.tips is not empty or entries.faq is not empty %}
-            <div class="knowledge-grid">
-                {% if entries.tips is not empty %}
-                    <section class="knowledge-section">
+        <div class="knowledge-content-shell">
+            <div class="knowledge-main-stack">
+                {% if entries.tips is not empty or entries.faq is not empty %}
+                    <div class="knowledge-grid">
+                        {% if entries.tips is not empty %}
+                            <section id="knowledge-tips" class="knowledge-section">
+                                <div class="knowledge-section-head">
+                                    <div>
+                                        <div class="knowledge-heading">
+                                            <span class="knowledge-heading-icon">✓</span>
+                                            <h2>{{ t('knowledge.section.tips') }}</h2>
+                                        </div>
+                                        <p style="margin: 0.45rem 0 0;">{{ t('knowledge.section.tips_copy') }}</p>
+                                    </div>
+                                    <span class="knowledge-meta">{{ entries.tips|length }} {{ t('knowledge.meta.tips') }}</span>
+                                </div>
+                                <div class="knowledge-card-list">
+                                    {% for entry in entries.tips %}
+                                        <article class="knowledge-tip-card">
+                                            <span class="knowledge-tip-icon">✓</span>
+                                            <div>
+                                                <strong style="display: block;">{{ entry.title }}</strong>
+                                                <p class="knowledge-text-preview" style="margin-top: 0.35rem;">{{ entry.body|replace({"\n": " "})|slice(0, 220) }}{% if entry.body|length > 220 %}…{% endif %}</p>
+                                            </div>
+                                        </article>
+                                    {% endfor %}
+                                </div>
+                            </section>
+                        {% endif %}
+
+                        {% if entries.faq is not empty %}
+                            <section id="knowledge-faq" class="knowledge-section">
+                                <div class="knowledge-section-head">
+                                    <div>
+                                        <div class="knowledge-heading">
+                                            <span class="knowledge-heading-icon">?</span>
+                                            <h2>{{ t('knowledge.section.faq') }}</h2>
+                                        </div>
+                                        <p style="margin: 0.45rem 0 0;">{{ t('knowledge.section.faq_copy') }}</p>
+                                    </div>
+                                    <span class="knowledge-meta">{{ entries.faq|length }} {{ t('knowledge.meta.questions') }}</span>
+                                </div>
+                                <div class="knowledge-faq-list">
+                                    {% for entry in entries.faq %}
+                                        <details {{ loop.first ? 'open' }}>
+                                            <summary>
+                                                <span class="knowledge-faq-question">
+                                                    <span class="knowledge-faq-icon">?</span>
+                                                    <span>{{ entry.title }}</span>
+                                                </span>
+                                                <span class="knowledge-faq-arrow">›</span>
+                                            </summary>
+                                            <div class="knowledge-faq-answer">{{ entry.body|nl2br }}</div>
+                                        </details>
+                                    {% endfor %}
+                                </div>
+                            </section>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                {% if entries.articles is not empty %}
+                    <section id="knowledge-guides" class="knowledge-section">
                         <div class="knowledge-section-head">
                             <div>
                                 <div class="knowledge-heading">
-                                    <span class="knowledge-heading-icon">✓</span>
-                                    <h2>{{ t('knowledge.section.tips') }}</h2>
+                                    <span class="knowledge-heading-icon">✦</span>
+                                    <h2>{{ t('knowledge.section.guides') }}</h2>
                                 </div>
-                                <p style="margin: 0.45rem 0 0;">{{ t('knowledge.section.tips_copy') }}</p>
+                                <p style="margin: 0.45rem 0 0;">{{ t('knowledge.section.guides_copy') }}</p>
                             </div>
-                            <span class="knowledge-meta">{{ entries.tips|length }} {{ t('knowledge.meta.tips') }}</span>
+                            <span class="knowledge-meta">{{ entries.articles|length }} {{ t('knowledge.meta.articles') }}</span>
                         </div>
-                        <div class="knowledge-card-list">
-                            {% for entry in entries.tips %}
-                                <article class="knowledge-tip-card">
-                                    <span class="knowledge-tip-icon">✓</span>
-                                    <div>
-                                        <strong style="display: block; color: #25305b;">{{ entry.title }}</strong>
-                                        <p style="margin: 0.35rem 0 0;">{{ entry.body|nl2br }}</p>
+                        <div class="knowledge-article-list">
+                            {% for entry in entries.articles %}
+                                <article class="knowledge-article-card">
+                                    <div class="knowledge-article-card-header">
+                                        <span class="knowledge-faq-icon knowledge-guide-icon">✦</span>
+                                        <div>
+                                            <h3>{{ entry.title }}</h3>
+                                            <div class="knowledge-meta" style="margin-top: 0.45rem;">
+                                                <span class="knowledge-audience-pill">
+                                                    {{ t('knowledge.audience.label') }}
+                                                    {% if entry.audience.value == 'public' %}
+                                                        {{ t('knowledge.audience.public') }}
+                                                    {% elseif entry.audience.value == 'customer' %}
+                                                        {{ t('knowledge.audience.customer') }}
+                                                    {% else %}
+                                                        {{ t('knowledge.audience.both') }}
+                                                    {% endif %}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
+                                    <p class="knowledge-text-preview">{{ entry.body|nl2br }}</p>
                                 </article>
                             {% endfor %}
                         </div>
                     </section>
                 {% endif %}
 
-                {% if entries.faq is not empty %}
-                    <section class="knowledge-section">
-                        <div class="knowledge-section-head">
-                            <div>
-                                <div class="knowledge-heading">
-                                    <span class="knowledge-heading-icon">?</span>
-                                    <h2>{{ t('knowledge.section.faq') }}</h2>
-                                </div>
-                                <p style="margin: 0.45rem 0 0;">{{ t('knowledge.section.faq_copy') }}</p>
-                            </div>
-                            <span class="knowledge-meta">{{ entries.faq|length }} {{ t('knowledge.meta.questions') }}</span>
+                {% if entries.tips is empty and entries.faq is empty and entries.articles is empty %}
+                    <section class="knowledge-empty">
+                        <div class="knowledge-heading">
+                            <span class="knowledge-heading-icon">!</span>
+                            <h2 style="margin: 0; color: #232b57;">{{ t('knowledge.empty.title') }}</h2>
                         </div>
-                        <div class="knowledge-faq-list">
-                            {% for entry in entries.faq %}
-                                <details {{ loop.first ? 'open' }}>
-                                    <summary>
-                                        <span class="knowledge-faq-question">
-                                            <span class="knowledge-faq-icon">?</span>
-                                            <span>{{ entry.title }}</span>
-                                        </span>
-                                        <span class="knowledge-faq-arrow">›</span>
-                                    </summary>
-                                    <div class="knowledge-faq-answer">{{ entry.body|nl2br }}</div>
-                                </details>
-                            {% endfor %}
+                        <p style="margin: 0;">{{ t('knowledge.empty.copy') }}</p>
+                        <div class="knowledge-empty-actions">
+                            <a class="knowledge-empty-chip" href="{{ path(searchRoute, {q: 'lösenord'}) }}">{{ t('knowledge.empty.suggestion.password') }}</a>
+                            <a class="knowledge-empty-chip" href="{{ path(searchRoute, {q: 'e-post'}) }}">{{ t('knowledge.empty.suggestion.mail') }}</a>
+                            <a class="knowledge-empty-chip" href="{{ path(searchRoute, {q: 'vpn'}) }}">{{ t('knowledge.empty.suggestion.vpn') }}</a>
                         </div>
                     </section>
                 {% endif %}
             </div>
-        {% endif %}
 
-        {% if entries.articles is not empty %}
-            <section class="knowledge-section">
-                <div class="knowledge-section-head">
-                    <div>
+            <aside class="knowledge-sidebar">
+                <section class="knowledge-sidebar-card">
+                    <div class="knowledge-sidebar-head">
                         <div class="knowledge-heading">
-                            <span class="knowledge-heading-icon">✦</span>
-                            <h2>{{ t('knowledge.section.guides') }}</h2>
+                            <span class="knowledge-heading-icon">≡</span>
+                            <h2>{{ t('knowledge.sidebar.browse_title') }}</h2>
                         </div>
-                        <p style="margin: 0.45rem 0 0;">{{ t('knowledge.section.guides_copy') }}</p>
                     </div>
-                    <span class="knowledge-meta">{{ entries.articles|length }} {{ t('knowledge.meta.articles') }}</span>
-                </div>
-                <div class="knowledge-article-list">
-                    {% for entry in entries.articles %}
-                        <article class="knowledge-article-card">
-                            <h3>{{ entry.title }}</h3>
-                            <div class="knowledge-meta" style="margin-bottom: 0.7rem;">
-                                {{ t('knowledge.audience.label') }}
-                                {% if entry.audience.value == 'public' %}
-                                    {{ t('knowledge.audience.public') }}
-                                {% elseif entry.audience.value == 'customer' %}
-                                    {{ t('knowledge.audience.customer') }}
-                                {% else %}
-                                    {{ t('knowledge.audience.both') }}
-                                {% endif %}
-                            </div>
-                            <p style="margin: 0;">{{ entry.body|nl2br }}</p>
-                        </article>
-                    {% endfor %}
-                </div>
-            </section>
-        {% endif %}
+                    <p style="margin: 0;">{{ t('knowledge.sidebar.browse_copy') }}</p>
+                    <div class="knowledge-nav-list">
+                        {% if entries.articles is not empty %}
+                            <a class="knowledge-nav-link" href="#knowledge-guides">
+                                <span>
+                                    <strong>{{ t('knowledge.section.guides') }}</strong>
+                                    <span style="display: block;">{{ t('knowledge.sidebar.guides_copy') }}</span>
+                                </span>
+                                <span class="knowledge-nav-link-badge">{{ entries.articles|length }}</span>
+                            </a>
+                        {% endif %}
+                        {% if entries.faq is not empty %}
+                            <a class="knowledge-nav-link" href="#knowledge-faq">
+                                <span>
+                                    <strong>{{ t('knowledge.section.faq') }}</strong>
+                                    <span style="display: block;">{{ t('knowledge.sidebar.faq_copy') }}</span>
+                                </span>
+                                <span class="knowledge-nav-link-badge">{{ entries.faq|length }}</span>
+                            </a>
+                        {% endif %}
+                        {% if entries.tips is not empty %}
+                            <a class="knowledge-nav-link" href="#knowledge-tips">
+                                <span>
+                                    <strong>{{ t('knowledge.section.tips') }}</strong>
+                                    <span style="display: block;">{{ t('knowledge.sidebar.tips_copy') }}</span>
+                                </span>
+                                <span class="knowledge-nav-link-badge">{{ entries.tips|length }}</span>
+                            </a>
+                        {% endif %}
+                    </div>
+                </section>
 
-        {% if entries.tips is empty and entries.faq is empty and entries.articles is empty %}
-            <section class="knowledge-empty">
-                <div class="knowledge-heading">
-                    <span class="knowledge-heading-icon">!</span>
-                    <h2 style="margin: 0; color: #232b57;">{{ t('knowledge.empty.title') }}</h2>
-                </div>
-                <p style="margin: 0;">{{ t('knowledge.empty.copy') }}</p>
-            </section>
-        {% endif %}
+                <section class="knowledge-sidebar-card">
+                    <div class="knowledge-heading">
+                        <span class="knowledge-heading-icon">i</span>
+                        <h2>{{ t('knowledge.sidebar.search_help_title') }}</h2>
+                    </div>
+                    <p style="margin: 0;">{{ t('knowledge.sidebar.search_help_copy') }}</p>
+                    <ul>
+                        <li>{{ t('knowledge.sidebar.search_help_1') }}</li>
+                        <li>{{ t('knowledge.sidebar.search_help_2') }}</li>
+                        <li>{{ t('knowledge.sidebar.search_help_3') }}</li>
+                    </ul>
+                </section>
+            </aside>
+        </div>
 
         <div class="knowledge-footer">
             <a class="knowledge-footer-link" href="{{ pageMode == 'customer' ? path('app_portal_customer') : path('app_home') }}">{{ pageMode == 'customer' ? t('knowledge.footer.customer_portal') : t('nav.home') }}</a>
             <a class="knowledge-footer-link" href="{{ pageMode == 'customer' ? path('app_portal_customer') : path('app_login', {role: 'customer'}) }}">{{ pageMode == 'customer' ? t('knowledge.footer.customer_portal') : t('knowledge.footer.customer_login') }}</a>
             <a class="knowledge-footer-link" href="#knowledge-search">{{ t('knowledge.search_again') }}</a>
-            {% if site_branding.footerText %}
-                <span>{{ site_branding.footerText }}</span>
-            {% endif %}
-            <span>{{ t('search.footer.version') }} {{ site_branding.appVersion }}</span>
-            <a class="knowledge-footer-link" href="{{ site_branding.githubUrl }}" target="_blank" rel="noopener noreferrer">{{ site_branding.copyrightLabel }}</a>
+            <div class="knowledge-footer-meta">
+                {% if site_branding.footerText %}
+                    <span>{{ site_branding.footerText }}</span>
+                {% endif %}
+                <span>{{ t('search.footer.version') }} {{ site_branding.appVersion }}</span>
+                <a class="knowledge-footer-link" href="{{ site_branding.githubUrl }}" target="_blank" rel="noopener noreferrer">{{ site_branding.copyrightLabel }}</a>
+            </div>
         </div>
 
         {% if pageMode == 'customer' %}

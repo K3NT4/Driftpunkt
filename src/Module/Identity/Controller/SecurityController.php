@@ -7,6 +7,9 @@ namespace App\Module\Identity\Controller;
 use App\Module\Identity\Entity\PasswordResetRequest;
 use App\Module\Identity\Entity\User;
 use App\Module\Identity\Enum\UserType;
+use App\Module\Identity\Service\MfaPolicyResolver;
+use App\Module\Identity\Service\MfaService;
+use App\Module\Identity\Service\MfaSessionManager;
 use App\Module\Identity\Service\PasswordResetMailer;
 use App\Module\Identity\Service\PasswordResetService;
 use App\Module\System\Service\SystemSettings;
@@ -19,13 +22,19 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
+use Symfony\Component\Security\Http\Util\TargetPathTrait;
 
 final class SecurityController extends AbstractController
 {
+    use TargetPathTrait;
+
     public function __construct(
         private readonly SystemSettings $systemSettings,
         private readonly EntityManagerInterface $entityManager,
         private readonly UserPasswordHasherInterface $passwordHasher,
+        private readonly MfaPolicyResolver $mfaPolicyResolver,
+        private readonly MfaService $mfaService,
+        private readonly MfaSessionManager $mfaSessionManager,
         private readonly PasswordResetService $passwordResetService,
         private readonly PasswordResetMailer $passwordResetMailer,
     ) {
@@ -34,7 +43,12 @@ final class SecurityController extends AbstractController
     #[Route('/login', name: 'app_login', methods: ['GET', 'POST'])]
     public function login(Request $request, AuthenticationUtils $authenticationUtils): Response
     {
-        if (null !== $this->getUser()) {
+        $currentUser = $this->getUser();
+        if ($currentUser instanceof User && $request->hasSession() && $this->mfaPolicyResolver->requiresMfa($currentUser) && !$this->mfaSessionManager->isVerified($request->getSession(), $currentUser)) {
+            return $this->redirectToRoute('app_mfa_challenge');
+        }
+
+        if (null !== $currentUser) {
             return $this->redirectToRoute('app_home');
         }
 
@@ -226,10 +240,79 @@ final class SecurityController extends AbstractController
         ]);
     }
 
+    #[Route('/mfa', name: 'app_mfa_challenge', methods: ['GET', 'POST'])]
+    public function mfaChallenge(Request $request): Response|RedirectResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->redirectToRoute('app_login');
+        }
+
+        if (!$this->mfaPolicyResolver->requiresMfa($user)) {
+            return $this->redirectToRoute('app_portal_entry');
+        }
+
+        if ($request->hasSession() && $this->mfaSessionManager->isVerified($request->getSession(), $user)) {
+            return $this->redirectToRoute('app_portal_entry');
+        }
+
+        $issuer = $this->resolveMfaIssuerName();
+        $this->mfaService->ensureSecret($user);
+        $this->entityManager->flush();
+
+        if ($request->isMethod('POST')) {
+            if (!$this->isCsrfTokenValid('mfa_challenge', (string) $request->request->get('_token'))) {
+                $this->addFlash('error', 'Kunde inte verifiera MFA-formuläret. Försök igen.');
+
+                return $this->redirectToRoute('app_mfa_challenge');
+            }
+
+            $code = (string) $request->request->get('code');
+            if (!$this->mfaService->verifyCode($user, $code)) {
+                $this->addFlash('error', 'Koden är inte giltig. Kontrollera appen och försök igen.');
+
+                return $this->redirectToRoute('app_mfa_challenge');
+            }
+
+            if ($request->hasSession()) {
+                $session = $request->getSession();
+                $this->mfaSessionManager->markVerified($session, $user);
+                $targetPath = $this->getTargetPath($session, 'main');
+                $this->removeTargetPath($session, 'main');
+
+                if ($user->isPasswordChangeRequired()) {
+                    return $this->redirectToRoute('app_portal_security');
+                }
+
+                return new RedirectResponse($targetPath ?? $this->generateUrl('app_portal_entry'));
+            }
+
+            if ($user->isPasswordChangeRequired()) {
+                return $this->redirectToRoute('app_portal_security');
+            }
+
+            return $this->redirectToRoute('app_portal_entry');
+        }
+
+        return $this->render('security/mfa_challenge.html.twig', [
+            'issuer' => $issuer,
+            'qrCodeDataUri' => $this->mfaService->getQrCodeDataUri($user, $issuer),
+            'manualEntryCode' => $this->mfaService->getFormattedManualEntryCode($user),
+        ]);
+    }
+
     #[Route('/logout', name: 'app_logout', methods: ['GET'])]
     public function logout(): never
     {
         throw new \LogicException('This route is intercepted by the logout key on your firewall.');
+    }
+
+    private function resolveMfaIssuerName(): string
+    {
+        $siteBranding = $this->systemSettings->getSiteBrandingSettings();
+        $name = trim((string) ($siteBranding['name'] ?? ''));
+
+        return '' !== $name ? $name : 'Driftpunkt';
     }
 
     private function resolveLoginRole(Request $request): string

@@ -6,6 +6,7 @@ namespace App\Module\KnowledgeBase\Controller;
 
 use App\Module\Identity\Entity\User;
 use App\Module\Identity\Enum\UserType;
+use App\Module\Identity\Service\MfaPolicyResolver;
 use App\Module\KnowledgeBase\Entity\KnowledgeBaseEntry;
 use App\Module\KnowledgeBase\Enum\KnowledgeBaseAudience;
 use App\Module\KnowledgeBase\Enum\KnowledgeBaseEntryType;
@@ -29,6 +30,7 @@ final class KnowledgeBaseController extends AbstractController
         private readonly EntityManagerInterface $entityManager,
         private readonly SystemSettings $systemSettings,
         private readonly TranslatorInterface $translator,
+        private readonly MfaPolicyResolver $mfaPolicyResolver,
     ) {
     }
 
@@ -341,6 +343,8 @@ final class KnowledgeBaseController extends AbstractController
         return [
             'activePage' => 'knowledge-base',
             'knowledgeBaseEnabled' => true,
+            'mfaAvailable' => $this->mfaPolicyResolver->isMfaAvailable($user),
+            'mfaEnabled' => $user->isMfaEnabled(),
             'ticketSummary' => [
                 'total' => \count($visibleTickets),
                 'open' => \count(array_filter($visibleTickets, static fn (Ticket $ticket): bool => \in_array($ticket->getStatus(), [TicketStatus::NEW, TicketStatus::OPEN, TicketStatus::PENDING_CUSTOMER], true))),

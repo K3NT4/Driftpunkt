@@ -1,59 +1,59 @@
-# Regler for behandling av inkommande mail
+# Regler för behandling av inkommande mail
 
-Detta dokument beskriver hur inkommande mail hanteras i den har versionen.
+Detta dokument beskriver hur inkommande mail hanteras i den här versionen.
 
 ## Huvudutfall
 
 Ett inkommande mail kan resultera i:
 
-- kommentar pa befintligt ticket
+- kommentar på befintligt ticket
 - nytt aktivt ticket
-- draftgranskning for admin
+- draftgranskning för admin
 - avvisning
 
 ## Typiska beslutspunkter
 
-### Kanner systemet igen ticketreferens?
+### Känner systemet igen ticketreferens?
 
-Om ja kan mailet kopplas som fortsatt dialog pa befintligt arende.
+Om ja kan mailet kopplas som fortsatt dialog på befintligt ärende.
 
-### Kanner systemet igen avsandaren?
+### Känner systemet igen avsändaren?
 
-Om avsandaren kan matchas mot känd kund eller foretag ar chansen hogre att mailet kan bli ett aktivt ticket direkt.
+Om avsändaren kan matchas mot känd kund eller företag är chansen högre att mailet kan bli ett aktivt ticket direkt.
 
-### Finns tillracklig kontext for trygg aktivering?
+### Finns tillräcklig kontext för trygg aktivering?
 
-Om svaret ar nej stoppas mailet i draftgranskning i admin istallet for att skapa osaker extern synlighet.
+Om svaret är nej stoppas mailet i draftgranskning i admin istället för att skapa osäker extern synlighet.
 
 ## Draftgranskning
 
-Draftgranskning anvands for att skydda systemet mot felaktig automatisk ticketaktivering.
+Draftgranskning används för att skydda systemet mot felaktig automatisk ticketaktivering.
 
 Admin kan:
 
-- granska avsandare, bolag, tilldelning och visibility
-- forhåndsvisa bilagor
-- godkanna och aktivera ticket
-- avvisa och stanga draftticketet
+- granska avsändare, bolag, tilldelning och visibility
+- förhandsvisa bilagor
+- godkänna och aktivera ticket
+- avvisa och stänga draftticketet
 
-Vid godkannande kan bilagor folja med in i ticketet. Vid avvisning blir ticketet internt och stangs.
+Vid godkännande kan bilagor följa med in i ticketet. Vid avvisning blir ticketet internt och stängs.
 
 ## Bilagor
 
-Inkommande bilagor lagras separat i ingestflodet och kan:
+Inkommande bilagor lagras separat i ingestflödet och kan:
 
-- forhandsgranskas av admin
+- förhandsgranskas av admin
 - laddas ner
-- kopieras in i ticket vid godkannande av draft
+- kopieras in i ticket vid godkännande av draft
 
 ## Avvisning
 
-Mail kan avvisas nar:
+Mail kan avvisas när:
 
-- avsandaren inte bor skapa arenden automatiskt
-- matchning inte ar tillrackligt saker
+- avsändaren inte bör skapa ärenden automatiskt
+- matchning inte är tillräckligt säker
 - admin uttryckligen stoppar draftgranskningen
 
 ## Viktig princip
 
-Mailflodet ar byggt for kontrollerad ingest, inte blind automatisk skapning. Nar osakerhet finns valjer systemet hellre intern granskning an risk for felaktig kundsynlighet.
+Mailflödet är byggt för kontrollerad ingest, inte blind automatisk skapning. När osäkerhet finns väljer systemet hellre intern granskning än risk för felaktig kundsynlighet.

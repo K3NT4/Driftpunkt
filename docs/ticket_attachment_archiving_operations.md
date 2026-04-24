@@ -4,18 +4,18 @@ Driftpunkt kan arkivera lokala bilagor till avslutade tickets i zip-format.
 
 ## Syfte
 
-- minska antalet losa filer pa disk
-- behalla tillgang till nedladdning och preview
-- gora historiska tickets billigare att lagra
+- minska antalet lösa filer på disk
+- behålla tillgång till nedladdning och preview
+- göra historiska tickets billigare att lagra
 
 ## Styrning
 
-Funktionen styrs i admin via installningar for ticketbilagor.
+Funktionen styrs i admin via inställningar för ticketbilagor.
 
-Viktiga installningar:
+Viktiga inställningar:
 
-- om zip-arkivering ar aktiverad
-- antal dagar efter stangning innan arkivering ska ske
+- om zip-arkivering är aktiverad
+- antal dagar efter stängning innan arkivering ska ske
 
 ## Kommando
 
@@ -32,13 +32,13 @@ php bin/console app:archive-ticket-attachments --force
 
 ## Beteende
 
-- endast lokala ticketbilagor berors
-- fokus ar avslutade tickets, det vill saga `resolved` och `closed` enligt policy och kommandologik
+- endast lokala ticketbilagor berörs
+- fokus är avslutade tickets, det vill säga `resolved` och `closed` enligt policy och kommandologik
 - zip skapas innan originalfiler tas bort
-- ticketens bilagelankar fortsatter att fungera via appens lagringslager
-- auditlogg kan anvandas for spårbarhet kring arkiveringen
+- ticketens bilagelänkar fortsätter att fungera via appens lagringslager
+- auditlogg kan användas för spårbarhet kring arkiveringen
 
-## Schemalaggning
+## Schemaläggning
 
 Repoexempel finns i:
 
@@ -48,10 +48,10 @@ Repoexempel finns i:
 
 ## Rekommendation
 
-- kor nattlig batch om ni vill minimera driftstorning
-- anvand `0` dagar bara om ni vet att tekniker inte langre behover originalfilerna i vardagsarbete
+- kör nattlig batch om ni vill minimera driftstörning
+- använd `0` dagar bara om ni vet att tekniker inte längre behöver originalfilerna i vardagsarbete
 
-## Felsokning
+## Felsökning
 
 ```bash
 php bin/console app:archive-ticket-attachments -vvv
@@ -59,7 +59,7 @@ php bin/console app:archive-ticket-attachments -vvv
 
 Kontrollera:
 
-- att funktionen ar aktiverad
-- att ticketet verkligen ar avslutat
-- att appens lagringsmappar ar skrivbara
-- att zip-filerna gar att lasa av webbprocessen
+- att funktionen är aktiverad
+- att ticketet verkligen är avslutat
+- att appens lagringsmappar är skrivbara
+- att zip-filerna går att läsa av webbprocessen

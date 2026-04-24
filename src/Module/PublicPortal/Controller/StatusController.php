@@ -10,6 +10,7 @@ use App\Module\News\Enum\NewsCategory;
 use App\Module\News\Service\NewsArticleSchemaInspector;
 use App\Module\PublicPortal\Service\PublicSiteSearch;
 use App\Module\System\Service\SystemSettings;
+use App\Module\Identity\Service\UserSchemaInspector;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,6 +24,7 @@ final class StatusController extends AbstractController
         private readonly NewsArticleSchemaInspector $newsArticleSchemaInspector,
         private readonly PublicSiteSearch $publicSiteSearch,
         private readonly SystemSettings $systemSettings,
+        private readonly UserSchemaInspector $userSchemaInspector,
     ) {
     }
 
@@ -48,6 +50,7 @@ final class StatusController extends AbstractController
                 ->getQuery()
                 ->getResult()
             : [];
+        $maintenanceArticles = $this->stripAuthorsWhenUserSchemaIsOutdated($maintenanceArticles);
 
         /** @var list<NewsArticle> $recentNews */
         $recentNews = $this->newsArticleSchemaInspector->isReady()
@@ -62,6 +65,7 @@ final class StatusController extends AbstractController
                 ->getQuery()
                 ->getResult()
             : [];
+        $recentNews = $this->stripAuthorsWhenUserSchemaIsOutdated($recentNews);
 
         return $this->render('public/status.html.twig', [
             'maintenanceState' => $maintenanceState,
@@ -82,6 +86,24 @@ final class StatusController extends AbstractController
             'recentNews' => $recentNews,
             'systemStatuses' => $this->publicSiteSearch->getSystemStatuses(),
         ]);
+    }
+
+    /**
+     * @param list<NewsArticle> $articles
+     *
+     * @return list<NewsArticle>
+     */
+    private function stripAuthorsWhenUserSchemaIsOutdated(array $articles): array
+    {
+        if ($this->userSchemaInspector->isReady()) {
+            return $articles;
+        }
+
+        foreach ($articles as $article) {
+            $article->setAuthor(null);
+        }
+
+        return $articles;
     }
 
     /**

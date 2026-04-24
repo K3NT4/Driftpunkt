@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Module\News\Controller;
 
 use App\Module\Identity\Entity\User;
+use App\Module\Identity\Service\UserSchemaInspector;
 use App\Module\News\Entity\NewsArticle;
 use App\Module\News\Enum\NewsCategory;
 use App\Module\Maintenance\Service\MaintenanceMode;
@@ -28,6 +29,7 @@ final class NewsController extends AbstractController
         private readonly SystemSettings $systemSettings,
         private readonly MaintenanceMode $maintenanceMode,
         private readonly NewsArticleSchemaInspector $newsArticleSchemaInspector,
+        private readonly UserSchemaInspector $userSchemaInspector,
     ) {
     }
 
@@ -109,6 +111,7 @@ final class NewsController extends AbstractController
             ->setMaxResults($perPage)
             ->getQuery()
             ->getResult();
+        $articles = $this->stripAuthorsWhenUserSchemaIsOutdated($articles);
 
         /** @var list<NewsArticle> $maintenanceArticles */
         /** @var list<NewsArticle> $maintenanceArticles */
@@ -125,6 +128,7 @@ final class NewsController extends AbstractController
             ->setMaxResults(3)
             ->getQuery()
             ->getResult();
+        $maintenanceArticles = $this->stripAuthorsWhenUserSchemaIsOutdated($maintenanceArticles);
         usort(
             $maintenanceArticles,
             fn (NewsArticle $left, NewsArticle $right): int => ($left->getMaintenanceStartsAt() ?? $left->getPublishedAt()) <=> ($right->getMaintenanceStartsAt() ?? $right->getPublishedAt()),
@@ -202,6 +206,7 @@ final class NewsController extends AbstractController
         }
 
         $article = $this->findNewsArticleOr404($id);
+        $this->stripAuthorsWhenUserSchemaIsOutdated([$article]);
         $now = new \DateTimeImmutable();
 
         if (!$article->isPublished() || $article->getPublishedAt() > $now) {
@@ -224,6 +229,7 @@ final class NewsController extends AbstractController
             ->setMaxResults(4)
             ->getQuery()
             ->getResult();
+        $relatedArticles = $this->stripAuthorsWhenUserSchemaIsOutdated($relatedArticles);
 
         return $this->render('news/show.html.twig', [
             'article' => $article,
@@ -234,6 +240,24 @@ final class NewsController extends AbstractController
                 static fn (NewsArticle $candidate): bool => $candidate->getId() !== $article->getId(),
             )),
         ]);
+    }
+
+    /**
+     * @param list<NewsArticle> $articles
+     *
+     * @return list<NewsArticle>
+     */
+    private function stripAuthorsWhenUserSchemaIsOutdated(array $articles): array
+    {
+        if ($this->userSchemaInspector->isReady()) {
+            return $articles;
+        }
+
+        foreach ($articles as $article) {
+            $article->setAuthor(null);
+        }
+
+        return $articles;
     }
 
     #[Route('/portal/admin/nyheter', name: 'app_portal_admin_news', methods: ['GET'])]
@@ -567,10 +591,17 @@ final class NewsController extends AbstractController
 
         $this->entityManager->flush();
 
-        $this->addFlash('success', $isNew ? 'Nyheten skapades.' : 'Nyheten uppdaterades.');
+        $successMessage = $isNew ? 'Nyheten skapades.' : 'Nyheten uppdaterades.';
+        if ($isPublished && $publishAt > $now) {
+            $successMessage .= ' Schemalagd publicering är aktiverad.';
+        }
+
+        $this->addFlash('success', $successMessage);
 
         $parameters = $this->buildNewsRedirectParameters($request);
-        $parameters['edit'] = $article->getId();
+        if ('app_portal_technician_news' !== $redirectRoute) {
+            $parameters['edit'] = $article->getId();
+        }
 
         return $this->redirectToRoute($redirectRoute, $parameters);
     }

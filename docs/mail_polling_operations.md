@@ -1,4 +1,4 @@
-# Driftguide for mailbox polling
+# Driftguide för mailbox polling
 
 ## Kommando
 
@@ -6,27 +6,27 @@
 php bin/console app:mail:poll
 ```
 
-Kommandot laser aktiva supportinkorgar och skickar varje hittat meddelande vidare till ingestflodet.
+Kommandot läser aktiva supportinkorgar och skickar varje hittat meddelande vidare till ingestflödet.
 
-## Nar polling ska anvandas
+## När polling ska användas
 
-Polling ska anvandas nar Driftpunkt sjalv ska hamta ny supportpost fran konfigurerade inkorgar.
+Polling ska användas när Driftpunkt själv ska hämta ny supportpost från konfigurerade inkorgar.
 
-Det ska inte forvaxlas med:
+Det ska inte förväxlas med:
 
 - `app:mail:ingest`, som behandlar ett enskilt inkommande meddelande
 - manuell adminhantering av draftgranskningar
 
-## Forberedelser
+## Förberedelser
 
-Innan polling aktiveras ska foljande vara klart:
+Innan polling aktiveras ska följande vara klart:
 
 - minst en inkommande `MailServer`
 - minst en aktiv `SupportMailbox`
 - verifierad anslutning mot mailservern
-- fungerande utgaende e-post om notifieringar ska skickas
+- fungerande utgående e-post om notifieringar ska skickas
 
-## Schemalaggning
+## Schemaläggning
 
 Repoexempel finns i:
 
@@ -43,8 +43,8 @@ Repoexempel finns i:
 ## Rekommenderad systemd-timer
 
 1. kopiera mallfilerna till `/etc/systemd/system/`
-2. ersatt sokvagar och anvandare
-3. kor:
+2. ersätt sökvägar och användare
+3. kör:
 
 ```bash
 sudo systemctl daemon-reload
@@ -54,16 +54,16 @@ sudo systemctl list-timers | grep driftpunkt-mail-poll
 
 ## Driftobservationer
 
-Efter aktivering bor du folja upp:
+Efter aktivering bör du följa upp:
 
 - att nya mail markeras som behandlade
 - att tickets eller draftgranskningar faktiskt skapas
 - att loggar inte visar upprepade anslutningsfel
-- att notifieringar skickas som forvantat
+- att notifieringar skickas som förväntat
 
-## Felsokning
+## Felsökning
 
-Kor kommandot manuellt med mer loggning:
+Kör kommandot manuellt med mer loggning:
 
 ```bash
 php bin/console app:mail:poll -vvv
@@ -73,5 +73,5 @@ Kontrollera sedan:
 
 - serveruppgifter
 - autentisering
-- att inkorgen verkligen ar aktiv
-- att databasen och lagringsmappar ar skrivbara
+- att inkorgen verkligen är aktiv
+- att databasen och lagringsmappar är skrivbara

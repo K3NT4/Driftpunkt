@@ -1,0 +1,276 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ site_branding.name }} | MFA{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .mfa-shell {
+            max-width: 72rem;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .mfa-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .mfa-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            width: fit-content;
+            padding: 0.45rem 0.8rem;
+            border-radius: 999px;
+            background: rgba(15, 118, 110, 0.1);
+            color: var(--brand-dark);
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 0.9rem;
+        }
+
+        .mfa-title {
+            margin-bottom: 0.5rem;
+            font-size: clamp(2rem, 4vw, 3rem);
+        }
+
+        .mfa-lead {
+            margin: 0;
+            max-width: 44rem;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        .mfa-layout {
+            display: grid;
+            gap: 1.25rem;
+            grid-template-columns: minmax(0, 1fr) minmax(320px, 0.86fr);
+            align-items: start;
+        }
+
+        .mfa-card {
+            padding: 1.35rem;
+            border-radius: 22px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.82);
+        }
+
+        .mfa-card-soft {
+            border-color: rgba(15, 118, 110, 0.14);
+            background:
+                linear-gradient(180deg, rgba(15, 118, 110, 0.12), rgba(255, 255, 255, 0.78));
+        }
+
+        .mfa-card h2 {
+            margin-bottom: 0.55rem;
+            font-size: 1.2rem;
+        }
+
+        .mfa-card p {
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        .mfa-form {
+            margin-top: 1.15rem;
+        }
+
+        .mfa-code-input {
+            font-size: 1.12rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-align: center;
+        }
+
+        .mfa-action {
+            width: 100%;
+        }
+
+        .mfa-restart {
+            margin: 1rem 0 0;
+            padding-top: 1rem;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+        }
+
+        .mfa-restart a {
+            color: var(--brand-dark);
+            font-weight: 700;
+        }
+
+        .mfa-setup {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .mfa-qr-frame {
+            display: grid;
+            place-items: center;
+            padding: 1rem;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            background: #fff;
+        }
+
+        .mfa-qr-frame img {
+            display: block;
+            width: min(280px, 100%);
+            height: auto;
+        }
+
+        .mfa-meta {
+            display: grid;
+            gap: 0.55rem;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .mfa-meta-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-top: 1px solid var(--line);
+        }
+
+        .mfa-meta-row:first-child {
+            border-top: 0;
+            padding-top: 0;
+        }
+
+        .mfa-meta-label {
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .mfa-meta-value {
+            color: var(--text);
+            text-align: right;
+            overflow-wrap: anywhere;
+        }
+
+        .mfa-manual-code {
+            font-size: 0.92rem;
+            white-space: normal;
+        }
+
+        @media (max-width: 820px) {
+            .mfa-shell {
+                padding: 1.35rem;
+            }
+
+            .mfa-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 540px) {
+            .mfa-shell {
+                padding: 1rem;
+            }
+
+            .mfa-card {
+                padding: 1rem;
+            }
+
+            .mfa-meta-row {
+                display: grid;
+                gap: 0.2rem;
+            }
+
+            .mfa-meta-value {
+                text-align: left;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <section class="surface mfa-shell">
+        <div class="mfa-header">
+            <div>
+                <div class="mfa-eyebrow">Säker inloggning</div>
+                <h1 class="mfa-title">Verifiera inloggningen</h1>
+                <p class="mfa-lead">
+                    Ange koden från din autentiseringsapp för att slutföra inloggningen och komma vidare till portalen.
+                </p>
+            </div>
+
+            <a class="button secondary" href="{{ path('app_logout') }}">Börja om</a>
+        </div>
+
+        <div class="mfa-layout">
+            <article class="mfa-card mfa-card-soft">
+                <h2>Engångskod</h2>
+                <p style="margin: 0;">
+                    Koden uppdateras löpande i appen. Skriv in sex siffror och bekräfta.
+                </p>
+
+                <form method="post" class="mfa-form">
+                    <input type="hidden" name="_token" value="{{ csrf_token('mfa_challenge') }}">
+
+                    <label>
+                        <span>Engångskod</span>
+                        <input
+                            class="mfa-code-input"
+                            type="text"
+                            name="code"
+                            inputmode="numeric"
+                            autocomplete="one-time-code"
+                            pattern="[0-9 ]*"
+                            minlength="6"
+                            maxlength="8"
+                            placeholder="123456"
+                            required
+                            autofocus
+                        >
+                    </label>
+
+                    <button class="button mfa-action" type="submit">Bekräfta kod</button>
+                </form>
+
+                <p class="mfa-restart">
+                    Om du har loggat in med fel konto kan du <a href="{{ path('app_logout') }}">logga ut här</a>.
+                </p>
+            </article>
+
+            <aside class="mfa-card mfa-setup">
+                <div>
+                    <h2>Behöver du ställa in appen?</h2>
+                    <p style="margin: 0;">
+                        Skanna QR-koden i Google Authenticator, 1Password, Microsoft Authenticator eller liknande app.
+                    </p>
+                </div>
+
+                <div class="mfa-qr-frame">
+                    <img
+                        src="{{ qrCodeDataUri }}"
+                        alt="QR-kod för MFA"
+                    >
+                </div>
+
+                <div class="mfa-meta">
+                    <div class="mfa-meta-row">
+                        <span class="mfa-meta-label">Issuer</span>
+                        <span class="mfa-meta-value">{{ issuer }}</span>
+                    </div>
+                    <div class="mfa-meta-row">
+                        <span class="mfa-meta-label">Konto</span>
+                        <span class="mfa-meta-value">{{ app.user.userIdentifier }}</span>
+                    </div>
+                    <div class="mfa-meta-row">
+                        <span class="mfa-meta-label">Manuell kod</span>
+                        <code class="mfa-meta-value mfa-manual-code">{{ manualEntryCode }}</code>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </section>
+{% endblock %}

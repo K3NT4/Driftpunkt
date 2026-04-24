@@ -506,6 +506,84 @@
             white-space: pre;
         }
 
+        .article-body-content .article-version {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.65rem;
+            align-items: center;
+            margin: 1.15rem 0;
+            padding: 0.85rem 1rem;
+            border-radius: 16px;
+            border: 1px solid rgba(29, 42, 72, 0.12);
+            background: linear-gradient(135deg, rgba(29, 42, 72, 0.06), rgba(79, 94, 219, 0.1));
+        }
+
+        .article-body-content .article-version strong {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.24rem 0.6rem;
+            border-radius: 999px;
+            background: #1d2a48;
+            color: #fff;
+            font-size: 0.88rem;
+            letter-spacing: 0.03em;
+        }
+
+        .article-body-content .article-version span {
+            color: #51627f;
+            font-weight: 600;
+        }
+
+        .article-body-content .article-faq {
+            margin: 1rem 0;
+            padding: 0.85rem 1rem;
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            background: rgba(255, 255, 255, 0.88);
+        }
+
+        .article-body-content .article-faq summary {
+            cursor: pointer;
+            font-weight: 700;
+            color: #1d2a48;
+        }
+
+        .article-body-content .article-faq p {
+            margin: 0.85rem 0 0;
+        }
+
+        .article-body-content .article-table-wrap {
+            margin: 1.2rem 0;
+            overflow-x: auto;
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .article-body-content .article-table {
+            width: 100%;
+            min-width: 28rem;
+            border-collapse: collapse;
+        }
+
+        .article-body-content .article-table th,
+        .article-body-content .article-table td {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            vertical-align: top;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+        }
+
+        .article-body-content .article-table th {
+            background: rgba(29, 42, 72, 0.05);
+            color: #1d2a48;
+            font-size: 0.92rem;
+        }
+
+        .article-body-content .article-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
         .article-body-content .article-cta {
             display: inline-flex;
             align-items: center;

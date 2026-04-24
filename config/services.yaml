@@ -22,6 +22,8 @@ services:
     App\:
         resource: '../src/'
 
+    PragmaRX\Google2FA\Google2FA: ~
+
     App\Module\System\Service\StatusMonitorService:
         arguments:
             $projectDir: '%kernel.project_dir%'

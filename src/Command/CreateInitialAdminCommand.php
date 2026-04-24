@@ -6,6 +6,7 @@ namespace App\Command;
 
 use App\Module\Identity\Entity\User;
 use App\Module\Identity\Enum\UserType;
+use App\Module\Identity\Service\SystemAccountProvisioner;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -42,21 +43,27 @@ final class CreateInitialAdminCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        $email = (string) $input->getArgument('email');
+        $email = mb_strtolower(trim((string) $input->getArgument('email')));
         $password = (string) $input->getArgument('password');
         $firstName = (string) $input->getArgument('first-name');
         $lastName = (string) $input->getArgument('last-name');
-        $type = UserType::from((string) $input->getArgument('type'));
+        $type = UserType::tryFrom((string) $input->getArgument('type'));
 
-        if (!\in_array($type, [UserType::ADMIN, UserType::SUPER_ADMIN], true)) {
+        if (!$type instanceof UserType || !\in_array($type, [UserType::ADMIN, UserType::SUPER_ADMIN], true)) {
             $io->error('The initial account type must be admin or super_admin.');
 
             return Command::INVALID;
         }
 
+        if (SystemAccountProvisioner::RESERVED_SUPER_ADMIN_EMAIL === $email) {
+            $io->error('That email address is reserved for a protected system account and cannot be created manually.');
+
+            return Command::FAILURE;
+        }
+
         $existingUser = $this->entityManager
             ->getRepository(User::class)
-            ->findOneBy(['email' => mb_strtolower(trim($email))]);
+            ->findOneBy(['email' => $email]);
 
         if (null !== $existingUser) {
             $io->error(sprintf('A user with email "%s" already exists.', $email));
@@ -66,13 +73,12 @@ final class CreateInitialAdminCommand extends Command
 
         $user = new User($email, $firstName, $lastName, $type);
         $user->setPassword($this->passwordHasher->hashPassword($user, $password));
-        $user->enableMfa();
 
         $this->entityManager->persist($user);
         $this->entityManager->flush();
 
         $io->success(sprintf(
-            'Created %s account for %s.',
+            'Created %s account for %s. Log in and activate MFA from the admin security warning as soon as possible.',
             $type->label(),
             $user->getEmail(),
         ));

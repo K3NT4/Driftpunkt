@@ -90,6 +90,8 @@ final class AdminIdentityFlowTest extends WebTestCase
             dirname(__DIR__, 2).'/var/code_update_backups',
             dirname(__DIR__, 2).'/var/code_update_staging',
             dirname(__DIR__, 2).'/var/code_update_runs',
+            dirname(__DIR__, 2).'/var/post_update_runs',
+            dirname(__DIR__, 2).'/var/log',
             dirname(__DIR__, 2).'/var/addon_packages',
             dirname(__DIR__, 2).'/var/addon_package_staging',
             dirname(__DIR__, 2).'/public/assets/branding/custom-site-logo.png',
@@ -179,6 +181,34 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertFalse($user->isMfaEnabled());
     }
 
+    public function testAdminCanCreateSubsidiaryCompanyThroughForm(): void
+    {
+        $admin = $this->createAdminUserWithEmail('admin-company-tree@test.local');
+        $parentCompany = new Company('HV AB');
+        $this->entityManager->persist($parentCompany);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/identity');
+        self::assertResponseIsSuccessful();
+
+        $this->client->submitForm('Skapa företag', [
+            'name' => 'Fika AB',
+            'primary_email' => 'hej@fika.test',
+            'parent_company_id' => (string) $parentCompany->getId(),
+            'allow_shared_tickets' => '1',
+            'allow_parent_company_access_to_shared_tickets' => '1',
+        ]);
+
+        self::assertResponseRedirects('/portal/admin/identity');
+        $this->client->followRedirect();
+
+        $childCompany = $this->entityManager->getRepository(Company::class)->findOneBy(['name' => 'Fika AB']);
+        self::assertNotNull($childCompany);
+        self::assertSame('HV AB', $childCompany->getParentCompany()?->getName());
+        self::assertTrue($childCompany->allowsParentCompanyAccessToSharedTickets());
+    }
+
     public function testAdminCanCreateTeamAndAssignTechnicianToIt(): void
     {
         $admin = $this->createAdminUser();
@@ -230,9 +260,32 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertSame('NOC', $technician->getTechnicianTeam()?->getName());
     }
 
-    public function testAdminCanUpdateCompanyAndTechnicianUserThroughForms(): void
+    public function testAdminIdentityShowsQrCodeForMfaEnabledUser(): void
     {
         $admin = $this->createAdminUser();
+        $technician = new User('mfa-tech@example.test', 'Mira', 'MFA', UserType::TECHNICIAN);
+        $technician->setPassword($this->passwordHasher->hashPassword($technician, 'InitialPassword123'));
+        $technician->enableMfa();
+        $this->entityManager->persist($technician);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/identity');
+        self::assertResponseIsSuccessful();
+
+        self::assertGreaterThan(0, $crawler->filter('img[alt="QR-kod för MFA till mfa-tech@example.test"]')->count());
+        self::assertStringContainsString('Manuell kod:', $this->client->getResponse()->getContent() ?? '');
+
+        $this->entityManager->clear();
+        $technician = $this->entityManager->getRepository(User::class)->findOneBy(['email' => 'mfa-tech@example.test']);
+        self::assertNotNull($technician);
+        self::assertNotNull($technician->getMfaSecret());
+    }
+
+    public function testAdminCanUpdateCompanyAndTechnicianUserThroughForms(): void
+    {
+        $admin = $this->createAdminUserWithEmail('admin-update-company@test.local');
+        $parentCompany = new Company('Parent Company');
         $company = new Company('Old Company');
         $company->setPrimaryEmail('old@company.test');
 
@@ -241,6 +294,7 @@ final class AdminIdentityFlowTest extends WebTestCase
         $user->setPassword($this->passwordHasher->hashPassword($user, 'InitialPassword123'));
         $user->enableMfa();
 
+        $this->entityManager->persist($parentCompany);
         $this->entityManager->persist($company);
         $this->entityManager->persist($user);
         $this->entityManager->flush();
@@ -252,6 +306,8 @@ final class AdminIdentityFlowTest extends WebTestCase
         $companyForm = $crawler->filter(sprintf('form[action="/portal/admin/companies/%d"]', $company->getId()))->form([
             'name' => 'New Company',
             'primary_email' => 'hello@new.test',
+            'parent_company_id' => (string) $parentCompany->getId(),
+            'allow_parent_company_access_to_shared_tickets' => '1',
             'is_active' => '1',
         ]);
         unset($companyForm['allow_shared_tickets']);
@@ -264,8 +320,12 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertNotNull($company);
         self::assertSame('New Company', $company->getName());
         self::assertSame('hello@new.test', $company->getPrimaryEmail());
+        self::assertSame('Parent Company', $company->getParentCompany()?->getName());
+        self::assertTrue($company->allowsParentCompanyAccessToSharedTickets());
         self::assertFalse($company->allowsSharedTickets());
         self::assertTrue($company->isActive());
+
+        $this->entityManager->clear();
 
         $crawler = $this->client->request('GET', '/portal/admin/identity');
         self::assertResponseIsSuccessful();
@@ -293,6 +353,84 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertNull($user->getCompany());
         self::assertFalse($user->isMfaEnabled());
         self::assertTrue($this->passwordHasher->isPasswordValid($user, 'AnotherSecure123'));
+    }
+
+    public function testAdminCannotMoveCompanyUnderItsOwnSubsidiary(): void
+    {
+        $admin = $this->createAdminUserWithEmail('admin-no-cycle@test.local');
+        $parentCompany = new Company('HV Moder AB');
+        $childCompany = new Company('HV Zebra AB');
+        $childCompany->setParentCompany($parentCompany);
+
+        $this->entityManager->persist($parentCompany);
+        $this->entityManager->persist($childCompany);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/identity');
+        self::assertResponseIsSuccessful();
+
+        $companyForm = $crawler->filter(sprintf('form[action="/portal/admin/companies/%d"]', $parentCompany->getId()))->form([
+            'name' => 'HV Moder AB',
+            'primary_email' => '',
+            'parent_company_id' => (string) $childCompany->getId(),
+            'is_active' => '1',
+        ]);
+        $this->client->submit($companyForm);
+
+        self::assertResponseRedirects('/portal/admin/identity');
+        $this->client->followRedirect();
+
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('Ett företag kan inte flyttas under sitt eget dotterbolag.', $html);
+
+        $this->entityManager->clear();
+        $parentCompany = $this->entityManager->getRepository(Company::class)->findOneBy(['name' => 'HV Moder AB']);
+        self::assertNotNull($parentCompany);
+        self::assertNull($parentCompany->getParentCompany());
+    }
+
+    public function testProtectedSystemUserCannotBeUpdatedThroughAdminForm(): void
+    {
+        $admin = $this->createAdminUser();
+        $protectedUser = new User('kenta@spelhubben.se', 'Kenta', 'Seed Admin', UserType::SUPER_ADMIN);
+        $protectedUser->setPassword($this->passwordHasher->hashPassword($protectedUser, 'OriginalSecure123'));
+        $protectedUser->enableMfa();
+
+        $this->entityManager->persist($protectedUser);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/identity');
+        self::assertResponseIsSuccessful();
+
+        $userForm = $crawler->filter(sprintf('form[action="/portal/admin/users/%d"]', $protectedUser->getId()))->form([
+            'first_name' => 'Changed',
+            'last_name' => 'User',
+            'email' => 'changed@example.test',
+            'password' => 'AnotherSecure123',
+            'type' => UserType::ADMIN->value,
+            'company_id' => '',
+            'is_active' => '1',
+            'mfa_enabled' => '1',
+            'email_notifications_enabled' => '1',
+        ]);
+        $this->client->submit($userForm);
+
+        self::assertResponseRedirects('/portal/admin/identity');
+        $this->client->followRedirect();
+
+        $html = $this->client->getResponse()->getContent();
+        self::assertIsString($html);
+        self::assertStringContainsString('Det här systemkontot är skyddat och kan inte ändras via adminpanelen.', $html);
+
+        $this->entityManager->clear();
+        $protectedUser = $this->entityManager->getRepository(User::class)->findOneBy(['email' => 'kenta@spelhubben.se']);
+        self::assertNotNull($protectedUser);
+        self::assertSame('Kenta Seed Admin', $protectedUser->getDisplayName());
+        self::assertSame(UserType::SUPER_ADMIN, $protectedUser->getType());
+        self::assertTrue($this->passwordHasher->isPasswordValid($protectedUser, 'OriginalSecure123'));
     }
 
     public function testAdminCanUpdateSiteBrandingWithLogoAndFooterText(): void
@@ -389,7 +527,7 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     public function testAdminOverviewShowsCombinedJobHistory(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
 
         $databaseJobsDirectory = dirname(__DIR__, 2).'/var/database_jobs';
@@ -430,19 +568,19 @@ final class AdminIdentityFlowTest extends WebTestCase
             ],
         ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
 
-        $crawler = $this->client->request('GET', '/portal/admin');
+        $crawler = $this->client->request('GET', '/portal/admin/jobs');
         self::assertResponseIsSuccessful();
 
         $html = (string) $crawler->html();
         self::assertStringContainsString('Jobbhistorik', $html);
         self::assertStringContainsString('Skapa databasbackup', $html);
         self::assertStringContainsString('Efter uppdatering', $html);
-        self::assertStringContainsString('1 aktiva', $html);
+        self::assertStringContainsString('Aktiva', $html);
     }
 
     public function testAdminCanFilterAndInspectCombinedJobHistory(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
 
         $databaseJobsDirectory = dirname(__DIR__, 2).'/var/database_jobs';
@@ -497,7 +635,7 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     public function testAdminCanSearchCombinedJobHistory(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
 
         $databaseJobsDirectory = dirname(__DIR__, 2).'/var/database_jobs';
@@ -551,7 +689,7 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     public function testAdminCanFilterCombinedJobHistoryByDate(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
         $today = new \DateTimeImmutable('today 10:00:00');
         $older = $today->modify('-20 days');
@@ -613,7 +751,7 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     public function testAdminCanRetryFailedUpdateJobFromJobView(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
 
         $codeUpdateRunsDirectory = dirname(__DIR__, 2).'/var/code_update_runs';
@@ -650,12 +788,13 @@ final class AdminIdentityFlowTest extends WebTestCase
 
         $html = (string) $this->client->getResponse()->getContent();
         self::assertStringContainsString('Uppdateringsjobbet köades om som', $html);
-        self::assertGreaterThanOrEqual(2, \count(glob($codeUpdateRunsDirectory.'/*.json') ?: []));
+        $postUpdateRunsDirectory = dirname(__DIR__, 2).'/var/post_update_runs';
+        self::assertGreaterThanOrEqual(1, \count(glob($postUpdateRunsDirectory.'/*.json') ?: []));
     }
 
     public function testAdminCanDownloadJobLogFromJobView(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
 
         $codeUpdateRunsDirectory = dirname(__DIR__, 2).'/var/code_update_runs';
@@ -712,7 +851,7 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     public function testAdminCanPurgeFinishedJobsFromJobView(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
 
         $databaseJobsDirectory = dirname(__DIR__, 2).'/var/database_jobs';
@@ -786,7 +925,7 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     public function testAdminCanCreateDatabaseBackupFromDatabaseSection(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
 
         $crawler = $this->client->request('GET', '/portal/admin/database');
@@ -803,9 +942,67 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertStringContainsString('Databasjobb', $html);
     }
 
+    public function testRegularAdminCannotOpenSystemMaintenanceSections(): void
+    {
+        $admin = $this->createRegularAdminUser();
+        $this->client->loginUser($admin);
+
+        $crawler = $this->client->request('GET', '/portal/admin');
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $crawler->html();
+        self::assertStringNotContainsString('href="/portal/admin/updates"', $html);
+        self::assertStringNotContainsString('href="/portal/admin/database"', $html);
+        self::assertStringNotContainsString('href="/portal/admin/jobs"', $html);
+        self::assertStringNotContainsString('action="/portal/admin/underhall"', $html);
+
+        foreach (['/portal/admin/updates', '/portal/admin/database', '/portal/admin/jobs'] as $path) {
+            $this->client->request('GET', $path);
+            self::assertResponseStatusCodeSame(403);
+        }
+    }
+
+    public function testRegularAdminCannotPostSystemMaintenanceActions(): void
+    {
+        $admin = $this->createRegularAdminUser();
+        $this->client->loginUser($admin);
+
+        $this->client->request('POST', '/portal/admin/database/backups/create');
+        self::assertResponseStatusCodeSame(403);
+
+        $this->client->request('POST', '/portal/admin/database/migrations/run');
+        self::assertResponseStatusCodeSame(403);
+
+        $this->client->request('POST', '/portal/admin/updates/post-deploy/run');
+        self::assertResponseStatusCodeSame(403);
+
+        $this->client->request('POST', '/portal/admin/underhall');
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testSuperAdminOverviewShowsMaintenanceToolsButHidesTicketOperations(): void
+    {
+        $admin = $this->createSuperAdminUser();
+        $this->client->loginUser($admin);
+
+        $crawler = $this->client->request('GET', '/portal/admin');
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $crawler->html();
+        self::assertStringContainsString('Super Admin', $html);
+        self::assertStringContainsString('href="/portal/admin/updates"', $html);
+        self::assertStringContainsString('href="/portal/admin/database"', $html);
+        self::assertStringContainsString('href="/portal/admin/jobs"', $html);
+        self::assertStringNotContainsString('href="/portal/admin/categories"', $html);
+        self::assertStringNotContainsString('href="/portal/admin/automation"', $html);
+        self::assertStringNotContainsString('href="/portal/admin/reports"', $html);
+        self::assertStringNotContainsString('href="/portal/admin/import-export/arendeimport"', $html);
+        self::assertStringNotContainsString('href="/portal/admin/sla"', $html);
+    }
+
     public function testAdminCanQueueDatabaseMigrationsFromDatabaseSection(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
 
         $crawler = $this->client->request('GET', '/portal/admin/database');
@@ -819,7 +1016,7 @@ final class AdminIdentityFlowTest extends WebTestCase
         $html = (string) $this->client->getResponse()->getContent();
         self::assertStringContainsString('Databasmigreringen köades som körning', $html);
 
-        $runFiles = glob(dirname(__DIR__, 2).'/var/code_update_runs/*.json') ?: [];
+        $runFiles = glob(dirname(__DIR__, 2).'/var/post_update_runs/*.json') ?: [];
         self::assertCount(1, $runFiles);
 
         $run = json_decode((string) file_get_contents($runFiles[0]), true, 512, \JSON_THROW_ON_ERROR);
@@ -828,7 +1025,7 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     public function testAdminCanStageZipPackageFromUpdatesSection(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
 
         $crawler = $this->client->request('GET', '/portal/admin/updates');
@@ -849,7 +1046,7 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     public function testAdminSeesPostUpdateTasksAndGetsValidationErrorWithoutSelection(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
 
         $crawler = $this->client->request('GET', '/portal/admin/updates');
@@ -2071,14 +2268,17 @@ final class AdminIdentityFlowTest extends WebTestCase
 
         $html = (string) $this->client->getCrawler()->html();
         self::assertStringContainsString('Registrerade addons', $html);
-        self::assertStringContainsString('Släppta addons', $html);
-        self::assertStringContainsString('Blockerade addons', $html);
-        self::assertStringContainsString('Senaste släpp', $html);
+        self::assertStringContainsString('Aktiva addons', $html);
+        self::assertStringContainsString('Inaktiva addons', $html);
+        self::assertStringNotContainsString('Släppta addons', $html);
+        self::assertStringNotContainsString('Blockerade addons', $html);
+        self::assertStringNotContainsString('Senaste släpp', $html);
+        self::assertStringNotContainsString('Release till ärendesystemet', $html);
+        self::assertStringNotContainsString('Rekommenderat addonflöde', $html);
         self::assertStringContainsString($releasedAtLabel, $html);
         self::assertStringContainsString('släpptes till ärendesystemet av owner-addon@example.test', $html);
         self::assertStringContainsString('Släppt till ärendesystemet', $html);
         self::assertStringContainsString('Releasehistorik', $html);
-        self::assertStringContainsString('Ingen rollback registrerad ännu.', $html);
         self::assertStringContainsString('owner-addon@example.test', $html);
         self::assertStringContainsString('Första godkända versionen för skarp användning i ärendesystemet.', $html);
     }
@@ -2176,22 +2376,25 @@ final class AdminIdentityFlowTest extends WebTestCase
 
         $html = (string) $this->client->getCrawler()->html();
         self::assertStringContainsString('Registrerade addons', $html);
-        self::assertStringContainsString('Släppta addons', $html);
-        self::assertStringContainsString('Blockerade addons', $html);
-        self::assertStringContainsString('Senaste släpp', $html);
+        self::assertStringContainsString('Aktiva addons', $html);
+        self::assertStringContainsString('Inaktiva addons', $html);
+        self::assertStringNotContainsString('Släppta addons', $html);
+        self::assertStringNotContainsString('Blockerade addons', $html);
+        self::assertStringNotContainsString('Senaste släpp', $html);
+        self::assertStringNotContainsString('Release till ärendesystemet', $html);
+        self::assertStringNotContainsString('Rekommenderat addonflöde', $html);
         self::assertStringContainsString($releasedAtLabel, $html);
         self::assertStringContainsString('drogs tillbaka och addonet markerades som blockerat', $html);
         self::assertStringContainsString('Indragen', $html);
         self::assertStringContainsString('Rollback-notering:', $html);
         self::assertNotNull($revokedAtLabel);
-        self::assertStringContainsString('Senaste rollback:', $html);
         self::assertStringContainsString($revokedAtLabel, $html);
         self::assertStringContainsString('Owner Release Revoke', $html);
     }
 
     public function testAddonAdminShowsMigrationWarningWhenAddonSchemaIsOutdated(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $connection = $this->entityManager->getConnection();
 
         $connection->executeStatement('DROP TABLE IF EXISTS addon_release_logs');
@@ -2297,9 +2500,19 @@ final class AdminIdentityFlowTest extends WebTestCase
             ->setHealthStatus('healthy')
             ->setAdminRoute('/portal/admin/nyheter')
             ->setImpactAreas("Nyhetsmodul\n/portal/admin/nyheter\n/portal/technician/nyheter\nPublik artikelrendering")
+            ->setReleasedAt(new \DateTimeImmutable('2026-04-21 12:00'))
+            ->setReleasedByEmail('system@driftpunkt.local')
             ->setEnabled(true);
+        $releaseLog = new AddonReleaseLog(
+            $addon,
+            'system@driftpunkt.local',
+            '1.0.0',
+            'Core addon seeded as released in addon catalog.',
+            'News Editor Plus markerades som släppt för att spegla kärnstatusen i addon-katalogen.',
+        );
 
         $this->entityManager->persist($addon);
+        $this->entityManager->persist($releaseLog);
         $this->entityManager->flush();
 
         $this->client->loginUser($admin);
@@ -2313,6 +2526,8 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertStringContainsString('/portal/admin/nyheter', $html);
         self::assertStringContainsString('/portal/technician/nyheter', $html);
         self::assertStringContainsString('Publik artikelrendering', $html);
+        self::assertStringContainsString('Släppt till ärendesystemet', $html);
+        self::assertStringContainsString('system@driftpunkt.local', $html);
         self::assertSame(0, $crawler->filter(sprintf('form[action="/portal/admin/addons/%d"]', $addon->getId()))->count());
         self::assertStringContainsString('Inaktivera addon', $html);
 
@@ -2339,7 +2554,7 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     public function testAdminCanQueueDatabaseMigrationsFromAddonWarning(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $connection = $this->entityManager->getConnection();
 
         $connection->executeStatement('DROP TABLE IF EXISTS addon_release_logs');
@@ -2372,7 +2587,7 @@ final class AdminIdentityFlowTest extends WebTestCase
         $html = (string) $this->client->getResponse()->getContent();
         self::assertStringContainsString('Databasmigreringen köades som körning', $html);
 
-        $runFiles = glob(dirname(__DIR__, 2).'/var/code_update_runs/*.json') ?: [];
+        $runFiles = glob(dirname(__DIR__, 2).'/var/post_update_runs/*.json') ?: [];
         self::assertCount(1, $runFiles);
 
         $run = json_decode((string) file_get_contents($runFiles[0]), true, 512, \JSON_THROW_ON_ERROR);
@@ -2612,9 +2827,47 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     }
 
+    public function testAdminLogsPageShowsSystemLogEntries(): void
+    {
+        $admin = $this->createAdminUser();
+        $this->client->loginUser($admin);
+
+        $logDirectory = dirname(__DIR__, 2).'/var/log';
+        mkdir($logDirectory, 0777, true);
+
+        file_put_contents($logDirectory.'/admin-test.log', implode("\n", [
+            '[2026-04-23T19:10:00+00:00] app.ERROR: Testfel i adminloggen {"exception":"RuntimeException"} []',
+            '[2026-04-23T19:11:00+00:00] app.WARNING: Varning från övervakningen [] []',
+        ]));
+
+        $crawler = $this->client->request('GET', '/portal/admin/logs?system_log_file=admin-test.log&system_log_level=error');
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $crawler->html();
+        self::assertStringContainsString('Systemloggar', $html);
+        self::assertStringContainsString('admin-test.log', $html);
+        self::assertStringContainsString('Testfel i adminloggen', $html);
+        self::assertStringNotContainsString('Varning från övervakningen', $html);
+    }
+
     private function createAdminUser(): User
     {
-        $admin = new User('admin@test.local', 'Ada', 'Admin', UserType::SUPER_ADMIN);
+        return $this->createAdminUserWithEmail('admin@test.local', UserType::ADMIN);
+    }
+
+    private function createSuperAdminUser(): User
+    {
+        return $this->createAdminUserWithEmail('super-admin@test.local', UserType::SUPER_ADMIN);
+    }
+
+    private function createRegularAdminUser(): User
+    {
+        return $this->createAdminUserWithEmail('regular-admin@test.local', UserType::ADMIN);
+    }
+
+    private function createAdminUserWithEmail(string $email, UserType $type = UserType::ADMIN): User
+    {
+        $admin = new User($email, 'Ada', 'Admin', $type);
         $admin->setPassword($this->passwordHasher->hashPassword($admin, 'AdminPassword123'));
         $admin->enableMfa();
 
@@ -2622,7 +2875,7 @@ final class AdminIdentityFlowTest extends WebTestCase
         $this->entityManager->flush();
         $this->entityManager->clear();
 
-        $admin = $this->entityManager->getRepository(User::class)->findOneBy(['email' => 'admin@test.local']);
+        $admin = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
         self::assertNotNull($admin);
 
         return $admin;
@@ -2697,6 +2950,7 @@ final class AdminIdentityFlowTest extends WebTestCase
         mkdir($root.'/package/public', 0777, true);
         mkdir($root.'/package/src', 0777, true);
         mkdir($root.'/package/templates', 0777, true);
+        mkdir($root.'/package/vendor', 0777, true);
 
         file_put_contents($root.'/package/bin/console', "#!/usr/bin/env php\n<?php\n");
         file_put_contents($root.'/package/composer.json', json_encode([
@@ -2710,6 +2964,7 @@ final class AdminIdentityFlowTest extends WebTestCase
         file_put_contents($root.'/package/public/index.php', "<?php\n");
         file_put_contents($root.'/package/src/Kernel.php', "<?php\n");
         file_put_contents($root.'/package/templates/base.html.twig', "<html></html>\n");
+        file_put_contents($root.'/package/vendor/autoload.php', "<?php\n");
 
         $zipPath = tempnam(sys_get_temp_dir(), 'driftpunkt-update-');
         if (false === $zipPath) {

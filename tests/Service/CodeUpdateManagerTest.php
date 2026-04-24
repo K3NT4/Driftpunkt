@@ -45,6 +45,10 @@ final class CodeUpdateManagerTest extends TestCase
 
     protected function tearDown(): void
     {
+        if (is_file($this->projectDir.'/composer.lock')) {
+            chmod($this->projectDir.'/composer.lock', 0666);
+        }
+
         $this->removeDirectory($this->projectDir);
     }
 
@@ -70,6 +74,52 @@ final class CodeUpdateManagerTest extends TestCase
         self::assertFileDoesNotExist($this->projectDir.'/migrations/Version20260419000000.php');
     }
 
+    public function testPreflightFailsWhenManagedTargetFileIsNotWritable(): void
+    {
+        $packageRoot = $this->createPackageManifestWithComposerLockOnly();
+        chmod($this->projectDir.'/composer.lock', 0444);
+        file_put_contents($packageRoot.'/composer.lock', json_encode(['lock' => 'new'], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('composer.lock är inte skrivbar');
+
+        $this->manager->assertStagedPackageCanBeApplied('preflight-package');
+    }
+
+    public function testPreflightPassesWhenPackageTargetsAreWritable(): void
+    {
+        $packageRoot = $this->createPackageManifestWithComposerLockOnly();
+        file_put_contents($packageRoot.'/composer.lock', json_encode(['lock' => 'new'], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        $this->manager->assertStagedPackageCanBeApplied('preflight-package');
+
+        self::assertTrue(true);
+    }
+
+    private function createPackageManifestWithComposerLockOnly(): string
+    {
+        $stagingRoot = $this->projectDir.'/var/code_update_staging/preflight-package';
+        $packageRoot = $stagingRoot.'/extracted/release';
+        mkdir($packageRoot, 0777, true);
+
+        file_put_contents($stagingRoot.'/manifest.json', json_encode([
+            'id' => 'preflight-package',
+            'originalFilename' => 'release.zip',
+            'packageName' => 'driftpunkt/preflight',
+            'packageVersion' => 'test',
+            'uploadedAt' => (new \DateTimeImmutable())->format(DATE_ATOM),
+            'valid' => true,
+            'validationMessages' => [],
+            'fileCount' => 1,
+            'includesVendor' => true,
+            'packageRoot' => $packageRoot,
+            'appliedAt' => null,
+            'applicationBackupFilename' => null,
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        return $packageRoot;
+    }
+
     private function createUpdatePackageZip(): string
     {
         $packageRoot = sys_get_temp_dir().'/driftpunkt-code-package-'.bin2hex(random_bytes(4));
@@ -78,6 +128,7 @@ final class CodeUpdateManagerTest extends TestCase
         mkdir($packageRoot.'/release/public', 0777, true);
         mkdir($packageRoot.'/release/src', 0777, true);
         mkdir($packageRoot.'/release/templates', 0777, true);
+        mkdir($packageRoot.'/release/vendor', 0777, true);
 
         file_put_contents($packageRoot.'/release/bin/console', "#!/usr/bin/env php\n<?php\n");
         file_put_contents($packageRoot.'/release/composer.json', json_encode([
@@ -91,6 +142,7 @@ final class CodeUpdateManagerTest extends TestCase
         file_put_contents($packageRoot.'/release/public/index.php', "<?php echo 'new';\n");
         file_put_contents($packageRoot.'/release/src/Version.php', "<?php\nreturn '2.1.0';\n");
         file_put_contents($packageRoot.'/release/templates/base.html.twig', "<html>new</html>\n");
+        file_put_contents($packageRoot.'/release/vendor/autoload.php', "<?php\n");
 
         $zipPath = tempnam(sys_get_temp_dir(), 'driftpunkt-release-');
         if (false === $zipPath) {
@@ -135,6 +187,7 @@ final class CodeUpdateManagerTest extends TestCase
         self::assertContains('Saknar bin/console i paketet.', $package['validationMessages']);
         self::assertContains('Saknar config i paketet.', $package['validationMessages']);
         self::assertContains('Saknar composer.lock i paketet.', $package['validationMessages']);
+        self::assertContains('Saknar vendor/autoload.php i paketet.', $package['validationMessages']);
     }
 
     private function createInvalidUpdatePackageZip(): string
@@ -209,6 +262,7 @@ final class CodeUpdateManagerTest extends TestCase
                 continue;
             }
 
+            @chmod($item->getPathname(), 0666);
             @unlink($item->getPathname());
         }
 

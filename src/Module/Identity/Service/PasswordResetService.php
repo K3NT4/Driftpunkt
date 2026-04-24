@@ -57,6 +57,7 @@ final class PasswordResetService
         }
 
         $user->setPassword($this->passwordHasher->hashPassword($user, $plainPassword));
+        $user->clearPasswordChangeRequired();
 
         $resetRequest->markAsUsed();
         $this->expireActiveRequestsForUser($user, $resetRequest);

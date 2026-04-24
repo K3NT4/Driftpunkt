@@ -38,6 +38,9 @@ class Company
     private bool $allowSharedTickets = true;
 
     #[ORM\Column(options: ['default' => false])]
+    private bool $allowParentCompanyAccessToSharedTickets = false;
+
+    #[ORM\Column(options: ['default' => false])]
     private bool $useCustomTicketSequence = false;
 
     #[ORM\Column(length: 16, nullable: true)]
@@ -45,6 +48,10 @@ class Company
 
     #[ORM\Column(options: ['default' => 1001])]
     private int $ticketSequenceNextNumber = 1001;
+
+    #[ORM\ManyToOne(targetEntity: self::class)]
+    #[ORM\JoinColumn(name: 'parent_company_id', referencedColumnName: 'id', onDelete: 'SET NULL', nullable: true)]
+    private ?self $parentCompany = null;
 
     /**
      * @var Collection<int, User>
@@ -124,6 +131,18 @@ class Company
         return $this;
     }
 
+    public function allowsParentCompanyAccessToSharedTickets(): bool
+    {
+        return $this->allowParentCompanyAccessToSharedTickets;
+    }
+
+    public function setAllowParentCompanyAccessToSharedTickets(bool $allowParentCompanyAccessToSharedTickets): self
+    {
+        $this->allowParentCompanyAccessToSharedTickets = $allowParentCompanyAccessToSharedTickets;
+
+        return $this;
+    }
+
     public function usesCustomTicketSequence(): bool
     {
         return $this->useCustomTicketSequence;
@@ -167,6 +186,57 @@ class Company
         $this->ticketSequenceNextNumber = $nextNumber + 1;
 
         return $nextNumber;
+    }
+
+    public function getParentCompany(): ?self
+    {
+        return $this->parentCompany;
+    }
+
+    public function setParentCompany(?self $parentCompany): self
+    {
+        if ($this->parentCompany === $parentCompany) {
+            return $this;
+        }
+
+        if ($parentCompany === $this) {
+            throw new \InvalidArgumentException('Ett företag kan inte vara sitt eget moderbolag.');
+        }
+
+        if ($parentCompany?->isDescendantOf($this)) {
+            throw new \InvalidArgumentException('Ett företag kan inte flyttas under sitt eget dotterbolag.');
+        }
+
+        $this->parentCompany = $parentCompany;
+
+        return $this;
+    }
+
+    public function isDescendantOf(self $company): bool
+    {
+        $parent = $this->parentCompany;
+        while ($parent instanceof self) {
+            if ($parent === $company) {
+                return true;
+            }
+
+            $parent = $parent->getParentCompany();
+        }
+
+        return false;
+    }
+
+    public function getHierarchyDepth(): int
+    {
+        $depth = 0;
+        $parent = $this->parentCompany;
+
+        while ($parent instanceof self) {
+            ++$depth;
+            $parent = $parent->getParentCompany();
+        }
+
+        return $depth;
     }
 
     /**

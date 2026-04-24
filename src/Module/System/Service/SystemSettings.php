@@ -6,6 +6,7 @@ namespace App\Module\System\Service;
 
 use App\Module\System\Entity\SystemSetting;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class SystemSettings
 {
@@ -15,6 +16,11 @@ final class SystemSettings
     public const FEATURE_TICKET_TEMPLATE_CHECKLIST_ENABLED = 'feature.ticket_template_checklist_enabled';
     public const FEATURE_TICKET_TEMPLATE_CHECKLIST_PROGRESS_ENABLED = 'feature.ticket_template_checklist_progress_enabled';
     public const FEATURE_TICKET_TEMPLATE_CHECKLIST_CUSTOMER_VISIBLE = 'feature.ticket_template_checklist_customer_visible';
+    public const FEATURE_REMOTE_SUPPORT_ANYDESK_ENABLED = 'feature.remote_support_anydesk_enabled';
+    public const FEATURE_REMOTE_SUPPORT_TEAMVIEWER_ENABLED = 'feature.remote_support_teamviewer_enabled';
+    public const FEATURE_COMPANY_HIERARCHY_PARENT_CAN_SEE_CHILD_SHARED_TICKETS = 'feature.company_hierarchy_parent_can_see_child_shared_tickets';
+    public const FEATURE_COMPANY_HIERARCHY_CHILD_CAN_SEE_PARENT_SHARED_TICKETS = 'feature.company_hierarchy_child_can_see_parent_shared_tickets';
+    public const FEATURE_CUSTOMER_REPORTS_ENABLED = 'feature.customer_reports_enabled';
     public const FEATURE_TICKET_ATTACHMENTS_ENABLED = 'feature.ticket_attachments_enabled';
     public const FEATURE_TICKET_ATTACHMENTS_EXTERNAL_ENABLED = 'feature.ticket_attachments_external_enabled';
     public const TICKET_ATTACHMENTS_MAX_UPLOAD_MB = 'ticket_attachments.max_upload_mb';
@@ -27,6 +33,9 @@ final class SystemSettings
     public const FEATURE_CUSTOMER_SELF_REGISTRATION_ENABLED = 'feature.customer_self_registration_enabled';
     public const CUSTOMER_LOGIN_SMART_TIPS = 'customer_login.smart_tips';
     public const CUSTOMER_LOGIN_FAQ = 'customer_login.faq';
+    public const FEATURE_MFA_CUSTOMER_ENABLED = 'feature.mfa_customer_enabled';
+    public const FEATURE_MFA_TECHNICIAN_ENABLED = 'feature.mfa_technician_enabled';
+    public const FEATURE_MFA_ADMIN_ENABLED = 'feature.mfa_admin_enabled';
     public const FEATURE_KNOWLEDGE_BASE_PUBLIC_ENABLED = 'feature.knowledge_base_public_enabled';
     public const FEATURE_KNOWLEDGE_BASE_CUSTOMER_ENABLED = 'feature.knowledge_base_customer_enabled';
     public const FEATURE_KNOWLEDGE_BASE_PUBLIC_SMART_TIPS_ENABLED = 'feature.knowledge_base_public_smart_tips_enabled';
@@ -112,9 +121,15 @@ final class SystemSettings
     public const COOKIE_POLICY_CONTACT_EMAIL = 'cookie_policy.contact_email';
     public const FEATURE_COOKIE_POLICY_EXTERNAL_ENABLED = 'feature.cookie_policy_external_enabled';
     public const COOKIE_POLICY_EXTERNAL_URL = 'cookie_policy.external_url';
+    public const UPDATE_RELEASE_PENDING_CONFIRMATION = 'update_release.pending_confirmation';
+    public const UPDATE_RELEASE_PACKAGE_NAME = 'update_release.package_name';
+    public const UPDATE_RELEASE_PACKAGE_VERSION = 'update_release.package_version';
+    public const UPDATE_RELEASE_APPLIED_AT = 'update_release.applied_at';
+    public const UPDATE_RELEASE_CONFIRMED_AT = 'update_release.confirmed_at';
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -195,6 +210,55 @@ final class SystemSettings
         }
 
         $this->entityManager->flush();
+    }
+
+    /**
+     * @return array{
+     *     pendingConfirmation: bool,
+     *     packageName: string,
+     *     packageVersion: string,
+     *     appliedAt: ?\DateTimeImmutable,
+     *     confirmedAt: ?\DateTimeImmutable
+     * }
+     */
+    public function getUpdateReleaseState(): array
+    {
+        return [
+            'pendingConfirmation' => $this->getBool(self::UPDATE_RELEASE_PENDING_CONFIRMATION, false),
+            'packageName' => trim($this->getString(self::UPDATE_RELEASE_PACKAGE_NAME, '')),
+            'packageVersion' => trim($this->getString(self::UPDATE_RELEASE_PACKAGE_VERSION, '')),
+            'appliedAt' => $this->parseStoredDateTime($this->getString(self::UPDATE_RELEASE_APPLIED_AT, '')),
+            'confirmedAt' => $this->parseStoredDateTime($this->getString(self::UPDATE_RELEASE_CONFIRMED_AT, '')),
+        ];
+    }
+
+    public function markUpdateReleasePendingConfirmation(string $packageName, string $packageVersion, ?\DateTimeImmutable $appliedAt = null): void
+    {
+        $this->setBool(self::UPDATE_RELEASE_PENDING_CONFIRMATION, true);
+        $this->setString(self::UPDATE_RELEASE_PACKAGE_NAME, trim($packageName));
+        $this->setString(self::UPDATE_RELEASE_PACKAGE_VERSION, trim($packageVersion));
+        $this->setString(self::UPDATE_RELEASE_APPLIED_AT, ($appliedAt ?? new \DateTimeImmutable())->format(DATE_ATOM));
+        $this->setString(self::UPDATE_RELEASE_CONFIRMED_AT, '');
+    }
+
+    public function confirmUpdateReleaseHealthy(): void
+    {
+        $this->setBool(self::UPDATE_RELEASE_PENDING_CONFIRMATION, false);
+        $this->setString(self::UPDATE_RELEASE_CONFIRMED_AT, (new \DateTimeImmutable())->format(DATE_ATOM));
+    }
+
+    private function parseStoredDateTime(string $value): ?\DateTimeImmutable
+    {
+        $normalized = trim($value);
+        if ('' === $normalized) {
+            return null;
+        }
+
+        try {
+            return new \DateTimeImmutable($normalized);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
@@ -395,6 +459,41 @@ final class SystemSettings
     }
 
     /**
+     * @return array{anydeskEnabled: bool, teamviewerEnabled: bool}
+     */
+    public function getRemoteSupportSettings(): array
+    {
+        return [
+            'anydeskEnabled' => $this->getBool(self::FEATURE_REMOTE_SUPPORT_ANYDESK_ENABLED, false),
+            'teamviewerEnabled' => $this->getBool(self::FEATURE_REMOTE_SUPPORT_TEAMVIEWER_ENABLED, false),
+        ];
+    }
+
+    /**
+     * @return array{
+     *     parentCanSeeChildSharedTickets: bool,
+     *     childCanSeeParentSharedTickets: bool
+     * }
+     */
+    public function getCompanyHierarchyVisibilitySettings(): array
+    {
+        return [
+            'parentCanSeeChildSharedTickets' => $this->getBool(self::FEATURE_COMPANY_HIERARCHY_PARENT_CAN_SEE_CHILD_SHARED_TICKETS, true),
+            'childCanSeeParentSharedTickets' => $this->getBool(self::FEATURE_COMPANY_HIERARCHY_CHILD_CAN_SEE_PARENT_SHARED_TICKETS, false),
+        ];
+    }
+
+    /**
+     * @return array{customerEnabled: bool}
+     */
+    public function getReportSettings(): array
+    {
+        return [
+            'customerEnabled' => $this->getBool(self::FEATURE_CUSTOMER_REPORTS_ENABLED, false),
+        ];
+    }
+
+    /**
      * @return array{
      *     enabled: bool,
      *     maxUploadMb: int,
@@ -454,6 +553,22 @@ final class SystemSettings
             'faq' => $faq,
             'faqLines' => $faqLines,
             'createAccountEnabled' => $this->getBool(self::FEATURE_CUSTOMER_SELF_REGISTRATION_ENABLED, false),
+        ];
+    }
+
+    /**
+     * @return array{
+     *     customerEnabled: bool,
+     *     technicianEnabled: bool,
+     *     adminEnabled: bool
+     * }
+     */
+    public function getMfaSettings(): array
+    {
+        return [
+            'customerEnabled' => $this->getBool(self::FEATURE_MFA_CUSTOMER_ENABLED, false),
+            'technicianEnabled' => $this->getBool(self::FEATURE_MFA_TECHNICIAN_ENABLED, false),
+            'adminEnabled' => $this->getBool(self::FEATURE_MFA_ADMIN_ENABLED, true),
         ];
     }
 
@@ -565,16 +680,20 @@ final class SystemSettings
      */
     public function getHomeSupportWidgetSettings(): array
     {
-        $title = $this->getString(self::HOME_SUPPORT_WIDGET_TITLE, 'Behöver du hjälp?');
-        $intro = $this->getString(self::HOME_SUPPORT_WIDGET_INTRO, 'Här hittar du de viktigaste genvägarna till hjälp, kunskap och kontakt.');
+        $title = $this->getString(self::HOME_SUPPORT_WIDGET_TITLE, $this->translator->trans('home.support_widget.title'));
+        $intro = $this->getString(self::HOME_SUPPORT_WIDGET_INTRO, $this->translator->trans('home.support_widget.intro'));
         $linkLines = $this->normalizeLineList($this->getString(
             self::HOME_SUPPORT_WIDGET_LINKS,
-            "spark | Vanliga Frågor | /kunskapsbas\nbook | Kunskapsbank | /kunskapsbas\ncheck | Kontakta Support | /kontakta-oss",
+            implode("\n", [
+                sprintf('spark | %s | /kunskapsbas', $this->translator->trans('home.support_widget.link.faq')),
+                sprintf('book | %s | /kunskapsbas', $this->translator->trans('home.support_widget.link.knowledge_base')),
+                sprintf('check | %s | /kontakta-oss', $this->translator->trans('home.support_widget.link.contact')),
+            ]),
         ));
 
         return [
-            'title' => '' !== $title ? $title : 'Behöver du hjälp?',
-            'intro' => '' !== $intro ? $intro : 'Här hittar du de viktigaste genvägarna till hjälp, kunskap och kontakt.',
+            'title' => '' !== $title ? $title : $this->translator->trans('home.support_widget.title'),
+            'intro' => '' !== $intro ? $intro : $this->translator->trans('home.support_widget.intro'),
             'links' => $this->normalizeSupportLinks($linkLines),
             'linkLines' => $linkLines,
         ];
@@ -586,8 +705,8 @@ final class SystemSettings
     public function getHomepageStatusSectionSettings(): array
     {
         return [
-            'title' => $this->getString(self::HOME_STATUS_SECTION_TITLE, 'Systemstatus'),
-            'intro' => $this->getString(self::HOME_STATUS_SECTION_INTRO, 'Överblick över systemets hälsa.'),
+            'title' => $this->getString(self::HOME_STATUS_SECTION_TITLE, $this->translator->trans('home.status_section.default_title')),
+            'intro' => $this->getString(self::HOME_STATUS_SECTION_INTRO, $this->translator->trans('home.status_section.default_intro')),
             'maxItems' => min(12, max(1, $this->getInt(self::HOME_STATUS_SECTION_MAX_ITEMS, 4))),
         ];
     }
@@ -773,13 +892,53 @@ final class SystemSettings
     {
         $rawLines = $this->normalizeLineList($this->getString(
             self::PUBLIC_STATUS_ITEMS,
-            "display | Driftpunkt | Webbportal 6 min sedan | Alla system operativa |  |  | \n".
-            "db | Databas | Databas 1 min sedan |  | Visa detaljer | /driftstatus | Underhåll\n".
-            "api | API / Webhooks | Filserver / NAS, 8 min sedan |  | Visa detaljer | /driftstatus | Nyhet\n".
-            "gear | Autentisering | SSO och lokal login, 3 min sedan | Stabil drift |  |  | \n".
-            "spark | E-postgateway | Inkommande och utgående köer, 4 min sedan |  | Visa detaljer | /driftstatus | \n".
-            "book | Backup / Arkiv | Senaste backup 02:00 i natt | Senaste körning lyckades |  |  | Backup\n".
-            "check | Övervakning | Alla monitorer svarar, 1 min sedan | Allting grönt |  |  | ",
+            implode("\n", [
+                sprintf(
+                    'display | %s | %s | %s |  |  | ',
+                    $this->translator->trans('status.defaults.site.name'),
+                    $this->translator->trans('status.defaults.site.status'),
+                    $this->translator->trans('status.defaults.site.state'),
+                ),
+                sprintf(
+                    'db | %s | %s |  | %s | /driftstatus | %s',
+                    $this->translator->trans('status.defaults.database.name'),
+                    $this->translator->trans('status.defaults.database.status'),
+                    $this->translator->trans('status.defaults.link_label'),
+                    $this->translator->trans('status.defaults.database.pill'),
+                ),
+                sprintf(
+                    'api | %s | %s |  | %s | /driftstatus | %s',
+                    $this->translator->trans('status.defaults.api.name'),
+                    $this->translator->trans('status.defaults.api.status'),
+                    $this->translator->trans('status.defaults.link_label'),
+                    $this->translator->trans('status.defaults.api.pill'),
+                ),
+                sprintf(
+                    'gear | %s | %s | %s |  |  | ',
+                    $this->translator->trans('status.defaults.auth.name'),
+                    $this->translator->trans('status.defaults.auth.status'),
+                    $this->translator->trans('status.defaults.auth.state'),
+                ),
+                sprintf(
+                    'spark | %s | %s |  | %s | /driftstatus | ',
+                    $this->translator->trans('status.defaults.mail.name'),
+                    $this->translator->trans('status.defaults.mail.status'),
+                    $this->translator->trans('status.defaults.link_label'),
+                ),
+                sprintf(
+                    'book | %s | %s | %s |  |  | %s',
+                    $this->translator->trans('status.defaults.backup.name'),
+                    $this->translator->trans('status.defaults.backup.status'),
+                    $this->translator->trans('status.defaults.backup.state'),
+                    $this->translator->trans('status.defaults.backup.pill'),
+                ),
+                sprintf(
+                    'check | %s | %s | %s |  |  | ',
+                    $this->translator->trans('status.defaults.monitoring.name'),
+                    $this->translator->trans('status.defaults.monitoring.status'),
+                    $this->translator->trans('status.defaults.monitoring.state'),
+                ),
+            ]),
         ));
 
         return [
@@ -1040,7 +1199,7 @@ final class SystemSettings
         foreach ($lines as $line) {
             $parts = array_map('trim', explode('|', $line, 3));
             $icon = $parts[0] ?? 'check';
-            $title = $parts[1] ?? '';
+            $title = $this->normalizeDecoratedLabel($parts[1] ?? '');
             $url = $parts[2] ?? '';
 
             if ('' === $title || '' === $url) {
@@ -1060,9 +1219,9 @@ final class SystemSettings
         }
 
         return [] !== $items ? $items : [
-            ['icon' => 'spark', 'title' => 'Vanliga Frågor', 'url' => '/kunskapsbas'],
-            ['icon' => 'book', 'title' => 'Kunskapsbank', 'url' => '/kunskapsbas'],
-            ['icon' => 'check', 'title' => 'Kontakta Support', 'url' => '/portal'],
+            ['icon' => 'spark', 'title' => $this->translator->trans('home.support_widget.link.faq'), 'url' => '/kunskapsbas'],
+            ['icon' => 'book', 'title' => $this->translator->trans('home.support_widget.link.knowledge_base'), 'url' => '/kunskapsbas'],
+            ['icon' => 'check', 'title' => $this->translator->trans('home.support_widget.link.contact'), 'url' => '/portal'],
         ];
     }
 
@@ -1207,12 +1366,12 @@ final class SystemSettings
         foreach ($lines as $line) {
             $parts = array_map('trim', explode('|', $line, 7));
             $icon = mb_strtolower($parts[0] ?? '');
-            $name = $parts[1] ?? '';
-            $status = $parts[2] ?? '';
-            $stateLabel = $parts[3] ?? '';
-            $linkLabel = $parts[4] ?? '';
+            $name = $this->normalizeDecoratedLabel($parts[1] ?? '');
+            $status = $this->normalizeDecoratedLabel($parts[2] ?? '');
+            $stateLabel = $this->normalizeDecoratedLabel($parts[3] ?? '');
+            $linkLabel = $this->normalizeDecoratedLabel($parts[4] ?? '');
             $url = $parts[5] ?? '';
-            $pill = $parts[6] ?? '';
+            $pill = $this->normalizeDecoratedLabel($parts[6] ?? '');
 
             if ('' === $name || '' === $status) {
                 continue;
@@ -1257,10 +1416,10 @@ final class SystemSettings
         foreach ($lines as $line) {
             $parts = array_map('trim', explode('|', $line, 8));
             $type = mb_strtolower($parts[0] ?? 'manual');
-            $name = $parts[1] ?? '';
+            $name = $this->normalizeDecoratedLabel($parts[1] ?? '');
             $target = $parts[2] ?? '';
-            $details = $parts[3] ?? '';
-            $linkLabel = $parts[4] ?? '';
+            $details = $this->normalizeDecoratedLabel($parts[3] ?? '');
+            $linkLabel = $this->normalizeDecoratedLabel($parts[4] ?? '');
             $linkUrl = $parts[5] ?? '';
             $icon = mb_strtolower($parts[6] ?? 'display');
             $showOnHomepage = $parts[7] ?? '1';
@@ -1290,6 +1449,14 @@ final class SystemSettings
         }
 
         return $items;
+    }
+
+    private function normalizeDecoratedLabel(string $value): string
+    {
+        $normalized = trim(html_entity_decode($value, \ENT_QUOTES | \ENT_HTML5, 'UTF-8'));
+        $normalized = preg_replace('/^\s*[\p{So}\p{Sk}\p{Sm}\p{P}]+/u', '', $normalized) ?? $normalized;
+
+        return trim($normalized);
     }
 
     /**

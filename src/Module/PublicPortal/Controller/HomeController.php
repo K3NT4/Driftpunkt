@@ -6,6 +6,7 @@ namespace App\Module\PublicPortal\Controller;
 
 use App\Module\Identity\Entity\User;
 use App\Module\Identity\Enum\UserType;
+use App\Module\Identity\Service\UserSchemaInspector;
 use App\Module\Maintenance\Service\MaintenanceMode;
 use App\Module\News\Entity\NewsArticle;
 use App\Module\News\Enum\NewsCategory;
@@ -29,6 +30,7 @@ final class HomeController extends AbstractController
         private readonly SystemSettings $systemSettings,
         private readonly MaintenanceMode $maintenanceMode,
         private readonly NewsArticleSchemaInspector $newsArticleSchemaInspector,
+        private readonly UserSchemaInspector $userSchemaInspector,
         private readonly PublicSiteSearch $publicSiteSearch,
         private readonly RequestStack $requestStack,
     ) {
@@ -59,6 +61,7 @@ final class HomeController extends AbstractController
                 ->getQuery()
                 ->getResult()
             : [];
+        $latestNews = $this->stripAuthorsWhenUserSchemaIsOutdated($latestNews);
         $homeSupportWidget = $this->filterHomeSupportWidget(
             $this->systemSettings->getHomeSupportWidgetSettings(),
             (bool) $knowledgeBaseSettings['publicEnabled'],
@@ -85,6 +88,24 @@ final class HomeController extends AbstractController
             'homepageStatusSection' => $homepageStatusSection,
             'systemStatuses' => $systemStatuses,
         ]);
+    }
+
+    /**
+     * @param list<NewsArticle> $articles
+     *
+     * @return list<NewsArticle>
+     */
+    private function stripAuthorsWhenUserSchemaIsOutdated(array $articles): array
+    {
+        if ($this->userSchemaInspector->isReady()) {
+            return $articles;
+        }
+
+        foreach ($articles as $article) {
+            $article->setAuthor(null);
+        }
+
+        return $articles;
     }
 
     /**

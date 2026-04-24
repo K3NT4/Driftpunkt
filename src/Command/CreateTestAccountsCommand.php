@@ -6,6 +6,7 @@ namespace App\Command;
 
 use App\Module\Identity\Entity\User;
 use App\Module\Identity\Enum\UserType;
+use App\Module\Identity\Service\SystemAccountProvisioner;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -25,20 +26,12 @@ final class CreateTestAccountsCommand extends Command
      */
     private const TEST_ACCOUNTS = [
         [
-            'email' => 'admin@test.local',
-            'password' => 'AdminPassword123',
-            'firstName' => 'Ada',
-            'lastName' => 'Admin',
-            'type' => UserType::SUPER_ADMIN,
-            'mfaEnabled' => true,
-        ],
-        [
             'email' => 'tech@test.local',
             'password' => 'TechPassword123',
             'firstName' => 'Ture',
             'lastName' => 'Tekniker',
             'type' => UserType::TECHNICIAN,
-            'mfaEnabled' => true,
+            'mfaEnabled' => false,
         ],
         [
             'email' => 'customer@test.local',
@@ -53,6 +46,7 @@ final class CreateTestAccountsCommand extends Command
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly UserPasswordHasherInterface $passwordHasher,
+        private readonly SystemAccountProvisioner $systemAccountProvisioner,
     ) {
         parent::__construct();
     }
@@ -60,6 +54,8 @@ final class CreateTestAccountsCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
+
+        $provisionResult = $this->systemAccountProvisioner->ensureRequiredAdminAccounts();
 
         foreach (self::TEST_ACCOUNTS as $account) {
             $user = $this->entityManager->getRepository(User::class)->findOneBy([
@@ -80,6 +76,7 @@ final class CreateTestAccountsCommand extends Command
             $user->setLastName($account['lastName']);
             $user->setType($account['type']);
             $user->setPassword($this->passwordHasher->hashPassword($user, $account['password']));
+            $user->requirePasswordChange();
 
             if ($account['mfaEnabled']) {
                 $user->enableMfa();
@@ -93,10 +90,18 @@ final class CreateTestAccountsCommand extends Command
         $this->entityManager->flush();
 
         $io->success('Testkonton skapade/uppdaterade.');
+        if ($provisionResult->changed()) {
+            $io->text(sprintf(
+                'Obligatoriska admin-konton skapade/uppdaterade: %s',
+                implode(', ', array_merge($provisionResult->createdEmails(), $provisionResult->updatedEmails())),
+            ));
+        }
+
         $io->table(
             ['Roll', 'E-post', 'Losenord'],
             [
-                ['Super admin', 'admin@test.local', 'AdminPassword123'],
+                ['Reserv super admin', SystemAccountProvisioner::RESERVED_SUPER_ADMIN_EMAIL, 'Dolt, byte kravs vid forsta inloggning'],
+                ['Admin', SystemAccountProvisioner::STANDARD_ADMIN_EMAIL, SystemAccountProvisioner::STANDARD_ADMIN_PASSWORD],
                 ['Tekniker', 'tech@test.local', 'TechPassword123'],
                 ['Kund', 'customer@test.local', 'CustomerPassword123'],
             ],

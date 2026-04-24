@@ -120,6 +120,33 @@ final class TicketResponseNotifier
         );
     }
 
+    public function notifyCustomerTicketResolved(Ticket $ticket): void
+    {
+        $recipient = $ticket->getRequester();
+        $subject = sprintf('[%s] Ärendet är %s', $ticket->getReference(), mb_strtolower($ticket->getStatus()->label()));
+
+        if (!$recipient instanceof User) {
+            $this->logNotification('customer_ticket_resolved', $ticket, null, '', $subject, false, 'Ingen kundmottagare satt på ticket.');
+            return;
+        }
+
+        if (!$recipient->isEmailNotificationsEnabled()) {
+            $this->logNotification('customer_ticket_resolved', $ticket, $recipient, $recipient->getEmail(), $subject, false, 'Mailnotiser är avstängda för mottagaren.');
+            return;
+        }
+
+        $this->sendTicketEmail(
+            eventType: 'customer_ticket_resolved',
+            recipient: $recipient,
+            ticket: $ticket,
+            subject: $subject,
+            intro: 'Ärendet har markerats som löst eller stängt. Lösningen finns nedan och syns även i ärendet.',
+            comment: null,
+            badge: 'Lösning klar',
+            resolutionSummary: $ticket->getResolutionSummary(),
+        );
+    }
+
     public function notifySlaReminder(Ticket $ticket, string $eventType, string $subject, string $intro, string $badge): bool
     {
         $recipient = $ticket->getAssignee();
@@ -193,6 +220,7 @@ final class TicketResponseNotifier
         string $intro,
         ?TicketComment $comment,
         string $badge,
+        ?string $resolutionSummary = null,
     ): void {
         $context = [
             'recipient' => $recipient,
@@ -200,6 +228,7 @@ final class TicketResponseNotifier
             'intro' => $intro,
             'comment' => $comment,
             'badge' => $badge,
+            'resolutionSummary' => $resolutionSummary,
         ];
 
         $this->mailer->send(

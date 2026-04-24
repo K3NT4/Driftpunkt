@@ -150,6 +150,59 @@ final class TicketCommentNotificationTest extends WebTestCase
         self::assertSame('Kundsynlig kommentar tillagd av tekniker.', $auditLog->getMessage());
     }
 
+    public function testResolvingTicketNotifiesCustomerAndShowsResolutionInTicket(): void
+    {
+        [, $technician, $customer, $ticket] = $this->createTicketFixture();
+
+        $this->client->loginUser($technician);
+        $this->client->enableProfiler();
+        $crawler = $this->client->request('GET', sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
+        self::assertResponseIsSuccessful();
+
+        $form = $crawler->filter(sprintf('form[action="/portal/technician/tickets/%d"]', $ticket->getId()))->form([
+            'subject' => $ticket->getSubject(),
+            'summary' => $ticket->getSummary(),
+            'resolution_summary' => 'Vi uppdaterade skrivardrivrutinen och startade om spoolern. Allt fungerar igen.',
+            'request_type' => $ticket->getRequestType()->value,
+            'impact_level' => $ticket->getImpactLevel()->value,
+            'priority' => $ticket->getPriority()->value,
+            'escalation_level' => $ticket->getEscalationLevel()->value,
+            'status' => TicketStatus::RESOLVED->value,
+            'visibility' => $ticket->getVisibility()->value,
+            'company_id' => (string) $ticket->getCompany()?->getId(),
+            'requester_id' => (string) $ticket->getRequester()?->getId(),
+            'category_id' => '',
+        ]);
+        $this->client->submit($form);
+
+        self::assertResponseRedirects(sprintf('/portal/technician/tickets/%d/visa', $ticket->getId()));
+        self::assertEmailCount(1);
+
+        /** @var Email $email */
+        $email = $this->getMailerMessage();
+        self::assertSame(['customer@example.test'], array_map(static fn ($address) => $address->getAddress(), $email->getTo()));
+        self::assertStringContainsString('ärendet är löst', mb_strtolower($email->getSubject()));
+        self::assertStringContainsString('Vi uppdaterade skrivardrivrutinen och startade om spoolern. Allt fungerar igen.', $email->getTextBody() ?? '');
+
+        $ticket = $this->entityManager->getRepository(Ticket::class)->find($ticket->getId());
+        self::assertNotNull($ticket);
+        self::assertSame(TicketStatus::RESOLVED, $ticket->getStatus());
+        self::assertSame('Vi uppdaterade skrivardrivrutinen och startade om spoolern. Allt fungerar igen.', $ticket->getResolutionSummary());
+
+        $log = $this->entityManager->getRepository(NotificationLog::class)->findOneBy(['eventType' => 'customer_ticket_resolved']);
+        self::assertNotNull($log);
+        self::assertTrue($log->isSent());
+
+        self::ensureKernelShutdown();
+        $customerClient = static::createClient();
+        $customerClient->loginUser($customer);
+        $customerClient->request('GET', sprintf('/portal/customer/tickets/%d', $ticket->getId()));
+        self::assertResponseIsSuccessful();
+        $html = $customerClient->getResponse()->getContent() ?? '';
+        self::assertStringContainsString('Lösning', $html);
+        self::assertStringContainsString('Vi uppdaterade skrivardrivrutinen och startade om spoolern. Allt fungerar igen.', $html);
+    }
+
     public function testInternalTechnicianCommentIsHiddenFromCustomerAndSendsNoEmail(): void
     {
         [, $technician, $customer, $ticket] = $this->createTicketFixture();
@@ -353,7 +406,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $csvPayload = json_encode([
             'filename' => 'sharepoint-export.csv',
             'delimiter' => ';',
-            'headers' => ['Ämne', 'Beskrivning', 'Referens', 'Avsändare', 'E-post', 'Status', 'Prioritet', 'Händelse', 'Kommentar', 'Datum', 'Aktör'],
+            'headers' => ['Ämne', 'Beskrivning', 'Referens', 'Avsändare', 'E-post', 'Status', 'Prioritet', 'Åtgärd', 'Händelse', 'Kommentar', 'Datum', 'Aktör'],
             'rows' => [
                 [
                     'Ämne' => 'Accesskort fungerar inte',
@@ -363,6 +416,7 @@ final class TicketCommentNotificationTest extends WebTestCase
                     'E-post' => 'kund@csv.test',
                     'Status' => 'Öppen',
                     'Prioritet' => 'Hög',
+                    'Åtgärd' => 'Kortläsaren startades om och lokal cache rensades.',
                     'Händelse' => 'Ärende skapat',
                     'Kommentar' => 'Registrerat via exportfil.',
                     'Datum' => '2026-04-18T08:00:00+00:00',
@@ -376,6 +430,7 @@ final class TicketCommentNotificationTest extends WebTestCase
                     'E-post' => '',
                     'Status' => '',
                     'Prioritet' => '',
+                    'Åtgärd' => '',
                     'Händelse' => 'Tekniker uppdaterade ärendet',
                     'Kommentar' => 'Kortläsaren startades om och loggar samlades in.',
                     'Datum' => '2026-04-18T10:15:00+00:00',
@@ -390,6 +445,7 @@ final class TicketCommentNotificationTest extends WebTestCase
                 'requester_email' => 'E-post',
                 'status' => 'Status',
                 'priority' => 'Prioritet',
+                'resolution_body' => 'Åtgärd',
                 'event_title' => 'Händelse',
                 'event_body' => 'Kommentar',
                 'event_date' => 'Datum',
@@ -429,6 +485,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $ticket = $this->entityManager->getRepository(Ticket::class)->findOneBy(['subject' => 'Accesskort fungerar inte']);
         self::assertNotNull($ticket);
         self::assertSame('Kundens accesskort öppnar inte ytterdörren längre.', $ticket->getSummary());
+        self::assertSame('Kortläsaren startades om och lokal cache rensades.', $ticket->getResolutionSummary());
 
         $import = $this->entityManager->getRepository(ExternalTicketImport::class)->findOneBy(['ticket' => $ticket]);
         self::assertNotNull($import);
@@ -4280,6 +4337,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $form = $crawler->filter(sprintf('form[action="/portal/technician/tickets/%d"]', $ticket->getId()))->form([
             'subject' => $ticket->getSubject(),
             'summary' => $ticket->getSummary(),
+            'resolution_summary' => 'Bilagorna verifierades och ärendet kan nu stängas.',
             'status' => TicketStatus::CLOSED->value,
             'visibility' => $ticket->getVisibility()->value,
             'request_type' => $ticket->getRequestType()->value,
@@ -4354,6 +4412,7 @@ final class TicketCommentNotificationTest extends WebTestCase
         $form = $crawler->filter(sprintf('form[action="/portal/technician/tickets/%d"]', $ticket->getId()))->form([
             'subject' => $ticket->getSubject(),
             'summary' => $ticket->getSummary(),
+            'resolution_summary' => 'Bilagorna verifierades och kan arkiveras senare.',
             'status' => TicketStatus::CLOSED->value,
             'visibility' => $ticket->getVisibility()->value,
             'request_type' => $ticket->getRequestType()->value,

@@ -15,6 +15,7 @@ use App\Module\Ticket\Enum\TicketVisibility;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class TicketImportExportTest extends WebTestCase
@@ -68,5 +69,46 @@ final class TicketImportExportTest extends WebTestCase
         $content = (string) $this->client->getResponse()->getContent();
         self::assertStringContainsString('Stängd', $content);
         self::assertStringContainsString('2026-04-18 12:34', $content);
+    }
+
+    public function testAdminCanPreviewUploadedSharepointCsvWithoutClientPayload(): void
+    {
+        $admin = new User('admin@example.test', 'Ada', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'AdminPassword123'));
+
+        $this->entityManager->persist($admin);
+        $this->entityManager->flush();
+
+        $path = tempnam(sys_get_temp_dir(), 'sharepoint-import-');
+        self::assertIsString($path);
+        file_put_contents($path, "\xEF\xBB\xBF\"Ärende ID\",\"Datum\",\"Beskrivning av problem\",\"Namn\",\"Ansvarig Tekniker\",\"Klart  datum\",\"Status\",\"Prio\",\"Ev. kommentar\",\"Åtgärd\"\n\"2\",\"2025-08-06\",\"Hei !\nKan dere bistå med å sjekke stasjonær pc ?\",\"Gisle\",\"Paul\",,\"Avslutad\",\"Mellan prio\",\"Ringt och mailat utan svar\",\"Fjärrstyrt och rensat disk\"\n");
+
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/portal/admin/import-export/arendeimport');
+        $token = (string) $this->client->getCrawler()->filter('input[name="_token"]')->attr('value');
+
+        $this->client->request(
+            'POST',
+            '/portal/admin/import-export/arendeimport/forhandsgranska',
+            [
+                '_token' => $token,
+                'import_source_system' => 'sharepoint',
+                'import_csv_payload' => '',
+                'status' => TicketStatus::NEW->value,
+                'visibility' => TicketVisibility::PRIVATE->value,
+                'request_type' => TicketRequestType::INCIDENT->value,
+                'impact_level' => TicketImpactLevel::SINGLE_USER->value,
+                'priority' => TicketPriority::NORMAL->value,
+            ],
+            [
+                'import_csv_file' => new UploadedFile($path, 'Åtgärdslistan.csv', 'text/csv', null, true),
+            ],
+        );
+
+        self::assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('Torrkörning och förhandsgranskning', $content);
+        self::assertStringContainsString('Hei !', $content);
+        self::assertStringContainsString('SharePoint / 2', $content);
     }
 }

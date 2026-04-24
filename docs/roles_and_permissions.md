@@ -1,4 +1,4 @@
-# Roller och behorigheter
+# Roller och behörigheter
 
 ## Roller i systemet
 
@@ -8,41 +8,41 @@
 - `admin`
 - `super_admin`
 
-## Overgripande ansvar
+## Övergripande ansvar
 
 ### Privatkund
 
-- skapar eget konto via sjalvregistrering om funktionen ar aktiverad
+- skapar eget konto via självregistrering om funktionen är aktiverad
 - ser sina egna tickets
 - kan kommentera sina tickets
-- har inte foretagsdelning
+- har inte företagsdelning
 
 ### Kund
 
-- ar normalt kopplad till ett foretag
+- är normalt kopplad till ett företag
 - ser egna tickets
-- kan se foretagsdelade tickets om visibility tillater det
-- kan kommentera tickets som kunden far se
+- kan se företagsdelade tickets om visibility tillåter det
+- kan kommentera tickets som kunden får se
 
 ### Tekniker
 
 - arbetar i teknikerportalen
 - kan skapa tickets
-- kan ta over och uppdatera tickets inom sina tillatna arbetsfloden
+- kan ta över och uppdatera tickets inom sina tillåtna arbetsflöden
 - kan skriva interna och kundsynliga kommentarer
-- kan bidra till kunskapsbasen nar installningar tillater det
+- kan bidra till kunskapsbasen när inställningar tillåter det
 
 ### Admin
 
-- har tillgang till adminportalen
-- kan hantera foretag, team, anvandare, mail, innehall, SLA och driftsektioner
-- kan godkanna eller avvisa draftgranskning for inkommande mail
-- kan koa databasjobb och uppdateringsjobb
+- har tillgång till adminportalen
+- kan hantera företag, team, användare, mail, innehåll, SLA, driftstatus och vanliga admininställningar
+- kan godkänna eller avvisa draftgranskning för inkommande mail
 
 ### Super admin
 
-- ar en admin med hogsta interna behorighet
-- anvands framfor allt for forsta installationen och full administrativ kontroll
+- är en admin med högsta interna behörighet
+- används framför allt för första installationen och full administrativ kontroll
+- ansvarar för systemunderhåll som underhållsläge, databasjobb, backuper, migreringar, koduppdateringar, post-update tasks och jobbköer
 
 ## Ticketvisibility
 
@@ -54,44 +54,48 @@ Ticket kan vara:
 
 Kund kan se ett ticket om:
 
-- kunden ar requester
-- eller ticketet ar `company_shared` och kunden tillhor samma foretag
+- kunden är requester
+- eller ticketet är `company_shared` och kunden tillhör samma företag
 
 Kund kan inte se:
 
 - `internal_only`
-- tickets utan relation till kunden eller kundens foretag
+- tickets utan relation till kunden eller kundens företag
 
 ## Intern samarbetsmodell
 
-Internt arbete pa ticket far goras av:
+Internt arbete på ticket får göras av:
 
 - admin och super admin
 - ansvarig tekniker
-- tekniker i samma tilldelade team dar flodet tillater det
+- tekniker i samma tilldelade team där flödet tillåter det
 
-Detaljredigering ar mer restriktiv an kommentering. Admin har bredare kontroll an tekniker.
+Detaljredigering är mer restriktiv än kommentering. Admin har bredare kontroll än tekniker.
 
-## Innehallsstyrning
+## Innehållsstyrning
 
 ### Nyheter
 
 - admin kan skapa och uppdatera nyheter
-- tekniker har egen nyhetsvy och kan skapa/uppdatera nyheter i teknikerflodet
+- tekniker har egen nyhetsvy och kan skapa/uppdatera nyheter i teknikerflödet
 
 ### Kunskapsbas
 
 - admin kan hantera alla delar
-- tekniker kan hantera tillatna malgrupper enligt systeminstallningar
-- publik och kundsynlighet styrs av kunskapsbasinstallningarna
+- tekniker kan hantera tillåtna målgrupper enligt systeminställningar
+- publik och kundsynlighet styrs av kunskapsbasinställningarna
 
 ## Driftstyrning
 
-Foljande ar adminansvar i nulaget:
+Följande är superadminansvar:
 
-- underhallslage
-- driftstatuskonfiguration
-- mailservrar och supportinkorgar
+- underhållsläge
 - databashantering
 - koduppdateringar och post-update tasks
-- jobbkoer och loggar
+- jobbköer och loggar
+
+Följande ligger kvar hos admin:
+
+- driftstatuskonfiguration
+- mailservrar och supportinkorgar
+- innehåll, SLA, identitet och övriga dagliga adminflöden

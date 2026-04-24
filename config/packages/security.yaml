@@ -20,6 +20,7 @@ security:
                 login_path: app_login
                 check_path: app_login
                 default_target_path: app_portal_entry
+                success_handler: App\Module\Identity\Security\LoginSuccessHandler
                 enable_csrf: true
             logout:
                 path: app_logout

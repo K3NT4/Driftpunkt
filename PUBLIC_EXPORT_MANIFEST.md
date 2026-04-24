@@ -1,6 +1,6 @@
 # Public Export Manifest
 
-Skapad: 2026-04-21T18:00:26+00:00
+Skapad: 2026-04-24T19:34:59+00:00
 
 ## Källrepo
 
@@ -44,6 +44,7 @@ Skapad: 2026-04-21T18:00:26+00:00
 - `bin/phpunit`
 - `composer.json`
 - `composer.lock`
+- `config/bootstrap_env.php`
 - `config/bundles.php`
 - `config/packages/cache.yaml`
 - `config/packages/doctrine.yaml`
@@ -66,6 +67,7 @@ Skapad: 2026-04-21T18:00:26+00:00
 - `docs/admin_information_architecture.md`
 - `docs/customer_portal_experience.md`
 - `docs/data_model.md`
+- `docs/debian_server_setup.md`
 - `docs/documentation_reuse_and_plan.md`
 - `docs/driftpunkt_ticket_system_spec.md`
 - `docs/driftpunktlogo ikon.png`
@@ -78,6 +80,7 @@ Skapad: 2026-04-21T18:00:26+00:00
 - `docs/mail_configuration_guide.md`
 - `docs/mail_polling_operations.md`
 - `docs/mail_processing_rules.md`
+- `docs/nas_docker_setup.md`
 - `docs/operational_model.md`
 - `docs/product_scope_and_mvp.md`
 - `docs/public-assets/branding/logo-icon.png`
@@ -156,10 +159,7 @@ Skapad: 2026-04-21T18:00:26+00:00
 - `migrations/Version20260419120000.php`
 - `migrations/Version20260419130000.php`
 - `migrations/Version20260420190000.php`
-- `migrations/Version20260421090000.php`
-- `migrations/Version20260421100000.php`
-- `migrations/Version20260421110000.php`
-- ... och ytterligare 135 filer
+- ... och ytterligare 172 filer
 
 ## Överhoppade sökvägar i denna körning
 

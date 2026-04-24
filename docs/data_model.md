@@ -1,108 +1,110 @@
-# Datamodell i nulaget
+# Datamodell i nuläget
 
-Detta ar en funktionell oversikt over de viktigaste entiteterna. Dokumentet beskriver ansvar, inte varje kolumn.
+Detta är en funktionell översikt över de viktigaste entiteterna. Dokumentet beskriver ansvar, inte varje kolumn.
 
 ## Identitet
 
 ### `User`
 
-Anvandare med:
+Användare med:
 
 - e-post och namn
 - rolltyp
 - aktiv/inaktiv-status
-- hashat losenord
+- hashat lösenord
 - MFA-flagga
 - notifieringspreferenser
-- eventuell koppling till foretag och teknikteam
+- eventuell koppling till företag och teknikteam
 
 ### `Company`
 
-Foretagsobjekt med:
+Företagsobjekt med:
 
-- namn och primar e-post
-- installning for delade tickets
-- egen ticketprefix/sekvens nar det behovs
+- namn och primär e-post
+- eventuell koppling till moderbolag och dotterbolag
+- inställning för delade tickets
+- val för om moderbolag får se delade tickets från bolaget
+- egen ticketprefix/sekvens när det behövs
 
 ### `TechnicianTeam`
 
-Grupp for tekniker som anvands i tilldelning och samarbete.
+Grupp för tekniker som används i tilldelning och samarbete.
 
 ### `PasswordResetRequest`
 
-Engangstoken for losenordsaterstallning med giltighetstid och koppling till anvandare.
+Engångstoken för lösenordsåterställning med giltighetstid och koppling till användare.
 
 ## Tickets
 
 ### `Ticket`
 
-Karnobjektet i systemet. Innehaller bland annat:
+Kärnobjektet i systemet. Innehåller bland annat:
 
 - referens
-- amne och sammanfattning
+- ämne och sammanfattning
 - status och visibility
-- requester, foretag, ansvarig tekniker och team
-- prioritet, paverkan, request type och eskalering
+- requester, företag, ansvarig tekniker och team
+- prioritet, påverkan, request type och eskalering
 - SLA-koppling
-- `closedAt` for definitivt stangda tickets
+- `closedAt` för definitivt stängda tickets
 
 ### `TicketComment`
 
-Kommentar pa ticket med intern eller kundsynlig karaktar.
+Kommentar på ticket med intern eller kundsynlig karaktär.
 
 ### `TicketCommentAttachment`
 
-Bilaga kopplad till kommentar, med stod for lagring, nedladdning, preview och senare zip-arkivering.
+Bilaga kopplad till kommentar, med stöd för lagring, nedladdning, preview och senare zip-arkivering.
 
 ### `TicketCategory`
 
-Kategori for gruppering, sortering och routing.
+Kategori för gruppering, sortering och routing.
 
 ### `SlaPolicy`
 
-Svarstider och gransvarden som anvands i SLA-uppfoljning.
+Svarstider och gränsvärden som används i SLA-uppföljning.
 
 ### `TicketRoutingRule`
 
-Regler for automatisk eller semiautomatisk styrning av tickets.
+Regler för automatisk eller semiautomatisk styrning av tickets.
 
 ### `TicketIntakeField`
 
-Konfigurerbart falt i intakefloden.
+Konfigurerbart fält i intakeflöden.
 
 ### `TicketIntakeTemplate`
 
-Mall/versionerad uppsattning av intakefalt och guidning.
+Mall/versionerad uppsättning av intakefält och guidning.
 
 ### `TicketImportTemplate`
 
-Mall for importfloden i admin.
+Mall för importflöden i admin.
 
 ### `ImportExportRun`
 
-Loggning av import- och exportkorningar.
+Loggning av import- och exportkörningar.
 
 ### `ExternalTicketImport` och `ExternalTicketEvent`
 
-Stod for importerade arenden och handelser fran externa kallsystem eller filformat.
+Stöd för importerade ärenden och händelser från externa källsystem eller filformat.
 
 ### `TicketAuditLog`
 
-Intern spårbarhet for viktiga handelser pa ticketnivå.
+Intern spårbarhet för viktiga händelser på ticketnivå.
 
 ## Mail
 
 ### `MailServer`
 
-Beskriver anslutning och riktning for mailserver, till exempel inkommande eller utgaende.
+Beskriver anslutning och riktning för mailserver, till exempel inkommande eller utgående.
 
 ### `SupportMailbox`
 
-En inkorg som kan pollas eller lasas fran spoolflode.
+En inkorg som kan pollas eller läsas från spoolflöde.
 
 ### `CompanyMailOverride`
 
-Overstyrning som kopplar avsandare eller doman till visst foretag eller mailbeteende.
+Överstyrning som kopplar avsändare eller domän till visst företag eller mailbeteende.
 
 ### `IncomingMail`
 
@@ -110,41 +112,41 @@ Rått eller processat inkommande mail med metadata, processresultat och bilagere
 
 ### `DraftTicketReview`
 
-Adminstyrt granskningsobjekt nar inkommande mail inte kan aktiveras direkt som normalt ticketflode.
+Adminstyrt granskningsobjekt när inkommande mail inte kan aktiveras direkt som normalt ticketflöde.
 
-## Innehall och kommunikation
+## Innehåll och kommunikation
 
 ### `NewsArticle`
 
-Publik eller portalnara nyhet, inklusive planerat underhall.
+Publik eller portalnära nyhet, inklusive planerat underhåll.
 
 ### `KnowledgeBaseEntry`
 
-Artikel, FAQ eller smart tips for publik, kund eller bada.
+Artikel, FAQ eller smart tips för publik, kund eller båda.
 
 ### `NotificationLog`
 
-Logg over notifieringshandelser, mottagare, status och amnesrad.
+Logg över notifieringshändelser, mottagare, status och ämnesrad.
 
 ## System och drift
 
 ### `SystemSetting`
 
-Central nyckel-varde-lagring for produktens installningar.
+Central nyckel-värde-lagring för produktens inställningar.
 
-Installningar styr bland annat:
+Inställningar styr bland annat:
 
-- kundinloggning och sjalvregistrering
+- kundinloggning och självregistrering
 - kunskapsbas
 - startsida och supportwidget
 - kontaktsida
 - driftstatus
-- underhallsmeddelanden
+- underhållsmeddelanden
 - SLA-varningar
 - ticketbilagepolicy
 
 ## Databasstrategi
 
-- SQLite ar standard i lokal miljo
+- MariaDB är standard i lokal miljö och drift
 - Doctrine-migrationer beskriver schemautvecklingen
-- funktionella tester bygger schema direkt fran metadata
+- funktionella tester bygger schema direkt från metadata
