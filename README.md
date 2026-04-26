@@ -10,7 +10,7 @@
 
 Driftpunkt är ett Symfony-baserat support- och driftsystem med publik webb, kundportal, teknikerportal och adminyta i samma produkt.
 
-README:n beskriver nuläget i koden i detta repo, version 1.0.7: fungerande MVP-flöden för ticketing, kunddialog, e-postingest, driftstatus, rapportering, administration, loggning och release/driftarbete. Miljöspecifika integrationer och viss intern driftsetup kan fortfarande leva utanför repo eller exportflöde.
+README:n beskriver nuläget i koden i detta repo, version 1.0.8: fungerande MVP-flöden för ticketing, kunddialog, e-postingest, SharePoint/CSV-import med skuggpersoner, driftstatus, rapportering, administration, loggning och release/driftarbete. Miljöspecifika integrationer och viss intern driftsetup kan fortfarande leva utanför repo eller exportflöde.
 
 ## Översikt
 
@@ -52,6 +52,7 @@ Driftpunkt innehåller bland annat:
 - hantera företag, användare, team och andra identitetsobjekt
 - skapa och publicera nyheter och kunskapsbasinnehåll
 - arbeta med telefonstödsdata i admin
+- importera ärenden från SharePoint/CSV och behålla kund- och teknikernamn som skuggpersoner tills riktiga konton skapas eller kopplas
 - konfigurera mail, supportinkorgar, driftstatus, inställningar och underhåll
 - följa BI-light-rapporter för inflöde, backlog, SLA-hälsa, risker, företag och intern arbetslast
 - konfigurera och skicka månadsrapporter för företag

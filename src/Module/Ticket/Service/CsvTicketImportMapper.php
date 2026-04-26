@@ -24,7 +24,8 @@ final class CsvTicketImportMapper
      *     subject: string,
      *     summary: string,
      *     import: ExternalTicketImport,
-     *     eventCount: int
+     *     eventCount: int,
+     *     importedPeople: array<string, array{displayName: string}>
      * }
      */
     public function mapToTicketImport(
@@ -46,7 +47,8 @@ final class CsvTicketImportMapper
      *     subject: string,
      *     summary: string,
      *     import: ExternalTicketImport,
-     *     eventCount: int
+     *     eventCount: int,
+     *     importedPeople: array<string, array{displayName: string}>
      * }>
      */
     public function mapToTicketImports(
@@ -122,6 +124,7 @@ final class CsvTicketImportMapper
 
             $ticket->setClosedAt($this->resolveClosedAt($ticketRow, $fieldMapping, $ticket));
             $ticket->setResolutionSummary($this->mappedValue($ticketRow, $fieldMapping, 'resolution_body'));
+            $importedPeople = $this->buildImportedPeople($ticketRow, $fieldMapping);
 
             $import = new ExternalTicketImport($ticket, $sourceSystem, $sourceLabel);
             $import
@@ -153,6 +156,7 @@ final class CsvTicketImportMapper
                 'summary' => $summary,
                 'import' => $import,
                 'eventCount' => \count($events),
+                'importedPeople' => $importedPeople,
             ];
         }
 
@@ -317,13 +321,35 @@ final class CsvTicketImportMapper
      */
     private function looksLikeTicketRow(array $row, array $fieldMapping): bool
     {
-        foreach (['subject', 'summary', 'reference', 'requester_name', 'requester_email', 'status', 'priority', 'closed_at'] as $field) {
+        foreach (['subject', 'summary', 'reference', 'requester_name', 'requester_email', 'assignee_name', 'status', 'priority', 'closed_at'] as $field) {
             if ('' !== $this->mappedValue($row, $fieldMapping, $field)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * @param array<string, string> $row
+     * @param array<string, string> $fieldMapping
+     * @return array<string, array{displayName: string}>
+     */
+    private function buildImportedPeople(array $row, array $fieldMapping): array
+    {
+        $people = [];
+        $requesterName = $this->mappedValue($row, $fieldMapping, 'requester_name');
+        $assigneeName = $this->mappedValue($row, $fieldMapping, 'assignee_name');
+
+        if ('' !== $requesterName) {
+            $people['requester'] = ['displayName' => $requesterName];
+        }
+
+        if ('' !== $assigneeName) {
+            $people['assignee'] = ['displayName' => $assigneeName];
+        }
+
+        return $people;
     }
 
     /**

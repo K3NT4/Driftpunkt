@@ -6,7 +6,9 @@ namespace App\Tests\Functional;
 
 use App\Module\Identity\Entity\User;
 use App\Module\Identity\Enum\UserType;
+use App\Module\Ticket\Entity\ImportedTicketPerson;
 use App\Module\Ticket\Entity\Ticket;
+use App\Module\Ticket\Enum\ImportedTicketPersonRole;
 use App\Module\Ticket\Enum\TicketImpactLevel;
 use App\Module\Ticket\Enum\TicketPriority;
 use App\Module\Ticket\Enum\TicketRequestType;
@@ -110,5 +112,210 @@ final class TicketImportExportTest extends WebTestCase
         self::assertStringContainsString('Torrkörning och förhandsgranskning', $content);
         self::assertStringContainsString('Hei !', $content);
         self::assertStringContainsString('SharePoint / 2', $content);
+    }
+
+    public function testAdminCsvImportCreatesShadowPeopleWhenSharepointNamesDoNotMatchUsers(): void
+    {
+        $admin = new User('admin@example.test', 'Ada', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'AdminPassword123'));
+
+        $this->entityManager->persist($admin);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/portal/admin/import-export/arendeimport');
+        $token = (string) $this->client->getCrawler()->filter('input[name="_token"]')->attr('value');
+
+        $this->client->request(
+            'POST',
+            '/portal/technician/tickets',
+            $this->sharepointImportRequest($token, $this->sharepointCsvPayload()),
+            [],
+            ['HTTP_REFERER' => '/portal/admin/import-export/arendeimport'],
+        );
+
+        self::assertResponseRedirects('/portal/admin/import-export/arendeimport');
+
+        $ticket = $this->entityManager->getRepository(Ticket::class)->findOneBy([
+            'subject' => 'Importerat CSV-ärende från SharePoint',
+        ]);
+        self::assertInstanceOf(Ticket::class, $ticket);
+        self::assertNull($ticket->getRequester());
+        self::assertNull($ticket->getAssignee());
+        self::assertSame('Gisle', $ticket->getImportedRequesterPerson()?->getDisplayName());
+        self::assertSame('Paul', $ticket->getImportedAssigneePerson()?->getDisplayName());
+        self::assertSame('Gisle', $ticket->getRequesterDisplayName());
+        self::assertSame('Paul', $ticket->getAssigneeDisplayName());
+    }
+
+    public function testAdminCsvImportLinksUniqueExistingRequesterAndAssigneeByDisplayName(): void
+    {
+        $admin = new User('admin@example.test', 'Ada', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'AdminPassword123'));
+        $requester = new User('gisle@example.test', 'Gisle', '', UserType::PRIVATE_CUSTOMER);
+        $assignee = new User('paul@example.test', 'Paul', '', UserType::TECHNICIAN);
+
+        $this->entityManager->persist($admin);
+        $this->entityManager->persist($requester);
+        $this->entityManager->persist($assignee);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/portal/admin/import-export/arendeimport');
+        $token = (string) $this->client->getCrawler()->filter('input[name="_token"]')->attr('value');
+
+        $this->client->request(
+            'POST',
+            '/portal/technician/tickets',
+            $this->sharepointImportRequest($token, $this->sharepointCsvPayload()),
+            [],
+            ['HTTP_REFERER' => '/portal/admin/import-export/arendeimport'],
+        );
+
+        self::assertResponseRedirects('/portal/admin/import-export/arendeimport');
+
+        $ticket = $this->entityManager->getRepository(Ticket::class)->findOneBy([
+            'subject' => 'Importerat CSV-ärende från SharePoint',
+        ]);
+        self::assertInstanceOf(Ticket::class, $ticket);
+        self::assertSame($requester->getId(), $ticket->getRequester()?->getId());
+        self::assertSame($assignee->getId(), $ticket->getAssignee()?->getId());
+        self::assertTrue($ticket->getImportedRequesterPerson()?->isLinked());
+        self::assertTrue($ticket->getImportedAssigneePerson()?->isLinked());
+        self::assertSame(ImportedTicketPersonRole::REQUESTER, $ticket->getImportedRequesterPerson()?->getRole());
+        self::assertSame(ImportedTicketPersonRole::ASSIGNEE, $ticket->getImportedAssigneePerson()?->getRole());
+    }
+
+    public function testAdminCsvPreviewShowsShadowPeopleBeforeImport(): void
+    {
+        $admin = new User('admin@example.test', 'Ada', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'AdminPassword123'));
+
+        $this->entityManager->persist($admin);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/portal/admin/import-export/arendeimport');
+        $token = (string) $this->client->getCrawler()->filter('input[name="_token"]')->attr('value');
+
+        $this->client->request(
+            'POST',
+            '/portal/admin/import-export/arendeimport/forhandsgranska',
+            $this->sharepointImportRequest($token, $this->sharepointCsvPayload()),
+        );
+
+        self::assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('Gisle', $content);
+        self::assertStringContainsString('Paul', $content);
+        self::assertStringContainsString('Skuggperson', $content);
+    }
+
+    public function testAdminCanLinkShadowAssigneeToExistingTechnician(): void
+    {
+        $admin = new User('admin@example.test', 'Ada', 'Admin', UserType::ADMIN);
+        $admin->setPassword($this->passwordHasher->hashPassword($admin, 'AdminPassword123'));
+
+        $this->entityManager->persist($admin);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/portal/admin/import-export/arendeimport');
+        $createToken = (string) $this->client->getCrawler()->filter('input[name="_token"]')->attr('value');
+        $this->client->request(
+            'POST',
+            '/portal/technician/tickets',
+            $this->sharepointImportRequest($createToken, $this->sharepointCsvPayload()),
+            [],
+            ['HTTP_REFERER' => '/portal/admin/import-export/arendeimport'],
+        );
+
+        $ticket = $this->entityManager->getRepository(Ticket::class)->findOneBy([
+            'subject' => 'Importerat CSV-ärende från SharePoint',
+        ]);
+        self::assertInstanceOf(Ticket::class, $ticket);
+        $person = $ticket->getImportedAssigneePerson();
+        self::assertInstanceOf(ImportedTicketPerson::class, $person);
+
+        $technician = new User('paul@example.test', 'Paul', '', UserType::TECHNICIAN);
+        $this->entityManager->persist($technician);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/portal/admin/import-export/arendeimport');
+        $linkForm = $crawler->filter(sprintf('form[data-imported-person-link-form="%d"]', $person->getId()));
+        self::assertCount(1, $linkForm);
+        $linkToken = (string) $linkForm->filter('input[name="_token"]')->attr('value');
+
+        $this->client->request('POST', sprintf('/portal/admin/import-export/skuggpersoner/%d/koppla', $person->getId()), [
+            '_token' => $linkToken,
+            'user_id' => (string) $technician->getId(),
+        ]);
+
+        self::assertResponseRedirects('/portal/admin/import-export/arendeimport');
+        $updatedTicket = $this->entityManager->getRepository(Ticket::class)->find($ticket->getId());
+        $updatedPerson = $this->entityManager->getRepository(ImportedTicketPerson::class)->find($person->getId());
+        self::assertInstanceOf(Ticket::class, $updatedTicket);
+        self::assertInstanceOf(ImportedTicketPerson::class, $updatedPerson);
+        self::assertSame($technician->getId(), $updatedTicket->getAssignee()?->getId());
+        self::assertSame($technician->getId(), $updatedPerson->getLinkedUser()?->getId());
+        self::assertTrue($updatedPerson->isLinked());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function sharepointCsvPayload(): array
+    {
+        return [
+            'filename' => 'Åtgärdslistan.csv',
+            'delimiter' => ',',
+            'headers' => ['Ärende ID', 'Datum', 'Beskrivning av problem', 'Namn', 'Ansvarig Tekniker', 'Status', 'Prio'],
+            'rows' => [[
+                'Ärende ID' => '2',
+                'Datum' => '2025-08-06',
+                'Beskrivning av problem' => 'Hei ! Kan dere bistå med å sjekke stasjonær pc ?',
+                'Namn' => 'Gisle',
+                'Ansvarig Tekniker' => 'Paul',
+                'Status' => 'Avslutad',
+                'Prio' => 'Mellan prio',
+            ]],
+            'fieldMapping' => [
+                'reference' => 'Ärende ID',
+                'event_date' => 'Datum',
+                'summary' => 'Beskrivning av problem',
+                'requester_name' => 'Namn',
+                'assignee_name' => 'Ansvarig Tekniker',
+                'status' => 'Status',
+                'priority' => 'Prio',
+            ],
+            'rowTargets' => ['0' => 'ticket'],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $csvPayload
+     * @return array<string, mixed>
+     */
+    private function sharepointImportRequest(string $token, array $csvPayload): array
+    {
+        return [
+            '_token' => $token,
+            'subject' => '',
+            'summary' => '',
+            'import_source_system' => 'sharepoint',
+            'import_csv_payload' => json_encode($csvPayload, \JSON_THROW_ON_ERROR),
+            'duplicate_strategy' => 'warn',
+            'status' => TicketStatus::NEW->value,
+            'visibility' => TicketVisibility::PRIVATE->value,
+            'request_type' => TicketRequestType::INCIDENT->value,
+            'impact_level' => TicketImpactLevel::SINGLE_USER->value,
+            'priority' => TicketPriority::NORMAL->value,
+            'escalation_level' => 'none',
+            'company_id' => '',
+            'requester_id' => '',
+            'assignee_id' => '',
+            'assigned_team_id' => '',
+            'sla_policy_id' => '',
+        ];
     }
 }

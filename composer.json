@@ -1,7 +1,7 @@
 {
     "name": "driftpunkt/driftpunkt",
     "description": "Driftpunkt support- och driftsystem",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "type": "project",
     "license": "proprietary",
     "minimum-stability": "stable",

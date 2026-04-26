@@ -1,6 +1,6 @@
 # Public Export Manifest
 
-Skapad: 2026-04-26T11:20:38+00:00
+Skapad: 2026-04-26T13:39:57+00:00
 
 ## Källrepo
 
@@ -175,7 +175,7 @@ Endast följande `docs/`-sökvägar ingår i exporten:
 - `migrations/Version20260423213000.php`
 - `migrations/Version20260424120000.php`
 - `migrations/Version20260424133000.php`
-- ... och ytterligare 181 filer
+- ... och ytterligare 185 filer
 
 ## Överhoppade sökvägar i denna körning
 

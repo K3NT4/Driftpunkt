@@ -355,10 +355,10 @@ För kundmiljöer där rollback är viktigt bör Driftpunkt på sikt driftsätta
 
 ```text
 /var/www/driftpunkt/
-├── current -> releases/1.0.7
+├── current -> releases/1.0.8
 ├── releases/
 │   ├── 1.0.6
-│   └── 1.0.7
+│   └── 1.0.8
 └── shared/
     ├── .env.local
     ├── var/

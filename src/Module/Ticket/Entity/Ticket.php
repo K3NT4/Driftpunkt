@@ -12,6 +12,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use App\Module\Ticket\Enum\TicketImpactLevel;
 use App\Module\Ticket\Enum\TicketEscalationLevel;
+use App\Module\Ticket\Enum\ImportedTicketPersonRole;
 use App\Module\Ticket\Enum\TicketPriority;
 use App\Module\Ticket\Enum\TicketRequestType;
 use App\Module\Ticket\Enum\TicketStatus;
@@ -121,6 +122,13 @@ class Ticket
     #[ORM\OrderBy(['createdAt' => 'DESC'])]
     private Collection $auditLogs;
 
+    /**
+     * @var Collection<int, ImportedTicketPerson>
+     */
+    #[ORM\OneToMany(mappedBy: 'ticket', targetEntity: ImportedTicketPerson::class, orphanRemoval: true, cascade: ['persist'])]
+    #[ORM\OrderBy(['role' => 'ASC', 'id' => 'ASC'])]
+    private Collection $importedPeople;
+
     #[ORM\OneToOne(mappedBy: 'ticket', targetEntity: ExternalTicketImport::class, orphanRemoval: true, cascade: ['persist', 'remove'])]
     private ?ExternalTicketImport $externalImport = null;
 
@@ -146,6 +154,7 @@ class Ticket
         $this->escalationLevel = $escalationLevel;
         $this->comments = new ArrayCollection();
         $this->auditLogs = new ArrayCollection();
+        $this->importedPeople = new ArrayCollection();
         $this->setStatus($status);
     }
 
@@ -549,6 +558,48 @@ class Ticket
         return $this;
     }
 
+    /**
+     * @return Collection<int, ImportedTicketPerson>
+     */
+    public function getImportedPeople(): Collection
+    {
+        return $this->importedPeople;
+    }
+
+    public function addImportedPerson(ImportedTicketPerson $person): self
+    {
+        if (!$this->importedPeople->contains($person)) {
+            $this->importedPeople->add($person);
+            $person->setTicket($this);
+        }
+
+        return $this;
+    }
+
+    public function getImportedRequesterPerson(): ?ImportedTicketPerson
+    {
+        return $this->findImportedPersonByRole(ImportedTicketPersonRole::REQUESTER);
+    }
+
+    public function getImportedAssigneePerson(): ?ImportedTicketPerson
+    {
+        return $this->findImportedPersonByRole(ImportedTicketPersonRole::ASSIGNEE);
+    }
+
+    public function getRequesterDisplayName(): string
+    {
+        return $this->requester?->getDisplayName()
+            ?: $this->getImportedRequesterPerson()?->getDisplayName()
+            ?: 'Okänd/ej satt';
+    }
+
+    public function getAssigneeDisplayName(): string
+    {
+        return $this->assignee?->getDisplayName()
+            ?: $this->getImportedAssigneePerson()?->getDisplayName()
+            ?: 'Ej tilldelad';
+    }
+
     public function getExternalImport(): ?ExternalTicketImport
     {
         return $this->externalImport;
@@ -559,6 +610,17 @@ class Ticket
         $this->externalImport = $externalImport;
 
         return $this;
+    }
+
+    private function findImportedPersonByRole(ImportedTicketPersonRole $role): ?ImportedTicketPerson
+    {
+        foreach ($this->importedPeople as $person) {
+            if ($person->getRole() === $role) {
+                return $person;
+            }
+        }
+
+        return null;
     }
 
     private function syncChecklistProgress(): void

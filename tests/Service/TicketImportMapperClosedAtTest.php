@@ -116,4 +116,30 @@ final class TicketImportMapperClosedAtTest extends TestCase
 
         self::assertSame('Åtgärdade problemet genom att återställa skrivarkön.', $ticket->getResolutionSummary());
     }
+
+    public function testCsvImportExtractsRequesterAndAssigneeNamesFromSharepointColumns(): void
+    {
+        $ticket = new Ticket('DP-6', '', '');
+        $mapper = new CsvTicketImportMapper();
+
+        $result = $mapper->mapToTicketImport($ticket, [
+            'headers' => ['Ärende ID', 'Namn', 'Ansvarig Tekniker', 'Beskrivning av problem'],
+            'rows' => [[
+                'Ärende ID' => '2',
+                'Namn' => 'Gisle',
+                'Ansvarig Tekniker' => 'Paul',
+                'Beskrivning av problem' => 'Minne under Excel.',
+            ]],
+            'fieldMapping' => [
+                'reference' => 'Ärende ID',
+                'requester_name' => 'Namn',
+                'assignee_name' => 'Ansvarig Tekniker',
+                'summary' => 'Beskrivning av problem',
+            ],
+            'rowTargets' => ['0' => 'ticket'],
+        ], 'sharepoint');
+
+        self::assertSame('Gisle', $result['importedPeople']['requester']['displayName'] ?? null);
+        self::assertSame('Paul', $result['importedPeople']['assignee']['displayName'] ?? null);
+    }
 }
