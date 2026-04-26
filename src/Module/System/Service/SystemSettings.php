@@ -30,6 +30,7 @@ final class SystemSettings
     public const TICKET_ATTACHMENTS_EXTERNAL_INSTRUCTIONS = 'ticket_attachments.external_instructions';
     public const FEATURE_TICKET_ATTACHMENTS_ZIP_ARCHIVING_ENABLED = 'feature.ticket_attachments_zip_archiving_enabled';
     public const TICKET_ATTACHMENTS_ZIP_ARCHIVE_AFTER_DAYS = 'ticket_attachments.zip_archive_after_days';
+    public const FEATURE_PUBLIC_TICKET_FORM_ENABLED = 'feature.public_ticket_form_enabled';
     public const FEATURE_CUSTOMER_SELF_REGISTRATION_ENABLED = 'feature.customer_self_registration_enabled';
     public const CUSTOMER_LOGIN_SMART_TIPS = 'customer_login.smart_tips';
     public const CUSTOMER_LOGIN_FAQ = 'customer_login.faq';
@@ -524,6 +525,16 @@ final class SystemSettings
             ),
             'zipArchivingEnabled' => $this->getBool(self::FEATURE_TICKET_ATTACHMENTS_ZIP_ARCHIVING_ENABLED, false),
             'zipArchiveAfterDays' => $this->getNonNegativeInt(self::TICKET_ATTACHMENTS_ZIP_ARCHIVE_AFTER_DAYS, 0),
+        ];
+    }
+
+    /**
+     * @return array{enabled: bool}
+     */
+    public function getPublicTicketFormSettings(): array
+    {
+        return [
+            'enabled' => $this->getBool(self::FEATURE_PUBLIC_TICKET_FORM_ENABLED, false),
         ];
     }
 

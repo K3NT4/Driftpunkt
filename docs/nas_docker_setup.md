@@ -7,7 +7,10 @@ Den här guiden är för att sätta upp Driftpunkt på nytt på en NAS efter att
 - NAS med Docker/Container Manager och Docker Compose
 - shell-access via SSH rekommenderas
 - Driftpunkt-koden kopierad eller klonad till NAS:en
+- MariaDB via den medföljande compose-stacken eller extern MariaDB 10.11+
+- `DATABASE_URL` som pekar på MariaDB och anger `serverVersion` med `mariadb`
 - om adminytans uppdateringsflöde ska användas måste appcontainerns `www-data` kunna skriva till applikationskoden i `/var/www/html`, inte bara till `var/`
+- om adminytans uppdateringsflöde används bör en NAS-schemalagd uppgift eller cron-worker köra `app:code-update:apply-run` för köade uppdateringar
 
 Efter ombyggd eller ny appcontainer kan kodfilerna behöva ägarrättas innan ett uppdateringspaket appliceras:
 
@@ -84,6 +87,8 @@ Compose-filen startar en `scheduler`-container som kör:
 - `app:mail:poll` varje minut
 - `app:check-ticket-sla` varje minut
 - `app:archive-ticket-attachments` runt 02:15
+
+Köade koduppdateringar från adminytan körs inte av scheduler-containern automatiskt. Använd NAS:ens schemalagda uppgifter eller cron enligt `docs/installation_and_deployment.md` om uppdateringar ska appliceras från adminytan.
 
 Kontrollera loggar:
 

@@ -552,7 +552,9 @@
             {% endfor %}
 
             {% set globalMaintenanceNotice = maintenance_notice() %}
-            {% if globalMaintenanceNotice %}
+            {% set currentRouteName = app.request.attributes.get('_route')|default('') %}
+            {% set hideAdminMaintenanceNotice = currentRouteName starts with 'app_portal_admin' and not is_granted('ROLE_SUPER_ADMIN') %}
+            {% if globalMaintenanceNotice and not hideAdminMaintenanceNotice %}
                 <div class="notice maintenance">
                     <div class="maintenance-notice-row">
                         <div class="maintenance-notice-copy">

@@ -52,15 +52,40 @@ final class CodeUpdateManagerTest extends TestCase
         $this->removeDirectory($this->projectDir);
     }
 
+    public function testItDescribesInstalledReleaseFromReleaseMetadata(): void
+    {
+        file_put_contents($this->projectDir.'/release-metadata.json', json_encode([
+            'applicationName' => 'driftpunkt/nas-release',
+            'packageType' => 'upgrade',
+            'version' => '2026.04.26',
+            'builtAt' => '2026-04-26T12:00:00+02:00',
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        $application = $this->manager->describeCurrentApplication();
+
+        self::assertSame('driftpunkt/nas-release', $application['name']);
+        self::assertSame('2026.04.26', $application['version']);
+        self::assertStringContainsString('Installerad release', $application['summary']);
+        self::assertStringContainsString('2026-04-26 12:00', $application['summary']);
+    }
+
     public function testItCanStageAndApplyValidZipPackage(): void
     {
         $zipPath = $this->createUpdatePackageZip();
+        $expectedPackageChecksum = hash_file('sha256', $zipPath);
         $uploadedFile = new UploadedFile($zipPath, 'release.zip', 'application/zip', null, true);
 
         $package = $this->manager->stageUploadedPackage($uploadedFile);
         self::assertTrue($package['valid']);
         self::assertSame('driftpunkt/release', $package['packageName']);
         self::assertSame('2.1.0', $package['packageVersion']);
+        self::assertSame('upgrade', $package['releasePackageType']);
+        self::assertTrue($package['releaseMetadataPresent']);
+        self::assertSame($expectedPackageChecksum, $package['packageChecksumSha256']);
+        self::assertGreaterThanOrEqual(1, $package['changeSummary']['modified']);
+        self::assertGreaterThanOrEqual(1, $package['changeSummary']['removed']);
+        self::assertContains('public/index.php', array_column($package['changedFiles'], 'path'));
+        self::assertNotEmpty($package['preflightChecks']);
 
         $result = $this->manager->applyStagedPackage($package['id']);
 
@@ -120,7 +145,7 @@ final class CodeUpdateManagerTest extends TestCase
         return $packageRoot;
     }
 
-    private function createUpdatePackageZip(): string
+    private function createUpdatePackageZip(string $packageType = 'upgrade', bool $corruptManifest = false): string
     {
         $packageRoot = sys_get_temp_dir().'/driftpunkt-code-package-'.bin2hex(random_bytes(4));
         mkdir($packageRoot.'/release/bin', 0777, true);
@@ -143,6 +168,7 @@ final class CodeUpdateManagerTest extends TestCase
         file_put_contents($packageRoot.'/release/src/Version.php', "<?php\nreturn '2.1.0';\n");
         file_put_contents($packageRoot.'/release/templates/base.html.twig', "<html>new</html>\n");
         file_put_contents($packageRoot.'/release/vendor/autoload.php', "<?php\n");
+        $this->writeReleaseMetadata($packageRoot.'/release', $packageType, $corruptManifest);
 
         $zipPath = tempnam(sys_get_temp_dir(), 'driftpunkt-release-');
         if (false === $zipPath) {
@@ -176,6 +202,64 @@ final class CodeUpdateManagerTest extends TestCase
         return $zipPath;
     }
 
+    private function writeReleaseMetadata(string $packageDirectory, string $packageType, bool $corruptManifest = false): void
+    {
+        $files = $this->collectReleaseFiles($packageDirectory);
+        $contentManifestSha256 = hash('sha256', json_encode($files, \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR));
+        if ($corruptManifest) {
+            $contentManifestSha256 = str_repeat('0', 64);
+        }
+
+        file_put_contents($packageDirectory.'/release-metadata.json', json_encode([
+            'applicationName' => 'driftpunkt/release',
+            'packageType' => $packageType,
+            'version' => '2.1.0',
+            'builtAt' => (new \DateTimeImmutable('2026-04-26T10:00:00+02:00'))->format(DATE_ATOM),
+            'installationMode' => 'install' === $packageType ? 'fresh_install' : 'upgrade',
+            'contentManifestSha256' => $contentManifestSha256,
+            'fileCount' => \count($files),
+            'managedPaths' => ['bin', 'config', 'public', 'src', 'templates', 'composer.json', 'composer.lock'],
+            'preflightChecklist' => [
+                'Aktivera underhållsläge',
+                'Verifiera databasanslutning',
+                'Behåll automatisk kodbackup',
+            ],
+            'files' => $files,
+        ], \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * @return list<array{path: string, sizeBytes: int, sha256: string}>
+     */
+    private function collectReleaseFiles(string $packageDirectory): array
+    {
+        $files = [];
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($packageDirectory, \FilesystemIterator::SKIP_DOTS),
+        );
+
+        foreach ($iterator as $file) {
+            if (!$file->isFile()) {
+                continue;
+            }
+
+            $relativePath = str_replace('\\', '/', substr($file->getPathname(), \strlen($packageDirectory.'/')));
+            if ('release-metadata.json' === $relativePath) {
+                continue;
+            }
+
+            $files[] = [
+                'path' => $relativePath,
+                'sizeBytes' => (int) $file->getSize(),
+                'sha256' => hash_file('sha256', $file->getPathname()),
+            ];
+        }
+
+        usort($files, static fn (array $left, array $right): int => $left['path'] <=> $right['path']);
+
+        return $files;
+    }
+
     public function testItRejectsPackageWithoutCoreApplicationFiles(): void
     {
         $zipPath = $this->createInvalidUpdatePackageZip();
@@ -188,6 +272,29 @@ final class CodeUpdateManagerTest extends TestCase
         self::assertContains('Saknar config i paketet.', $package['validationMessages']);
         self::assertContains('Saknar composer.lock i paketet.', $package['validationMessages']);
         self::assertContains('Saknar vendor/autoload.php i paketet.', $package['validationMessages']);
+    }
+
+    public function testItRejectsInstallPackageWhenStagingCodeUpdate(): void
+    {
+        $zipPath = $this->createUpdatePackageZip('install');
+        $uploadedFile = new UploadedFile($zipPath, 'driftpunkt-install.zip', 'application/zip', null, true);
+
+        $package = $this->manager->stageUploadedPackage($uploadedFile);
+
+        self::assertFalse($package['valid']);
+        self::assertSame('install', $package['releasePackageType']);
+        self::assertContains('Paketet är ett install-paket och ska användas för nyinstallation, inte som koduppgradering.', $package['validationMessages']);
+    }
+
+    public function testItRejectsPackageWhenReleaseManifestChecksumDoesNotMatch(): void
+    {
+        $zipPath = $this->createUpdatePackageZip('upgrade', true);
+        $uploadedFile = new UploadedFile($zipPath, 'driftpunkt-upgrade.zip', 'application/zip', null, true);
+
+        $package = $this->manager->stageUploadedPackage($uploadedFile);
+
+        self::assertFalse($package['valid']);
+        self::assertContains('Filmanifestet i release-metadata stämmer inte med paketets innehåll.', $package['validationMessages']);
     }
 
     private function createInvalidUpdatePackageZip(): string

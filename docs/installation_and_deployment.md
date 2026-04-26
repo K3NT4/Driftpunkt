@@ -3,19 +3,32 @@
 ## Lokala förutsättningar
 
 - PHP 8.4 eller senare
-- Composer
-- MariaDB
+- Composer 2
+- MariaDB 10.11 eller senare
+- PHP-tilläggen `ctype`, `curl`, `iconv`, `intl`, `mbstring`, `pdo`, `pdo_mysql`, `xml` och `zip`
+- `DATABASE_URL` mot MariaDB utanför `APP_ENV=test`; vid `mysql://` ska `serverVersion` innehålla `mariadb`
+- skrivbar `var/`-katalog för cache, loggar, uppladdningar och delade driftfiler
 - valfritt: Symfony CLI
 
 ## Lokal installation
 
-1. installera beroenden
+1. Installera beroenden:
 
    ```bash
    composer install
    ```
 
-2. initialisera databasen
+2. Kontrollera miljö.
+
+   Standardvärdena i `.env` fungerar mot MariaDB i rootens `compose.yaml`. Skapa `.env.local` om du behöver ändra `APP_SECRET`, `DEFAULT_URI`, `DATABASE_URL`, `MAILER_DSN` eller andra lokala värden.
+
+   Exempel på lokal MariaDB-URL:
+
+   ```dotenv
+   DATABASE_URL="mysql://driftpunkt:driftpunkt@127.0.0.1:33060/driftpunkt?serverVersion=mariadb-11.8.6&charset=utf8mb4"
+   ```
+
+3. Initiera databasen.
 
    För en helt ny MariaDB-installation:
 
@@ -33,19 +46,19 @@
    php bin/console doctrine:migrations:migrate -n
    ```
 
-3. skapa konto
+4. Skapa konto vid behov:
 
    ```bash
    php bin/console app:create-test-accounts
    ```
 
-   eller
+   eller:
 
    ```bash
    php bin/console app:create-admin dinmail@example.com DittLösenord123 Förnamn Efternamn super_admin
    ```
 
-4. starta webbserver
+5. Starta webbserver:
 
    ```bash
    symfony server:start
@@ -55,15 +68,37 @@
 
 Repo innehåller `compose.yaml` och `compose.override.yaml` med MariaDB och mailtestning för lokal Docker-baserad utveckling.
 
+Vanliga Docker-kommandon från projektets rotmapp:
+
+```bash
+docker compose --env-file .env -f compose.yaml up -d
+docker compose --env-file .env -f compose.yaml ps
+docker compose --env-file .env -f compose.yaml logs --tail=150 app
+```
+
+Om tjänstenamnen avviker mellan miljöer, kontrollera dem med:
+
+```bash
+docker compose --env-file .env -f compose.yaml config --services
+```
+
 ## Produktionsdrift
 
 En fungerande driftsättning bör innehålla:
 
 - webbserver som pekar på `public/`
 - skrivbar `var/`
-- migrerad databas
+- MariaDB-databas med korrekt `serverVersion` i `DATABASE_URL`
 - reserv-superadmin och minst ett vanligt admin-konto
 - process för schemalagda jobb
+- worker för köade koduppdateringar om adminytans uppdateringsflöde används
+- loggrotation eller motsvarande retention för `var/log/*.log`
+
+Schemalagda jobb bör minst omfatta mailpolling, SLA-kontroll, bilagearkivering och månadsrapporter om rapportmail används. Månadsrapporten kan exempelvis köras efter månadsskifte:
+
+```bash
+php bin/console app:reports:send-monthly --env=prod
+```
 
 Om adminytans uppdateringsflöde ska användas för att applicera kodpaket måste PHP/webbserver-användaren, normalt `www-data`, också kunna skriva till koddelarna som byts vid uppdatering: `bin/`, `config/`, `migrations/`, `public/`, `src/`, `templates/`, `composer.json`, `composer.lock` och `symfony.lock`.
 
@@ -76,14 +111,128 @@ För en konkret Debian-installation, använd:
 - `deploy/debian/apache-driftpunkt.conf`
 - `deploy/debian/setup.sh`
 
+## Automatisk hantering av köade uppdateringar
+
+Driftpunkt kan lägga koduppdateringar i kö från adminytan. En köad uppdatering sparas som JSON i `var/code_update_runs`. För att uppdateringen inte ska bli liggande som `queued` behöver produktionen ha en schemalagd worker.
+
+Rekommenderad modell:
+
+```text
+Adminyta köar uppdatering
+        ↓
+cron/systemd timer kör worker
+        ↓
+worker hittar queued update
+        ↓
+worker kör app:code-update:apply-run
+        ↓
+status blir completed eller failed
+```
+
+Webbprocessen ska helst inte vara enda mekanismen för att starta själva uppdateringen. Det är säkrare att låta cron, systemd timer eller Docker-scheduler plocka upp jobbet.
+
+### Docker/NAS: cron-worker
+
+Skapa scriptet i projektets rotmapp:
+
+```bash
+nano /share/Docker/driftpunkt/run-pending-updates.sh
+```
+
+Innehåll:
+
+```sh
+#!/bin/sh
+
+cd /share/Docker/driftpunkt || exit 1
+
+RUN_ID=$(docker compose --env-file .env -f compose.yaml exec -T app php -r '
+$dir = "var/code_update_runs";
+if (!is_dir($dir)) { exit; }
+
+$files = glob($dir . "/*.json");
+rsort($files);
+
+foreach ($files as $file) {
+    $data = json_decode(file_get_contents($file), true);
+    if (($data["status"] ?? "") === "queued") {
+        echo basename($file, ".json");
+        exit;
+    }
+}
+')
+
+if [ -n "$RUN_ID" ]; then
+    echo "Kör Driftpunkt-uppdatering: $RUN_ID"
+    docker compose --env-file .env -f compose.yaml exec -T --user www-data app php bin/console app:code-update:apply-run "$RUN_ID" --env=prod
+else
+    echo "Ingen köad Driftpunkt-uppdatering hittades."
+fi
+```
+
+Gör scriptet körbart:
+
+```bash
+chmod +x /share/Docker/driftpunkt/run-pending-updates.sh
+```
+
+Testa scriptet:
+
+```bash
+/share/Docker/driftpunkt/run-pending-updates.sh
+```
+
+Om ingen uppdatering väntar ska svaret vara:
+
+```text
+Ingen köad Driftpunkt-uppdatering hittades.
+```
+
+Lägg in scriptet i root-cron:
+
+```bash
+sudo crontab -e
+```
+
+Lägg till:
+
+```cron
+* * * * * /share/Docker/driftpunkt/run-pending-updates.sh >> /share/Docker/driftpunkt/var/background_jobs/auto_update_cron.log 2>&1
+```
+
+Kontrollera:
+
+```bash
+sudo crontab -l
+tail -n 50 /share/Docker/driftpunkt/var/background_jobs/auto_update_cron.log
+```
+
+Om NAS:en inte stödjer vanlig `crontab -e`, skapa motsvarande schemalagd uppgift i NAS:ens webbgränssnitt och kör samma script var 1–5 minut.
+
+### Debian utan Docker: systemd timer
+
+På en vanlig Debian-server utan Docker rekommenderas `systemd timer`. Se `docs/debian_server_setup.md` för komplett exempel. Grundprincipen är:
+
+```bash
+sudo systemctl enable --now driftpunkt-update-worker.timer
+systemctl status driftpunkt-update-worker.timer
+journalctl -u driftpunkt-update-worker.service -n 100 --no-pager
+```
+
 ## Rekommenderad efter-installation
 
-1. verifiera inloggning
-2. konfigurera kundinloggning och publik kunskapsbas vid behov
-3. konfigurera mailservrar och supportinkorgar
-4. aktivera polling och SLA-jobb
-5. testa backup och restore
-6. verifiera driftstatussidan
+Verifiera följande efter installation:
+
+- [ ] webbgränssnittet går att nå
+- [ ] inloggning fungerar
+- [ ] databasanslutning fungerar
+- [ ] reserv-superadmin och vanligt admin-konto finns
+- [ ] `var/` är skrivbar för rätt användare
+- [ ] mailservrar och supportinkorgar är konfigurerade vid behov
+- [ ] polling, SLA-jobb och bilagearkivering är aktiverade
+- [ ] automatisk worker för köade uppdateringar är aktiverad om adminytans uppdateringsflöde används
+- [ ] backup och restore har testats
+- [ ] driftstatussidan är verifierad
 
 ## Uppgradering
 
@@ -101,5 +250,24 @@ Rekommenderad ordning i drift:
 2. aktivera underhållsläge
 3. stagea/applicera uppdateringspaket
 4. låt uppdateringsflödet köra Composer, MariaDB-migrationer och cache-rensning
-5. verifiera inloggning, tickets och mail
-6. avaktivera underhållsläge
+5. verifiera att update-worker markerar körningen som `completed`
+6. verifiera inloggning, tickets och mail
+7. avaktivera underhållsläge
+
+Manuell körning av en specifik update-run:
+
+```bash
+php bin/console app:code-update:apply-run RUN_ID --env=prod
+```
+
+Docker/NAS:
+
+```bash
+docker compose --env-file .env -f compose.yaml exec -T --user www-data app php bin/console app:code-update:apply-run RUN_ID --env=prod
+```
+
+Kontrollera status för en körning:
+
+```bash
+cat var/code_update_runs/RUN_ID.json
+```

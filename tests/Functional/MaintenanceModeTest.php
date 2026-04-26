@@ -85,9 +85,9 @@ final class MaintenanceModeTest extends WebTestCase
         self::assertStringContainsString('Las driftinfo', $contactCrawler->html());
     }
 
-    public function testAdminCanScheduleMaintenanceAndStatusPageShowsIt(): void
+    public function testSuperAdminCanScheduleMaintenanceAndStatusPageShowsIt(): void
     {
-        $admin = new User('maintenance-admin@example.test', 'Mira', 'Admin', UserType::ADMIN);
+        $admin = new User('maintenance-admin@example.test', 'Mira', 'Admin', UserType::SUPER_ADMIN);
         $admin->setPassword($this->passwordHasher->hashPassword($admin, 'Supersakert123'));
         $admin->enableMfa();
         $this->entityManager->persist($admin);
@@ -184,7 +184,7 @@ final class MaintenanceModeTest extends WebTestCase
         self::assertResponseRedirects('/portal/admin');
         $adminClient->followRedirect();
         self::assertResponseIsSuccessful();
-        self::assertStringContainsString('Underhallslage aktivt', (string) $adminClient->getResponse()->getContent());
+        self::assertStringContainsString('Underhållsläget är aktivt', (string) $adminClient->getResponse()->getContent());
 
         self::ensureKernelShutdown();
         $publicClient = static::createClient();

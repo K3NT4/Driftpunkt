@@ -10,7 +10,7 @@
 
 Driftpunkt är ett Symfony-baserat support- och driftsystem med publik webb, kundportal, teknikerportal och adminyta i samma produkt.
 
-README:n beskriver nuläget i koden i detta repo: fungerande MVP-flöden för ticketing, kunddialog, e-postingest, driftstatus, administration och release/driftarbete. Miljöspecifika integrationer och viss intern driftsetup kan fortfarande leva utanför repo eller exportflöde.
+README:n beskriver nuläget i koden i detta repo, version 1.0.7: fungerande MVP-flöden för ticketing, kunddialog, e-postingest, driftstatus, rapportering, administration, loggning och release/driftarbete. Miljöspecifika integrationer och viss intern driftsetup kan fortfarande leva utanför repo eller exportflöde.
 
 ## Översikt
 
@@ -23,6 +23,10 @@ Driftpunkt innehåller bland annat:
 - e-postflöden med spool-ingest, mailbox-polling och draftgranskning för osäkra fall
 - kunskapsbas, nyhetsmodul och statuskommunikation i samma produkt
 - underhållsläge, bilagearkivering, bakgrundsjobb och release-/uppgraderingspaket
+- publikt ticket-formulär för att skapa nya tickets utan inloggning
+- rapporter och BI-light-översikter för ärenden, SLA, backlog och företag
+- månadsrapporter för företag med automatisk e-postsändning
+- systemaudit, applikationsloggning och Debian-logrotate för enklare felsökning
 
 ## Vad man kan göra
 
@@ -32,6 +36,7 @@ Driftpunkt innehåller bland annat:
 - läsa nyheter, publik kunskapsbas och publika policy-sidor
 - använda sök och kontaktsida utan separat frontend
 - visa driftstatus och underhållsinformation publikt
+- skapa nya supporttickets via publikt formulär utan inloggning
 
 ### Kundflöden
 
@@ -48,21 +53,27 @@ Driftpunkt innehåller bland annat:
 - skapa och publicera nyheter och kunskapsbasinnehåll
 - arbeta med telefonstödsdata i admin
 - konfigurera mail, supportinkorgar, driftstatus, inställningar och underhåll
+- följa BI-light-rapporter för inflöde, backlog, SLA-hälsa, risker, företag och intern arbetslast
+- konfigurera och skicka månadsrapporter för företag
+- följa systemaudit och jobbstatus för uppdateringar, databasjobb och driftåtgärder
+- importera, registrera och växla installerade addon-paket när moduler följer Driftpunkts paketstruktur
 
 ### Drift och automation
 
 - läsa in inkommande mail via spool eller polling av supportinkorgar
 - lägga osäkra mail i draftgranskning innan de blir kundsynliga tickets
-- köra SLA-kontroll, bilagearkivering, databasjobb och post-update tasks via CLI
+- köra mailpolling, SLA-kontroll, bilagearkivering och månadsrapporter via appens interna fallback eller externa schemaläggare
+- köra databasjobb och post-update tasks via CLI eller adminens bakgrundsjobb
 - bygga installations- och uppgraderingspaket
 - stagea och applicera koduppdateringsflöden i admin/drift
+- exportera en publik repo-kopia med privata moduler, driftkod och interna docs bortfiltrerade
+- felsöka via `var/log/*.log`, systemd-loggar, release-metadata och checksummor för paket
 
 ## Begränsningar i nuläget
 
-- inget publikt webbformulär för att skapa helt nya tickets utan inloggning
 - inget externt API för integrationer
-- ingen full rapport- eller BI-modul
-- driftmodellen förutsätter att schemalagda jobb och hardening satts upp externt
+- ingen full fristående BI-motor med sparade egna rapportmallar eller externa BI-integrationer
+- produktion behöver fortfarande egen serverhardening, backup/restore och extern scheduler för förutsägbara bakgrundsjobb
 
 ## Installationskrav
 
@@ -73,7 +84,8 @@ Minimikrav för lokal utveckling och serverdrift:
 - PHP 8.4 eller senare
 - Composer 2
 - MariaDB 10.11 eller senare, rekommenderat MariaDB 11 för lokal Docker-miljö
-- PHP-tilläggen `ctype`, `iconv`, `intl`, `pdo_mysql` och `zip`
+- `DATABASE_URL` måste peka på MariaDB utanför `APP_ENV=test`; `mysql://` ska ange `serverVersion` som innehåller `mariadb`
+- PHP-tilläggen `ctype`, `curl`, `iconv`, `intl`, `mbstring`, `pdo`, `pdo_mysql`, `xml`, `zip` och gärna `opcache`
 - en webbserver som kan köra PHP och peka dokumentroten mot `public/`, till exempel Symfony CLI, PHP:s inbyggda server, Apache eller appcontainern i Docker
 - skrivbar `var/`-katalog för cache, loggar, uppladdningar och delade driftfiler
 - om adminytans webbaserade uppdateringsflöde ska användas måste PHP/webbserver-användaren, normalt `www-data`, även kunna skriva till kodfilerna som uppdateras: `bin/`, `config/`, `migrations/`, `public/`, `src/`, `templates/`, `composer.json`, `composer.lock` och `symfony.lock`
@@ -84,7 +96,7 @@ Rekommenderat för produktion:
 - ett unikt `APP_SECRET` i `.env.local` eller riktiga miljovariabler
 - en riktig `DATABASE_URL` mot MariaDB
 - SMTP-konfiguration via `MAILER_DSN` om appen ska skicka e-post
-- schemalagda jobb för mailpolling, SLA-kontroll och bilagearkivering via systemd, cron eller Docker-scheduler
+- schemalagda jobb för mailpolling, SLA-kontroll, månadsrapporter och bilagearkivering via systemd, cron eller Docker-scheduler rekommenderas för förutsägbar produktion, men appen har en intern fallback som köar samma återkommande jobb från webbflödet om extern scheduler saknas
 - regelbunden backup av MariaDB och `var/share`
 - välj driftmodell för kodägarskap: webbaserad uppdatering kräver skrivbar applikationskod för `www-data`, medan en hårdare låst server kan låta `root` äga kodfilerna och i stället uppdateras via SSH/deploy-script
 
@@ -142,7 +154,7 @@ Valfria verktyg:
 
 4. Initialisera databasen
 
-   För en helt ny installation, särskilt på MariaDB/MySQL:
+   För en helt ny MariaDB-installation:
 
    ```bash
    php bin/console app:install:fresh
@@ -270,7 +282,9 @@ php bin/console app:create-admin <email> <lösenord> <förnamn> <efternamn> <adm
 php bin/console app:mail:ingest <spoolfil>
 php bin/console app:mail:poll
 php bin/console app:check-ticket-sla
+php bin/console app:reports:send-monthly --dry-run
 php bin/console app:archive-ticket-attachments
+php bin/console app:operations:run-due
 php bin/console app:database-maintenance:run <job-id>
 php bin/console app:post-update:run <run-id>
 php bin/console app:code-update:apply-run <run-id>
@@ -279,6 +293,16 @@ php bin/console app:release:build-packages
 composer export:public-repo
 php bin/phpunit
 ```
+
+## Intern schemaläggningsfallback
+
+Driftpunkt har en appstyrd fallback för återkommande driftjobb. När en webbförfrågan avslutas kontrollerar appen om mailpolling, SLA-kontroll, bilagearkivering eller månadsrapporter är förfallna och köar då:
+
+```bash
+php bin/console app:operations:run-due
+```
+
+Fallbacken använder låsning och state i `var/operational_tasks.lock` och `var/operational_tasks.json`, så den inte ska starta samma körning vid varje sidladdning. Extern schemaläggning via systemd, cron eller Docker-scheduler är fortfarande rekommenderad i produktion för mer förutsägbara körtider, men appen slutar inte fungera om det saknas.
 
 ## Releasepaket
 
@@ -294,6 +318,12 @@ Bygg bara uppgraderingspaketet:
 
 ```bash
 composer build:upgrade-package
+```
+
+Om Composer-kommandot inte är tillgängligt i driftmiljön kan samma uppgraderingsbygge köras direkt via Symfony-kommandot:
+
+```bash
+php bin/console app:release:build-packages --type=upgrade
 ```
 
 Bygg bara installationspaketet:
@@ -329,6 +359,20 @@ Exporten behåller publika projektmappar men filtrerar bort privata delar som:
 - `templates/emails`
 - `deploy/`
 
+I `docs/` följer bara publik dokumentation och README-assets med. Den publika dokumentationslistan är:
+
+- `docs/debian_server_setup.md`
+- `docs/driftpunkt_ticket_system_spec.md`
+- `docs/installation_and_deployment.md`
+- `docs/known_limitations.md`
+- `docs/mail_configuration_guide.md`
+- `docs/mail_polling_operations.md`
+- `docs/mail_processing_rules.md`
+- `docs/nas_docker_setup.md`
+- `docs/security_requirements.md`
+- `docs/ticket_attachment_archiving_operations.md`
+- `docs/public-assets/`
+
 Rekommenderat arbetsflöde:
 
 1. Utveckla i `Driftpunkt-privat`
@@ -338,30 +382,26 @@ Rekommenderat arbetsflöde:
 
 ## Dokumentation
 
-Dokumentationen i `docs/` beskriver nuläget i koden, inte en framtida målbild:
+Dokumentationen i `docs/` beskriver nuläget i koden, inte en framtida målbild. De drift- och publikt återanvändbara dokumenten är:
 
 - `docs/driftpunkt_ticket_system_spec.md`
-- `docs/product_scope_and_mvp.md`
 - `docs/installation_and_deployment.md`
-- `docs/roles_and_permissions.md`
-- `docs/data_model.md`
-- `docs/ticket_lifecycle_and_visibility.md`
-- `docs/customer_portal_experience.md`
-- `docs/admin_information_architecture.md`
+- `docs/debian_server_setup.md`
+- `docs/nas_docker_setup.md`
 - `docs/mail_configuration_guide.md`
 - `docs/mail_processing_rules.md`
 - `docs/mail_polling_operations.md`
 - `docs/ticket_attachment_archiving_operations.md`
-- `docs/operational_model.md`
 - `docs/security_requirements.md`
-- `docs/testing_and_quality.md`
 - `docs/known_limitations.md`
-- `docs/documentation_reuse_and_plan.md`
+
+Det privata repot kan dessutom innehålla interna produkt-, roll-, datamodell-, test- och planeringsdokument som inte behöver följa med i den publika exporten.
 
 Bra startpunkter beroende på vad du vill göra:
 
 - produktomfång och nuläge: `docs/driftpunkt_ticket_system_spec.md`
 - installation och drift: `docs/installation_and_deployment.md`
-- roller och behörigheter: `docs/roles_and_permissions.md`
 - mailflöden: `docs/mail_processing_rules.md`
-- daglig driftmodell: `docs/operational_model.md`
+- Debian-server: `docs/debian_server_setup.md`
+- NAS/Docker: `docs/nas_docker_setup.md`
+- säkerhetskrav: `docs/security_requirements.md`

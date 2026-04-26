@@ -19,6 +19,7 @@ Driftpunkt är ett webbaserat support- och driftsystem byggt i Symfony 8 med Doc
 - nyhetslista och nyhetsdetaljer
 - kontaktsida
 - publik driftstatussida
+- publikt formulär för att skapa supporttickets utan inloggning när funktionen är aktiverad
 
 ### Identitet och inloggning
 
@@ -36,6 +37,8 @@ Driftpunkt är ett webbaserat support- och driftsystem byggt i Symfony 8 med Doc
 - bilagor i tickets med nedladdning och preview
 - arkivering av lokala bilagor till zip för avslutade tickets
 - import/export för ärenden i admin
+- rapporter och BI-light-översikter för SLA, backlog, företag och arbetslast
+- månadsrapporter per företag via e-post
 
 ### E-postflöden
 
@@ -62,6 +65,8 @@ Driftpunkt är ett webbaserat support- och driftsystem byggt i Symfony 8 med Doc
 - staging och applicering av koduppdateringspaket
 - post-update tasks efter uppdatering
 - bakgrundsjobb med loggar och retry
+- köade koduppdateringar som bör köras av extern worker via cron, systemd timer eller Docker-scheduler
+- systemaudit och applikationsloggar för uppdateringar, databasjobb och driftåtgärder
 
 ## Teknisk bas
 
@@ -71,7 +76,8 @@ Driftpunkt är ett webbaserat support- och driftsystem byggt i Symfony 8 med Doc
 - Twig
 - Symfony Security
 - Symfony Mailer
-- MariaDB som standard i lokal miljö och drift
+- Monolog för applikationsloggning
+- MariaDB som krav i lokal miljö och drift utanför `APP_ENV=test`
 
 ## När vi kallar versionen fungerande
 
@@ -81,6 +87,7 @@ I detta repo betyder "fungerande version" att följande redan finns i kodbasen:
 - databasmodell och migrationer finns
 - centrala användarflöden har funktionella tester
 - driftkritiska jobb kan köras via kommandon
+- köade uppdateringar kan köras kontrollerat via `app:code-update:apply-run` och bör övervakas av en worker i produktion
 - installation, uppgradering och drift kan dokumenteras utan att hitta på saknade delar
 
 Versionen är därför fungerande som intern eller kundnära MVP, men inte liktydig med att allt framtida produktomfång är klart. Se `known_limitations.md` för det som fortfarande är medvetet begränsat.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Module\System\Service\CodeUpdateApplyRunner;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -20,6 +21,7 @@ final class RunCodeUpdateApplyCommand extends Command
 {
     public function __construct(
         private readonly CodeUpdateApplyRunner $codeUpdateApplyRunner,
+        private readonly LoggerInterface $logger,
     ) {
         parent::__construct();
     }
@@ -34,8 +36,13 @@ final class RunCodeUpdateApplyCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         try {
-            $run = $this->codeUpdateApplyRunner->processQueuedRun((string) $input->getArgument('run-id'));
+            $runId = (string) $input->getArgument('run-id');
+            $run = $this->codeUpdateApplyRunner->processQueuedRun($runId);
         } catch (\Throwable $exception) {
+            $this->logger->error('Koduppdateringskörning misslyckades oväntat.', [
+                'run_id' => $runId ?? (string) $input->getArgument('run-id'),
+                'exception' => $exception,
+            ]);
             $io->error($exception->getMessage());
 
             return Command::FAILURE;

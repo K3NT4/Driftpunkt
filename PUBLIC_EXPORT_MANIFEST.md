@@ -1,6 +1,6 @@
 # Public Export Manifest
 
-Skapad: 2026-04-24T19:34:59+00:00
+Skapad: 2026-04-26T11:20:38+00:00
 
 ## Källrepo
 
@@ -37,6 +37,22 @@ Skapad: 2026-04-24T19:34:59+00:00
 - `templates/emails`
 - `templates/portal`
 
+## Publik dokumentation
+
+Endast följande `docs/`-sökvägar ingår i exporten:
+
+- `docs/debian_server_setup.md`
+- `docs/driftpunkt_ticket_system_spec.md`
+- `docs/installation_and_deployment.md`
+- `docs/known_limitations.md`
+- `docs/mail_configuration_guide.md`
+- `docs/mail_polling_operations.md`
+- `docs/mail_processing_rules.md`
+- `docs/nas_docker_setup.md`
+- `docs/security_requirements.md`
+- `docs/ticket_attachment_archiving_operations.md`
+- `docs/public-assets`
+
 ## Kopierade filer
 
 - `README.md`
@@ -50,6 +66,7 @@ Skapad: 2026-04-24T19:34:59+00:00
 - `config/packages/doctrine.yaml`
 - `config/packages/doctrine_migrations.yaml`
 - `config/packages/framework.yaml`
+- `config/packages/monolog.yaml`
 - `config/packages/property_info.yaml`
 - `config/packages/routing.yaml`
 - `config/packages/security.yaml`
@@ -61,28 +78,14 @@ Skapad: 2026-04-24T19:34:59+00:00
 - `config/routes/framework.yaml`
 - `config/routes.yaml`
 - `config/services.yaml`
-- `docs/Kundportal.png`
-- `docs/addon_build_and_release_guide.md`
-- `docs/admin sida.png`
-- `docs/admin_information_architecture.md`
-- `docs/customer_portal_experience.md`
-- `docs/data_model.md`
 - `docs/debian_server_setup.md`
-- `docs/documentation_reuse_and_plan.md`
 - `docs/driftpunkt_ticket_system_spec.md`
-- `docs/driftpunktlogo ikon.png`
-- `docs/driftpunktlogo paket.png`
-- `docs/driftpunktlogo paket.psd`
-- `docs/driftpunktlogo stor.png`
 - `docs/installation_and_deployment.md`
 - `docs/known_limitations.md`
-- `docs/logga in kund.png`
 - `docs/mail_configuration_guide.md`
 - `docs/mail_polling_operations.md`
 - `docs/mail_processing_rules.md`
 - `docs/nas_docker_setup.md`
-- `docs/operational_model.md`
-- `docs/product_scope_and_mvp.md`
 - `docs/public-assets/branding/logo-icon.png`
 - `docs/public-assets/branding/logo-wide.png`
 - `docs/public-assets/screenshots/admin-dashboard.png`
@@ -92,13 +95,8 @@ Skapad: 2026-04-24T19:34:59+00:00
 - `docs/public-assets/screenshots/login-customer.png`
 - `docs/public-assets/screenshots/login-technician.png`
 - `docs/public-assets/screenshots/technician-portal.png`
-- `docs/roles_and_permissions.md`
 - `docs/security_requirements.md`
-- `docs/startsida.png`
-- `docs/teknikerportal.png`
-- `docs/testing_and_quality.md`
 - `docs/ticket_attachment_archiving_operations.md`
-- `docs/ticket_lifecycle_and_visibility.md`
 - `migrations/.gitignore`
 - `migrations/Version20260418072614.php`
 - `migrations/Version20260418074303.php`
@@ -159,12 +157,50 @@ Skapad: 2026-04-24T19:34:59+00:00
 - `migrations/Version20260419120000.php`
 - `migrations/Version20260419130000.php`
 - `migrations/Version20260420190000.php`
-- ... och ytterligare 172 filer
+- `migrations/Version20260421090000.php`
+- `migrations/Version20260421100000.php`
+- `migrations/Version20260421110000.php`
+- `migrations/Version20260421120000.php`
+- `migrations/Version20260421130000.php`
+- `migrations/Version20260421140000.php`
+- `migrations/Version20260421160000.php`
+- `migrations/Version20260421170000.php`
+- `migrations/Version20260421180000.php`
+- `migrations/Version20260422090000.php`
+- `migrations/Version20260423170000.php`
+- `migrations/Version20260423183000.php`
+- `migrations/Version20260423190000.php`
+- `migrations/Version20260423193000.php`
+- `migrations/Version20260423210000.php`
+- `migrations/Version20260423213000.php`
+- `migrations/Version20260424120000.php`
+- `migrations/Version20260424133000.php`
+- ... och ytterligare 181 filer
 
 ## Överhoppade sökvägar i denna körning
 
 - `config/packages/mailer.yaml`
 - `config/routes/security.yaml`
+- `docs/Kundportal.png`
+- `docs/addon_build_and_release_guide.md`
+- `docs/admin sida.png`
+- `docs/admin_information_architecture.md`
+- `docs/customer_portal_experience.md`
+- `docs/data_model.md`
+- `docs/documentation_reuse_and_plan.md`
+- `docs/driftpunktlogo ikon.png`
+- `docs/driftpunktlogo paket.png`
+- `docs/driftpunktlogo paket.psd`
+- `docs/driftpunktlogo stor.png`
+- `docs/logga in kund.png`
+- `docs/operational_model.md`
+- `docs/product_scope_and_mvp.md`
+- `docs/roles_and_permissions.md`
+- `docs/startsida.png`
+- `docs/superpowers`
+- `docs/teknikerportal.png`
+- `docs/testing_and_quality.md`
+- `docs/ticket_lifecycle_and_visibility.md`
 - `src/Command/BuildReleasePackagesCommand.php`
 - `src/Command/ExportPublicRepoCommand.php`
 - `src/Command/IngestIncomingMailCommand.php`

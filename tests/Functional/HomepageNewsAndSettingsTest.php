@@ -312,7 +312,7 @@ final class HomepageNewsAndSettingsTest extends WebTestCase
 
     public function testAdminCanUpdateHomepageSettingsAndTechnicianNewsPermission(): void
     {
-        $admin = new User('admin-home@example.test', 'Ada', 'Admin', UserType::ADMIN);
+        $admin = new User('admin-home@example.test', 'Ada', 'Admin', UserType::SUPER_ADMIN);
         $admin->setPassword($this->passwordHasher->hashPassword($admin, 'Supersakert123'));
         $admin->enableMfa();
         $this->entityManager->persist($admin);
@@ -550,7 +550,7 @@ final class HomepageNewsAndSettingsTest extends WebTestCase
 
         self::assertResponseRedirects('/portal/technician/nyheter');
         $this->client->followRedirect();
-        self::assertStringContainsString('Tekniker kan bara skapa vanliga sajt-nyheter.', (string) $this->client->getResponse()->getContent());
+        self::assertStringContainsString('Planerat underhåll kan bara hanteras av superadmin.', (string) $this->client->getResponse()->getContent());
         self::assertSame(0, $this->entityManager->getRepository(NewsArticle::class)->count([
             'title' => 'Teknikerforsok',
         ]));

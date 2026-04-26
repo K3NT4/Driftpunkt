@@ -997,6 +997,10 @@
             <a href="{{ path('app_register_customer') }}">{{ t('home.quick_links.create_account') }}</a>
             <span class="sep">|</span>
         {% endif %}
+        {% if publicTicketFormSettings.enabled %}
+            <a href="{{ path('app_public_ticket_new') }}">Skapa ärende</a>
+            <span class="sep">|</span>
+        {% endif %}
         <a href="{{ path('app_password_reset_request', {role: 'customer'}) }}">{{ t('home.quick_links.forgot_password') }}</a>
         <span class="sep">|</span>
         <a href="{{ path('app_contact') }}">{{ t('nav.support') }}</a>

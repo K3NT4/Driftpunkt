@@ -11,6 +11,9 @@ Detta dokument beskriver vad som faktiskt finns i versionen och vad som bör gä
 - underhållskontroll som kan stoppa inloggningar
 - e-postflöde med draftgranskning för osäkra fall
 - notifieringslogg för spårbarhet
+- systemauditlogg för centrala drift- och adminåtgärder
+- grundläggande HTTP-säkerhetsheaders via applikationen
+- MariaDB-krav utanför `APP_ENV=test`, så fel databasmotor stoppas tidigt
 
 ## Säkerhetskrav i drift
 
@@ -18,6 +21,8 @@ Detta dokument beskriver vad som faktiskt finns i versionen och vad som bör gä
 - lägg inte riktiga hemligheter i `.env`
 - sätt korrekta filrättigheter på `var/`
 - begränsa tillgång till backupfiler och staged uppdateringsfiler
+- använd externa schedulerjobb för återkommande driftflöden och köade koduppdateringar i produktion
+- säkerställ loggrotation eller retention för `var/log/*.log`
 - övervak loggar för misslyckad inloggning, pollingfel och jobbmisslyckanden
 
 ## Konto- och behörighetskrav

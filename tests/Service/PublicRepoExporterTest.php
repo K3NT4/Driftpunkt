@@ -20,7 +20,7 @@ final class PublicRepoExporterTest extends TestCase
 
         mkdir($this->projectDir.'/bin', 0777, true);
         mkdir($this->projectDir.'/config/packages', 0777, true);
-        mkdir($this->projectDir.'/docs', 0777, true);
+        mkdir($this->projectDir.'/docs/public-assets/branding', 0777, true);
         mkdir($this->projectDir.'/migrations', 0777, true);
         mkdir($this->projectDir.'/public', 0777, true);
         mkdir($this->projectDir.'/src/Module/Ticket/Service', 0777, true);
@@ -38,7 +38,10 @@ final class PublicRepoExporterTest extends TestCase
         file_put_contents($this->projectDir.'/bin/console', "#!/usr/bin/env php\n");
         file_put_contents($this->projectDir.'/config/packages/framework.yaml', "framework:\n");
         file_put_contents($this->projectDir.'/config/packages/mailer.yaml', "framework:\n");
-        file_put_contents($this->projectDir.'/docs/readme.md', "public docs\n");
+        file_put_contents($this->projectDir.'/docs/installation_and_deployment.md', "public install docs\n");
+        file_put_contents($this->projectDir.'/docs/debian_server_setup.md', "public debian docs\n");
+        file_put_contents($this->projectDir.'/docs/data_model.md', "private implementation docs\n");
+        file_put_contents($this->projectDir.'/docs/public-assets/branding/logo-wide.png', "fake png\n");
         file_put_contents($this->projectDir.'/migrations/Version.php', "<?php\n");
         file_put_contents($this->projectDir.'/public/index.php', "<?php\n");
         file_put_contents($this->projectDir.'/src/Module/Ticket/Service/PublicTicketService.php', "<?php\n");
@@ -66,6 +69,9 @@ final class PublicRepoExporterTest extends TestCase
         self::assertFileExists($this->exportDir.'/src/Module/Ticket/Service/PublicTicketService.php');
         self::assertFileExists($this->exportDir.'/src/Module/System/Service/SystemSettings.php');
         self::assertFileExists($this->exportDir.'/templates/public/index.html.twig');
+        self::assertFileExists($this->exportDir.'/docs/installation_and_deployment.md');
+        self::assertFileExists($this->exportDir.'/docs/debian_server_setup.md');
+        self::assertFileExists($this->exportDir.'/docs/public-assets/branding/logo-wide.png');
         self::assertFileExists($this->exportDir.'/PUBLIC_EXPORT_MANIFEST.md');
 
         self::assertFileDoesNotExist($this->exportDir.'/src/Module/Mail/Service/PrivateMailService.php');
@@ -73,6 +79,7 @@ final class PublicRepoExporterTest extends TestCase
         self::assertFileDoesNotExist($this->exportDir.'/src/Module/System/Service/CodeUpdateManager.php');
         self::assertFileDoesNotExist($this->exportDir.'/templates/portal/admin.html.twig');
         self::assertFileDoesNotExist($this->exportDir.'/config/packages/mailer.yaml');
+        self::assertFileDoesNotExist($this->exportDir.'/docs/data_model.md');
         self::assertGreaterThan(0, $result['fileCount']);
     }
 

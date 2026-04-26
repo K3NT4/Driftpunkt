@@ -250,6 +250,124 @@ final class CodeUpdateApplyRunner
         return $normalized;
     }
 
+    /**
+     * @return array{
+     *     id: string,
+     *     packageId: string,
+     *     packageName: string,
+     *     packageVersion: string,
+     *     queuedAt: \DateTimeImmutable,
+     *     startedAt: ?\DateTimeImmutable,
+     *     finishedAt: ?\DateTimeImmutable,
+     *     status: string,
+     *     succeeded: ?bool,
+     *     output: string,
+     *     backupFilename: ?string
+     * }|null
+     */
+    public function getRunById(string $runId): ?array
+    {
+        return $this->normalizeRun($this->readRawRun($runId));
+    }
+
+    public function purgeFinishedRuns(): int
+    {
+        $deleted = 0;
+
+        foreach (glob($this->runsDirectory().\DIRECTORY_SEPARATOR.'*.json') ?: [] as $path) {
+            $run = $this->readRawRun(pathinfo($path, \PATHINFO_FILENAME));
+            if (null === $run || !isset($run['packageId'])) {
+                continue;
+            }
+
+            if (!\in_array((string) ($run['status'] ?? ''), ['completed', 'failed'], true)) {
+                continue;
+            }
+
+            if (@unlink($path)) {
+                ++$deleted;
+            }
+        }
+
+        return $deleted;
+    }
+
+    public function failStaleQueuedRuns(\DateTimeImmutable $queuedBefore, string $reason): int
+    {
+        $failed = 0;
+
+        foreach (glob($this->runsDirectory().\DIRECTORY_SEPARATOR.'*.json') ?: [] as $path) {
+            $run = $this->readRawRun(pathinfo($path, \PATHINFO_FILENAME));
+            $normalizedRun = $this->normalizeRun($run);
+            if (null === $normalizedRun || 'queued' !== $normalizedRun['status']) {
+                continue;
+            }
+
+            if ($normalizedRun['queuedAt'] > $queuedBefore) {
+                continue;
+            }
+
+            $run['status'] = 'failed';
+            $run['succeeded'] = false;
+            $run['finishedAt'] = (new \DateTimeImmutable())->format(DATE_ATOM);
+            $existingOutput = trim((string) ($run['output'] ?? ''));
+            $run['output'] = '' !== $existingOutput ? $existingOutput."\n".$reason : $reason;
+            $this->persistRun($run);
+            ++$failed;
+        }
+
+        return $failed;
+    }
+
+    public function failStaleRunningRuns(\DateTimeImmutable $startedBefore, string $reason): int
+    {
+        $failed = 0;
+
+        foreach (glob($this->runsDirectory().\DIRECTORY_SEPARATOR.'*.json') ?: [] as $path) {
+            $run = $this->readRawRun(pathinfo($path, \PATHINFO_FILENAME));
+            $normalizedRun = $this->normalizeRun($run);
+            if (null === $normalizedRun || 'running' !== $normalizedRun['status'] || null === $normalizedRun['startedAt']) {
+                continue;
+            }
+
+            if ($normalizedRun['startedAt'] > $startedBefore) {
+                continue;
+            }
+
+            $run['status'] = 'failed';
+            $run['succeeded'] = false;
+            $run['finishedAt'] = (new \DateTimeImmutable())->format(DATE_ATOM);
+            $existingOutput = trim((string) ($run['output'] ?? ''));
+            $run['output'] = '' !== $existingOutput ? $existingOutput."\n".$reason : $reason;
+            $this->persistRun($run);
+            ++$failed;
+        }
+
+        return $failed;
+    }
+
+    public function purgeOldFinishedRuns(\DateTimeImmutable $completedBefore, \DateTimeImmutable $failedBefore): int
+    {
+        $deleted = 0;
+
+        foreach (glob($this->runsDirectory().\DIRECTORY_SEPARATOR.'*.json') ?: [] as $path) {
+            $run = $this->readRawRun(pathinfo($path, \PATHINFO_FILENAME));
+            if (null === $run || !isset($run['packageId'])) {
+                continue;
+            }
+
+            if (!$this->isOldFinishedRecord($run, $completedBefore, $failedBefore)) {
+                continue;
+            }
+
+            if (@unlink($path)) {
+                ++$deleted;
+            }
+        }
+
+        return $deleted;
+    }
+
     private function hasActiveRun(): bool
     {
         foreach ($this->listRecentRuns() as $run) {
@@ -560,5 +678,26 @@ final class CodeUpdateApplyRunner
                 ? (string) $raw['backupFilename']
                 : null,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     */
+    private function isOldFinishedRecord(array $record, \DateTimeImmutable $completedBefore, \DateTimeImmutable $failedBefore): bool
+    {
+        $status = (string) ($record['status'] ?? '');
+        if (!\in_array($status, ['completed', 'failed'], true)) {
+            return false;
+        }
+
+        try {
+            $finishedAt = new \DateTimeImmutable((string) ($record['finishedAt'] ?? ''));
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return 'completed' === $status
+            ? $finishedAt <= $completedBefore
+            : $finishedAt <= $failedBefore;
     }
 }

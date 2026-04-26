@@ -84,6 +84,7 @@ final class HomeController extends AbstractController
             'topStatus' => $this->buildTopStatus(),
             'knowledgeBaseSettings' => $knowledgeBaseSettings,
             'customerLoginSettings' => $customerLoginSettings,
+            'publicTicketFormSettings' => $this->systemSettings->getPublicTicketFormSettings(),
             'homeSupportWidget' => $homeSupportWidget,
             'homepageStatusSection' => $homepageStatusSection,
             'systemStatuses' => $systemStatuses,

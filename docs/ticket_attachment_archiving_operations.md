@@ -50,6 +50,7 @@ Repoexempel finns i:
 
 - kör nattlig batch om ni vill minimera driftstörning
 - använd `0` dagar bara om ni vet att tekniker inte längre behöver originalfilerna i vardagsarbete
+- systemd-mallen skriver stdout och stderr till `var/log/ticket-attachment-archive.log`
 
 ## Felsökning
 

@@ -31,6 +31,15 @@ class Company
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $primaryEmail = null;
 
+    #[ORM\Column(options: ['default' => false])]
+    private bool $monthlyReportEnabled = false;
+
+    #[ORM\Column(length: 180, nullable: true)]
+    private ?string $monthlyReportRecipientEmail = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $monthlyReportLastSentAt = null;
+
     #[ORM\Column]
     private bool $isActive = true;
 
@@ -96,6 +105,43 @@ class Company
     public function setPrimaryEmail(?string $primaryEmail): self
     {
         $this->primaryEmail = $primaryEmail;
+
+        return $this;
+    }
+
+    public function isMonthlyReportEnabled(): bool
+    {
+        return $this->monthlyReportEnabled;
+    }
+
+    public function setMonthlyReportEnabled(bool $monthlyReportEnabled): self
+    {
+        $this->monthlyReportEnabled = $monthlyReportEnabled;
+
+        return $this;
+    }
+
+    public function getMonthlyReportRecipientEmail(): ?string
+    {
+        return $this->monthlyReportRecipientEmail;
+    }
+
+    public function setMonthlyReportRecipientEmail(?string $monthlyReportRecipientEmail): self
+    {
+        $normalized = null !== $monthlyReportRecipientEmail ? mb_strtolower(trim($monthlyReportRecipientEmail)) : null;
+        $this->monthlyReportRecipientEmail = '' !== (string) $normalized ? $normalized : null;
+
+        return $this;
+    }
+
+    public function getMonthlyReportLastSentAt(): ?\DateTimeImmutable
+    {
+        return $this->monthlyReportLastSentAt;
+    }
+
+    public function markMonthlyReportSent(?\DateTimeImmutable $sentAt = null): self
+    {
+        $this->monthlyReportLastSentAt = $sentAt ?? new \DateTimeImmutable();
 
         return $this;
     }

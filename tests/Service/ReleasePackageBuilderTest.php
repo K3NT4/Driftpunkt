@@ -40,6 +40,7 @@ final class ReleasePackageBuilderTest extends TestCase
         file_put_contents($this->projectDir.'/bin/console', "#!/usr/bin/env php\n<?php\n");
         file_put_contents($this->projectDir.'/config/packages/framework.yaml', "framework:\n");
         file_put_contents($this->projectDir.'/deploy/nas/.env', "MARIADB_PASSWORD=secret\n");
+        file_put_contents($this->projectDir.'/deploy/nas/.env.production', "MARIADB_PASSWORD=secret\n");
         file_put_contents($this->projectDir.'/deploy/nas/.env.example', "MARIADB_PASSWORD=change-me\n");
         file_put_contents($this->projectDir.'/deploy/systemd/driftpunkt.service', "[Service]\n");
         file_put_contents($this->projectDir.'/docs/release.md', "release\n");
@@ -74,7 +75,21 @@ final class ReleasePackageBuilderTest extends TestCase
         self::assertContains('driftpunkt-upgrade-9.9.9/release-metadata.json', $upgradeEntries);
         self::assertContains('driftpunkt-upgrade-9.9.9/vendor/autoload.php', $upgradeEntries);
         self::assertNotContains('driftpunkt-upgrade-9.9.9/deploy/nas/.env', $upgradeEntries);
+        self::assertNotContains('driftpunkt-upgrade-9.9.9/deploy/nas/.env.production', $upgradeEntries);
         self::assertNotContains('driftpunkt-upgrade-9.9.9/var/cache/dev.txt', $upgradeEntries);
+        self::assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $packages[0]['checksumSha256']);
+        self::assertFileExists($packages[0]['path'].'.sha256');
+        self::assertStringContainsString($packages[0]['checksumSha256'], (string) file_get_contents($packages[0]['path'].'.sha256'));
+
+        $upgradeMetadata = $this->readArchiveJson($packages[0]['path'], 'driftpunkt-upgrade-9.9.9/release-metadata.json');
+        self::assertSame('driftpunkt/test-app', $upgradeMetadata['applicationName']);
+        self::assertSame('upgrade', $upgradeMetadata['packageType']);
+        self::assertSame('9.9.9', $upgradeMetadata['version']);
+        self::assertSame('upgrade', $upgradeMetadata['installationMode']);
+        self::assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $upgradeMetadata['contentManifestSha256']);
+        self::assertGreaterThan(0, $upgradeMetadata['fileCount']);
+        self::assertContains('src', $upgradeMetadata['managedPaths']);
+        self::assertContains('vendor/autoload.php', array_column($upgradeMetadata['files'], 'path'));
 
         $installEntries = $this->listArchiveEntries($packages[1]['path']);
         self::assertContains('driftpunkt-install-9.9.9/vendor/autoload.php', $installEntries);
@@ -83,7 +98,12 @@ final class ReleasePackageBuilderTest extends TestCase
         self::assertContains('driftpunkt-install-9.9.9/deploy/nas/.env.example', $installEntries);
         self::assertContains('driftpunkt-install-9.9.9/release-metadata.json', $installEntries);
         self::assertNotContains('driftpunkt-install-9.9.9/deploy/nas/.env', $installEntries);
+        self::assertNotContains('driftpunkt-install-9.9.9/deploy/nas/.env.production', $installEntries);
         self::assertNotContains('driftpunkt-install-9.9.9/var/cache/dev.txt', $installEntries);
+
+        $installMetadata = $this->readArchiveJson($packages[1]['path'], 'driftpunkt-install-9.9.9/release-metadata.json');
+        self::assertSame('install', $installMetadata['packageType']);
+        self::assertSame('fresh_install', $installMetadata['installationMode']);
     }
 
     public function testItCanBuildSpecificPackageTypeAndVersion(): void
@@ -94,6 +114,7 @@ final class ReleasePackageBuilderTest extends TestCase
         self::assertSame('upgrade', $packages[0]['type']);
         self::assertSame('2026.04.19', $packages[0]['version']);
         self::assertFileExists($this->projectDir.'/artifacts/driftpunkt-upgrade-2026.04.19.zip');
+        self::assertFileExists($this->projectDir.'/artifacts/driftpunkt-upgrade-2026.04.19.zip.sha256');
     }
 
     private function listArchiveEntries(string $path): array
@@ -111,6 +132,30 @@ final class ReleasePackageBuilderTest extends TestCase
         $zip->close();
 
         return $entries;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function readArchiveJson(string $path, string $entryName): array
+    {
+        $zip = new \ZipArchive();
+        $result = $zip->open($path);
+        if (true !== $result) {
+            throw new \RuntimeException('Kunde inte öppna det skapade testarkivet.');
+        }
+
+        $content = $zip->getFromName($entryName);
+        $zip->close();
+
+        if (false === $content) {
+            throw new \RuntimeException('Kunde inte läsa metadata ur testarkivet.');
+        }
+
+        /** @var array<string, mixed> $metadata */
+        $metadata = json_decode($content, true, 512, \JSON_THROW_ON_ERROR);
+
+        return $metadata;
     }
 
     private function removeDirectory(string $directory): void

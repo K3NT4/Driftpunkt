@@ -268,7 +268,14 @@ final class NewsController extends AbstractController
         $dateFilter = trim($request->query->getString('news_date', 'all'));
         $selectedArticleId = $request->query->getInt('edit', 0);
         $newsSchemaReady = $this->newsArticleSchemaInspector->isReady();
+        $allowMaintenanceCategory = $this->isGranted('ROLE_SUPER_ADMIN');
         $newsArticles = $newsSchemaReady ? $this->findAllArticles($searchQuery, $dateFilter) : [];
+        if (!$allowMaintenanceCategory) {
+            $newsArticles = array_values(array_filter(
+                $newsArticles,
+                static fn (NewsArticle $article): bool => NewsCategory::PLANNED_MAINTENANCE !== $article->getCategory(),
+            ));
+        }
 
         return $this->render('portal/admin_news.html.twig', [
             'title' => 'Nyheter',
@@ -284,6 +291,7 @@ final class NewsController extends AbstractController
             'newsSchemaMissingColumns' => $this->newsArticleSchemaInspector->missingColumns(),
             'newsSettings' => $this->systemSettings->getNewsSettings(),
             'newsEditorPlusEnabled' => $this->isNewsEditorPlusEnabled(),
+            'allowMaintenanceCategory' => $allowMaintenanceCategory,
             'homeSupportWidget' => $this->systemSettings->getHomeSupportWidgetSettings(),
             'homepageStatusSection' => $this->systemSettings->getHomepageStatusSectionSettings(),
             'maintenanceNoticeSettings' => $this->systemSettings->getMaintenanceNoticeSettings(),
@@ -304,7 +312,7 @@ final class NewsController extends AbstractController
             return $this->redirectToRoute('app_portal_admin_news');
         }
 
-        return $this->handleNewsUpsert($request, null, 'app_portal_admin_news');
+        return $this->handleNewsUpsert($request, null, 'app_portal_admin_news', $this->isGranted('ROLE_SUPER_ADMIN'));
     }
 
     #[Route('/portal/admin/nyheter/{id}', name: 'app_portal_admin_news_update', methods: ['POST'])]
@@ -316,13 +324,14 @@ final class NewsController extends AbstractController
         }
 
         $article = $this->findNewsArticleOr404($id);
+        $this->assertAdminMaintenanceNewsAccess($article, 'uppdatera');
         if (!$this->isCsrfTokenValid(sprintf('update_news_article_%d', $article->getId()), (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Kunde inte verifiera uppdateringen av nyheten.');
 
             return $this->redirectToRoute('app_portal_admin_news');
         }
 
-        return $this->handleNewsUpsert($request, $article, 'app_portal_admin_news');
+        return $this->handleNewsUpsert($request, $article, 'app_portal_admin_news', $this->isGranted('ROLE_SUPER_ADMIN'));
     }
 
     #[Route('/portal/admin/nyheter/{id}/arkivera', name: 'app_portal_admin_news_archive', methods: ['POST'])]
@@ -334,6 +343,7 @@ final class NewsController extends AbstractController
         }
 
         $article = $this->findNewsArticleOr404($id);
+        $this->assertAdminMaintenanceNewsAccess($article, 'arkivera');
         if (!$this->isCsrfTokenValid(sprintf('archive_news_article_%d', $article->getId()), (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Kunde inte verifiera arkiveringen av nyheten.');
 
@@ -362,6 +372,7 @@ final class NewsController extends AbstractController
         }
 
         $article = $this->findNewsArticleOr404($id);
+        $this->assertAdminMaintenanceNewsAccess($article, 'ta bort');
         if (!$this->isCsrfTokenValid(sprintf('delete_news_article_%d', $article->getId()), (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Kunde inte verifiera borttagningen av nyheten.');
 
@@ -536,7 +547,7 @@ final class NewsController extends AbstractController
         }
 
         if (!$allowMaintenanceCategory && NewsCategory::PLANNED_MAINTENANCE === $category) {
-            $this->addFlash('error', 'Tekniker kan bara skapa vanliga sajt-nyheter.');
+            $this->addFlash('error', 'Planerat underhåll kan bara hanteras av superadmin.');
 
             return $this->redirectToRoute($redirectRoute);
         }
@@ -766,6 +777,13 @@ final class NewsController extends AbstractController
 
         if (NewsCategory::PLANNED_MAINTENANCE === $article->getCategory()) {
             throw $this->createAccessDeniedException(sprintf('Tekniker får inte %s underhållsnyheter.', $action));
+        }
+    }
+
+    private function assertAdminMaintenanceNewsAccess(NewsArticle $article, string $action): void
+    {
+        if (NewsCategory::PLANNED_MAINTENANCE === $article->getCategory() && !$this->isGranted('ROLE_SUPER_ADMIN')) {
+            throw $this->createAccessDeniedException(sprintf('Bara superadmin får %s underhållsnyheter.', $action));
         }
     }
 

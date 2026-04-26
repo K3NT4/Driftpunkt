@@ -52,6 +52,8 @@ sudo systemctl enable --now driftpunkt-mail-poll.timer
 sudo systemctl list-timers | grep driftpunkt-mail-poll
 ```
 
+Systemd-mallen skriver stdout och stderr till `var/log/mail-poll.log`, så samma logg kan följas från adminvyn eller med `tail`.
+
 ## Driftobservationer
 
 Efter aktivering bör du följa upp:

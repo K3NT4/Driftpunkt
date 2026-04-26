@@ -355,6 +355,157 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertTrue($this->passwordHasher->isPasswordValid($user, 'AnotherSecure123'));
     }
 
+    public function testAdminCanUpdateCompanyMonthlyReportSettings(): void
+    {
+        $admin = $this->createAdminUserWithEmail('admin-company-report@test.local');
+        $company = new Company('Report Company');
+        $company->setPrimaryEmail('old-report@company.test');
+
+        $this->entityManager->persist($company);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/identity');
+        self::assertResponseIsSuccessful();
+
+        $companyForm = $crawler->filter(sprintf('form[action="/portal/admin/companies/%d"]', $company->getId()))->form([
+            'name' => 'Report Company',
+            'primary_email' => 'old-report@company.test',
+            'parent_company_id' => '',
+            'monthly_report_enabled' => '1',
+            'monthly_report_recipient_email' => ' Reports@Company.Test ',
+            'is_active' => '1',
+        ]);
+        unset($companyForm['allow_shared_tickets']);
+
+        $this->client->submit($companyForm);
+
+        self::assertResponseRedirects('/portal/admin/identity');
+        $this->client->followRedirect();
+
+        $this->entityManager->clear();
+        $company = $this->entityManager->getRepository(Company::class)->findOneBy(['name' => 'Report Company']);
+        self::assertNotNull($company);
+        self::assertTrue($company->isMonthlyReportEnabled());
+        self::assertSame('reports@company.test', $company->getMonthlyReportRecipientEmail());
+        self::assertStringContainsString('Månadsrapport', $this->client->getResponse()->getContent() ?? '');
+    }
+
+    public function testAdminCannotEnableCompanyMonthlyReportWithInvalidEmail(): void
+    {
+        $admin = $this->createAdminUserWithEmail('admin-invalid-company-report@test.local');
+        $company = new Company('Invalid Report Company');
+        $company->setPrimaryEmail('support@invalid-report.test');
+
+        $this->entityManager->persist($company);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/identity');
+        self::assertResponseIsSuccessful();
+
+        $companyForm = $crawler->filter(sprintf('form[action="/portal/admin/companies/%d"]', $company->getId()))->form([
+            'name' => 'Invalid Report Company',
+            'primary_email' => 'support@invalid-report.test',
+            'parent_company_id' => '',
+            'monthly_report_enabled' => '1',
+            'monthly_report_recipient_email' => 'inte-en-mailadress',
+            'is_active' => '1',
+        ]);
+        unset($companyForm['allow_shared_tickets']);
+
+        $this->client->submit($companyForm);
+
+        self::assertResponseRedirects('/portal/admin/identity');
+        $this->client->followRedirect();
+
+        $this->entityManager->clear();
+        $company = $this->entityManager->getRepository(Company::class)->findOneBy(['name' => 'Invalid Report Company']);
+        self::assertNotNull($company);
+        self::assertFalse($company->isMonthlyReportEnabled());
+        self::assertNull($company->getMonthlyReportRecipientEmail());
+        self::assertStringContainsString('Månadsrapportens mottagaradress är inte giltig.', $this->client->getResponse()->getContent() ?? '');
+    }
+
+    public function testAdminCannotEnableCompanyMonthlyReportWithTooLongEmail(): void
+    {
+        $admin = $this->createAdminUserWithEmail('admin-company-report-length@test.local');
+        $company = new Company('Report Length Company');
+        $company->setPrimaryEmail('length-report@company.test');
+        $tooLongEmail = str_repeat('a', 64).'@'.str_repeat('b', 60).'.'.str_repeat('c', 60).'.test';
+
+        self::assertGreaterThan(180, mb_strlen($tooLongEmail));
+        self::assertNotFalse(filter_var($tooLongEmail, FILTER_VALIDATE_EMAIL));
+
+        $this->entityManager->persist($company);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/identity');
+        self::assertResponseIsSuccessful();
+
+        $companyForm = $crawler->filter(sprintf('form[action="/portal/admin/companies/%d"]', $company->getId()))->form([
+            'name' => 'Report Length Company',
+            'primary_email' => 'length-report@company.test',
+            'parent_company_id' => '',
+            'monthly_report_enabled' => '1',
+            'monthly_report_recipient_email' => $tooLongEmail,
+            'is_active' => '1',
+        ]);
+        unset($companyForm['allow_shared_tickets']);
+
+        $this->client->submit($companyForm);
+
+        self::assertResponseRedirects('/portal/admin/identity');
+        $this->client->followRedirect();
+
+        $this->entityManager->clear();
+        $company = $this->entityManager->getRepository(Company::class)->findOneBy(['name' => 'Report Length Company']);
+        self::assertNotNull($company);
+        self::assertFalse($company->isMonthlyReportEnabled());
+        self::assertNull($company->getMonthlyReportRecipientEmail());
+        self::assertStringContainsString('Månadsrapportens mottagaradress får vara högst 180 tecken.', $this->client->getResponse()->getContent() ?? '');
+    }
+
+    public function testAdminCannotStoreDisabledCompanyMonthlyReportWithTooLongEmail(): void
+    {
+        $admin = $this->createAdminUserWithEmail('admin-company-report-disabled-length@test.local');
+        $company = new Company('Disabled Report Length Company');
+        $company->setPrimaryEmail('disabled-length-report@company.test');
+        $tooLongEmail = str_repeat('a', 64).'@'.str_repeat('b', 60).'.'.str_repeat('c', 60).'.test';
+
+        self::assertGreaterThan(180, mb_strlen($tooLongEmail));
+        self::assertNotFalse(filter_var($tooLongEmail, FILTER_VALIDATE_EMAIL));
+
+        $this->entityManager->persist($company);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/identity');
+        self::assertResponseIsSuccessful();
+
+        $companyForm = $crawler->filter(sprintf('form[action="/portal/admin/companies/%d"]', $company->getId()))->form([
+            'name' => 'Disabled Report Length Company',
+            'primary_email' => 'disabled-length-report@company.test',
+            'parent_company_id' => '',
+            'monthly_report_recipient_email' => $tooLongEmail,
+            'is_active' => '1',
+        ]);
+        unset($companyForm['allow_shared_tickets'], $companyForm['monthly_report_enabled']);
+
+        $this->client->submit($companyForm);
+
+        self::assertResponseRedirects('/portal/admin/identity');
+        $this->client->followRedirect();
+
+        $this->entityManager->clear();
+        $company = $this->entityManager->getRepository(Company::class)->findOneBy(['name' => 'Disabled Report Length Company']);
+        self::assertNotNull($company);
+        self::assertFalse($company->isMonthlyReportEnabled());
+        self::assertNull($company->getMonthlyReportRecipientEmail());
+        self::assertStringContainsString('Månadsrapportens mottagaradress får vara högst 180 tecken.', $this->client->getResponse()->getContent() ?? '');
+    }
+
     public function testAdminCannotMoveCompanyUnderItsOwnSubsidiary(): void
     {
         $admin = $this->createAdminUserWithEmail('admin-no-cycle@test.local');
@@ -433,9 +584,30 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertTrue($this->passwordHasher->isPasswordValid($protectedUser, 'OriginalSecure123'));
     }
 
-    public function testAdminCanUpdateSiteBrandingWithLogoAndFooterText(): void
+    public function testRegularAdminCannotManageSiteBranding(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createRegularAdminUser();
+        $this->client->loginUser($admin);
+
+        $crawler = $this->client->request('GET', '/portal/admin/identity');
+        self::assertResponseIsSuccessful();
+        self::assertSame(0, $crawler->filter('form[action="/portal/admin/site-branding"]')->count());
+        self::assertStringNotContainsString('Spara webbplatsidentitet', (string) $crawler->html());
+
+        $this->client->request('POST', '/portal/admin/site-branding', [
+            '_token' => 'blocked-before-csrf-validation',
+            'site_name' => 'Ej tillåtet',
+            'footer_text' => 'Ska inte sparas.',
+        ]);
+
+        self::assertResponseStatusCodeSame(403);
+        self::assertNull($this->entityManager->getRepository(SystemSetting::class)->find(SystemSettings::SITE_BRAND_NAME));
+        self::assertNull($this->entityManager->getRepository(SystemSetting::class)->find(SystemSettings::SITE_FOOTER_TEXT));
+    }
+
+    public function testSuperAdminCanUpdateSiteBrandingWithLogoAndFooterText(): void
+    {
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
 
         $crawler = $this->client->request('GET', '/portal/admin/identity');
@@ -849,6 +1021,125 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertStringContainsString('Cache cleared', $content);
     }
 
+    public function testAdminJobHistoryIncludesCodeUpdateApplyRuns(): void
+    {
+        $admin = $this->createSuperAdminUser();
+        $this->client->loginUser($admin);
+
+        $codeUpdateRunsDirectory = dirname(__DIR__, 2).'/var/code_update_runs';
+        mkdir($codeUpdateRunsDirectory, 0777, true);
+
+        file_put_contents($codeUpdateRunsDirectory.'/code-apply-run.json', json_encode([
+            'id' => 'code-apply-run',
+            'packageId' => 'driftpunkt-package',
+            'packageName' => 'driftpunkt/driftpunkt',
+            'packageVersion' => '2.4.0',
+            'queuedAt' => '2026-04-19T09:00:00+02:00',
+            'startedAt' => '2026-04-19T09:00:01+02:00',
+            'finishedAt' => '2026-04-19T09:04:00+02:00',
+            'status' => 'failed',
+            'succeeded' => false,
+            'output' => "Förkontrollen misslyckades.\nComposer saknar beroende.",
+            'backupFilename' => null,
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        $crawler = $this->client->request('GET', '/portal/admin/jobs?job_source=code_updates&job_status=failed&job_id=code-apply-run');
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $crawler->html();
+        self::assertStringContainsString('option value="code_updates" selected', $html);
+        self::assertStringContainsString('Koduppdateringar', $html);
+        self::assertStringContainsString('Koduppdatering', $html);
+        self::assertStringContainsString('driftpunkt/driftpunkt 2.4.0', $html);
+        self::assertStringContainsString('code-apply-run', $html);
+        self::assertStringContainsString('Det här jobbet kan inte köas om automatiskt.', $html);
+        self::assertCount(1, $crawler->selectLink('Ladda ner logg'));
+
+        $this->client->request('GET', '/portal/admin/jobs/code_updates/code-apply-run/download-log');
+        self::assertResponseIsSuccessful();
+        self::assertResponseHeaderSame('content-type', 'text/plain; charset=UTF-8');
+        self::assertStringContainsString(
+            'attachment; filename=driftpunkt-jobb-code_updates-code-apply-run.log.txt',
+            (string) $this->client->getResponse()->headers->get('content-disposition'),
+        );
+
+        $content = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('Källa: code_updates', $content);
+        self::assertStringContainsString('Jobb-ID: code-apply-run', $content);
+        self::assertStringContainsString('Förkontrollen misslyckades.', $content);
+        self::assertStringContainsString('Composer saknar beroende.', $content);
+    }
+
+    public function testAdminJobViewShowsOperationalQueueOverviewAndStatusHints(): void
+    {
+        $admin = $this->createSuperAdminUser();
+        $this->client->loginUser($admin);
+
+        $databaseJobsDirectory = dirname(__DIR__, 2).'/var/database_jobs';
+        $postUpdateRunsDirectory = dirname(__DIR__, 2).'/var/post_update_runs';
+        mkdir($databaseJobsDirectory, 0777, true);
+        mkdir($postUpdateRunsDirectory, 0777, true);
+
+        file_put_contents($databaseJobsDirectory.'/db-queued.json', json_encode([
+            'id' => 'db-queued',
+            'queuedAt' => (new \DateTimeImmutable('-1 hour'))->format(DATE_ATOM),
+            'startedAt' => null,
+            'finishedAt' => null,
+            'status' => 'queued',
+            'action' => 'backup',
+            'label' => 'Skapa databasbackup',
+            'databasePath' => dirname(__DIR__, 2).'/var/driftpunkt_test.db',
+            'succeeded' => null,
+            'resultSummary' => null,
+            'output' => '',
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        file_put_contents($databaseJobsDirectory.'/db-running.json', json_encode([
+            'id' => 'db-running',
+            'queuedAt' => (new \DateTimeImmutable('-40 minutes'))->format(DATE_ATOM),
+            'startedAt' => (new \DateTimeImmutable('-20 minutes'))->format(DATE_ATOM),
+            'finishedAt' => null,
+            'status' => 'running',
+            'action' => 'optimize',
+            'label' => 'Optimera databas',
+            'databasePath' => dirname(__DIR__, 2).'/var/driftpunkt_test.db',
+            'succeeded' => null,
+            'resultSummary' => null,
+            'output' => 'Pågår',
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        file_put_contents($postUpdateRunsDirectory.'/post-failed.json', json_encode([
+            'id' => 'post-failed',
+            'queuedAt' => (new \DateTimeImmutable('-2 hours'))->format(DATE_ATOM),
+            'startedAt' => (new \DateTimeImmutable('-119 minutes'))->format(DATE_ATOM),
+            'finishedAt' => (new \DateTimeImmutable('-110 minutes'))->format(DATE_ATOM),
+            'status' => 'failed',
+            'succeeded' => false,
+            'selectedTasks' => ['composer_install'],
+            'taskResults' => [
+                [
+                    'id' => 'composer_install',
+                    'label' => 'Composer install',
+                    'exitCode' => 1,
+                    'succeeded' => false,
+                    'output' => 'Composer failed',
+                ],
+            ],
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        $crawler = $this->client->request('GET', '/portal/admin/jobs');
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $crawler->html();
+        self::assertStringContainsString('Driftkö', $html);
+        self::assertStringContainsString('Aktiva jobb', $html);
+        self::assertStringContainsString('Fastnade köade', $html);
+        self::assertStringContainsString('Senaste fel', $html);
+        self::assertStringContainsString('Köad, väntar på bakgrundsstart', $html);
+        self::assertStringContainsString('Pågår sedan', $html);
+        self::assertStringContainsString('Fel, kräver kontroll', $html);
+    }
+
     public function testAdminCanPurgeFinishedJobsFromJobView(): void
     {
         $admin = $this->createSuperAdminUser();
@@ -906,6 +1197,20 @@ final class AdminIdentityFlowTest extends WebTestCase
             ],
         ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
 
+        file_put_contents($codeUpdateRunsDirectory.'/code-apply-completed.json', json_encode([
+            'id' => 'code-apply-completed',
+            'packageId' => 'driftpunkt-package',
+            'packageName' => 'driftpunkt/driftpunkt',
+            'packageVersion' => '2.4.0',
+            'queuedAt' => '2026-04-19T08:00:00+02:00',
+            'startedAt' => '2026-04-19T08:00:01+02:00',
+            'finishedAt' => '2026-04-19T08:04:00+02:00',
+            'status' => 'completed',
+            'succeeded' => true,
+            'output' => 'Koduppdateringen applicerades.',
+            'backupFilename' => 'backup.zip',
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
         $crawler = $this->client->request('GET', '/portal/admin/jobs');
         self::assertResponseIsSuccessful();
 
@@ -917,10 +1222,346 @@ final class AdminIdentityFlowTest extends WebTestCase
         $this->client->followRedirect();
 
         $html = (string) $this->client->getResponse()->getContent();
-        self::assertStringContainsString('Rensade bort 2 avslutade jobb', $html);
+        self::assertStringContainsString('Rensade bort 3 avslutade jobb', $html);
         self::assertFileDoesNotExist($databaseJobsDirectory.'/db-completed.json');
         self::assertFileExists($databaseJobsDirectory.'/db-running.json');
         self::assertFileDoesNotExist($codeUpdateRunsDirectory.'/update-failed.json');
+        self::assertFileDoesNotExist($codeUpdateRunsDirectory.'/code-apply-completed.json');
+        self::assertStringContainsString('Senaste driftåtgärder', $html);
+        self::assertStringContainsString('super-admin@test.local', $html);
+        self::assertStringContainsString('Rensade avslutade jobb', $html);
+    }
+
+    public function testAdminCanPurgeOldFinishedJobsByRetentionFromJobView(): void
+    {
+        $admin = $this->createSuperAdminUser();
+        $this->client->loginUser($admin);
+
+        $databaseJobsDirectory = dirname(__DIR__, 2).'/var/database_jobs';
+        $codeUpdateRunsDirectory = dirname(__DIR__, 2).'/var/code_update_runs';
+        $postUpdateRunsDirectory = dirname(__DIR__, 2).'/var/post_update_runs';
+        mkdir($databaseJobsDirectory, 0777, true);
+        mkdir($codeUpdateRunsDirectory, 0777, true);
+        mkdir($postUpdateRunsDirectory, 0777, true);
+
+        file_put_contents($databaseJobsDirectory.'/db-old-completed.json', json_encode([
+            'id' => 'db-old-completed',
+            'queuedAt' => '2026-02-01T09:00:00+02:00',
+            'startedAt' => '2026-02-01T09:00:01+02:00',
+            'finishedAt' => '2026-02-01T09:01:00+02:00',
+            'status' => 'completed',
+            'action' => 'backup',
+            'label' => 'Skapa databasbackup',
+            'databasePath' => dirname(__DIR__, 2).'/var/driftpunkt_test.db',
+            'succeeded' => true,
+            'resultSummary' => 'Klar',
+            'output' => 'Done',
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        file_put_contents($databaseJobsDirectory.'/db-recent-completed.json', json_encode([
+            'id' => 'db-recent-completed',
+            'queuedAt' => (new \DateTimeImmutable('-7 days'))->format(DATE_ATOM),
+            'startedAt' => (new \DateTimeImmutable('-7 days'))->format(DATE_ATOM),
+            'finishedAt' => (new \DateTimeImmutable('-7 days'))->format(DATE_ATOM),
+            'status' => 'completed',
+            'action' => 'backup',
+            'label' => 'Skapa databasbackup',
+            'databasePath' => dirname(__DIR__, 2).'/var/driftpunkt_test.db',
+            'succeeded' => true,
+            'resultSummary' => 'Klar',
+            'output' => 'Done',
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        file_put_contents($codeUpdateRunsDirectory.'/code-old-failed.json', json_encode([
+            'id' => 'code-old-failed',
+            'packageId' => 'driftpunkt-package',
+            'packageName' => 'driftpunkt/driftpunkt',
+            'packageVersion' => '2.0.0',
+            'queuedAt' => '2025-12-01T09:00:00+02:00',
+            'startedAt' => '2025-12-01T09:00:01+02:00',
+            'finishedAt' => '2025-12-01T09:04:00+02:00',
+            'status' => 'failed',
+            'succeeded' => false,
+            'output' => 'Gammalt fel',
+            'backupFilename' => null,
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        file_put_contents($postUpdateRunsDirectory.'/post-recent-failed.json', json_encode([
+            'id' => 'post-recent-failed',
+            'queuedAt' => (new \DateTimeImmutable('-7 days'))->format(DATE_ATOM),
+            'startedAt' => (new \DateTimeImmutable('-7 days'))->format(DATE_ATOM),
+            'finishedAt' => (new \DateTimeImmutable('-7 days'))->format(DATE_ATOM),
+            'status' => 'failed',
+            'succeeded' => false,
+            'selectedTasks' => ['composer_install'],
+            'taskResults' => [
+                [
+                    'id' => 'composer_install',
+                    'label' => 'Composer install',
+                    'exitCode' => 1,
+                    'succeeded' => false,
+                    'output' => 'Nyligt fel',
+                ],
+            ],
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        $crawler = $this->client->request('GET', '/portal/admin/jobs');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Rensa gamla avslutade jobb', (string) $crawler->html());
+
+        $this->client->submit(
+            $crawler->filter('form[action*="/portal/admin/jobs/purge-old-finished"]')->form(),
+        );
+
+        self::assertResponseRedirects('/portal/admin/jobs?job_source=all&job_status=all');
+        $this->client->followRedirect();
+
+        $html = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('Rensade 2 gamla avslutade jobb', $html);
+        self::assertFileDoesNotExist($databaseJobsDirectory.'/db-old-completed.json');
+        self::assertFileExists($databaseJobsDirectory.'/db-recent-completed.json');
+        self::assertFileDoesNotExist($codeUpdateRunsDirectory.'/code-old-failed.json');
+        self::assertFileExists($postUpdateRunsDirectory.'/post-recent-failed.json');
+        self::assertStringContainsString('Retention rensade gamla avslutade jobb', $html);
+    }
+
+    public function testAdminCanMarkStaleQueuedJobsAsFailedFromJobView(): void
+    {
+        $admin = $this->createSuperAdminUser();
+        $this->client->loginUser($admin);
+
+        $databaseJobsDirectory = dirname(__DIR__, 2).'/var/database_jobs';
+        $codeUpdateRunsDirectory = dirname(__DIR__, 2).'/var/code_update_runs';
+        $postUpdateRunsDirectory = dirname(__DIR__, 2).'/var/post_update_runs';
+        mkdir($databaseJobsDirectory, 0777, true);
+        mkdir($codeUpdateRunsDirectory, 0777, true);
+        mkdir($postUpdateRunsDirectory, 0777, true);
+
+        $oldQueuedAt = (new \DateTimeImmutable('-3 hours'))->format(DATE_ATOM);
+        $freshQueuedAt = (new \DateTimeImmutable('-30 minutes'))->format(DATE_ATOM);
+
+        file_put_contents($databaseJobsDirectory.'/db-stale-queued.json', json_encode([
+            'id' => 'db-stale-queued',
+            'queuedAt' => $oldQueuedAt,
+            'startedAt' => null,
+            'finishedAt' => null,
+            'status' => 'queued',
+            'action' => 'backup',
+            'label' => 'Skapa databasbackup',
+            'databasePath' => dirname(__DIR__, 2).'/var/driftpunkt_test.db',
+            'succeeded' => null,
+            'resultSummary' => null,
+            'output' => '',
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        file_put_contents($databaseJobsDirectory.'/db-fresh-queued.json', json_encode([
+            'id' => 'db-fresh-queued',
+            'queuedAt' => $freshQueuedAt,
+            'startedAt' => null,
+            'finishedAt' => null,
+            'status' => 'queued',
+            'action' => 'backup',
+            'label' => 'Skapa databasbackup',
+            'databasePath' => dirname(__DIR__, 2).'/var/driftpunkt_test.db',
+            'succeeded' => null,
+            'resultSummary' => null,
+            'output' => '',
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        file_put_contents($databaseJobsDirectory.'/db-old-running.json', json_encode([
+            'id' => 'db-old-running',
+            'queuedAt' => $oldQueuedAt,
+            'startedAt' => $oldQueuedAt,
+            'finishedAt' => null,
+            'status' => 'running',
+            'action' => 'backup',
+            'label' => 'Skapa databasbackup',
+            'databasePath' => dirname(__DIR__, 2).'/var/driftpunkt_test.db',
+            'succeeded' => null,
+            'resultSummary' => null,
+            'output' => 'Pågår',
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        file_put_contents($postUpdateRunsDirectory.'/post-stale-queued.json', json_encode([
+            'id' => 'post-stale-queued',
+            'queuedAt' => $oldQueuedAt,
+            'startedAt' => null,
+            'finishedAt' => null,
+            'status' => 'queued',
+            'succeeded' => null,
+            'selectedTasks' => ['composer_install'],
+            'taskResults' => [],
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        file_put_contents($postUpdateRunsDirectory.'/post-fresh-queued.json', json_encode([
+            'id' => 'post-fresh-queued',
+            'queuedAt' => $freshQueuedAt,
+            'startedAt' => null,
+            'finishedAt' => null,
+            'status' => 'queued',
+            'succeeded' => null,
+            'selectedTasks' => ['cache_clear'],
+            'taskResults' => [],
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        file_put_contents($codeUpdateRunsDirectory.'/code-stale-queued.json', json_encode([
+            'id' => 'code-stale-queued',
+            'packageId' => 'package-stale',
+            'packageName' => 'driftpunkt/update',
+            'packageVersion' => '2.1.0',
+            'queuedAt' => $oldQueuedAt,
+            'startedAt' => null,
+            'finishedAt' => null,
+            'status' => 'queued',
+            'succeeded' => null,
+            'output' => '',
+            'backupFilename' => null,
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        file_put_contents($codeUpdateRunsDirectory.'/code-fresh-queued.json', json_encode([
+            'id' => 'code-fresh-queued',
+            'packageId' => 'package-fresh',
+            'packageName' => 'driftpunkt/update',
+            'packageVersion' => '2.1.1',
+            'queuedAt' => $freshQueuedAt,
+            'startedAt' => null,
+            'finishedAt' => null,
+            'status' => 'queued',
+            'succeeded' => null,
+            'output' => '',
+            'backupFilename' => null,
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        $crawler = $this->client->request('GET', '/portal/admin/jobs');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Rensa fastnade köade jobb', (string) $crawler->html());
+
+        $this->client->submit(
+            $crawler->filter('form[action*="/portal/admin/jobs/purge-stale-queued"]')->form(),
+        );
+
+        self::assertResponseRedirects('/portal/admin/jobs?job_source=all&job_status=all');
+        $this->client->followRedirect();
+
+        $html = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('Rensade 3 fastnade köade jobb', $html);
+
+        $staleDatabaseJob = json_decode((string) file_get_contents($databaseJobsDirectory.'/db-stale-queued.json'), true, 512, \JSON_THROW_ON_ERROR);
+        $freshDatabaseJob = json_decode((string) file_get_contents($databaseJobsDirectory.'/db-fresh-queued.json'), true, 512, \JSON_THROW_ON_ERROR);
+        $runningDatabaseJob = json_decode((string) file_get_contents($databaseJobsDirectory.'/db-old-running.json'), true, 512, \JSON_THROW_ON_ERROR);
+        $stalePostRun = json_decode((string) file_get_contents($postUpdateRunsDirectory.'/post-stale-queued.json'), true, 512, \JSON_THROW_ON_ERROR);
+        $freshPostRun = json_decode((string) file_get_contents($postUpdateRunsDirectory.'/post-fresh-queued.json'), true, 512, \JSON_THROW_ON_ERROR);
+        $staleCodeRun = json_decode((string) file_get_contents($codeUpdateRunsDirectory.'/code-stale-queued.json'), true, 512, \JSON_THROW_ON_ERROR);
+        $freshCodeRun = json_decode((string) file_get_contents($codeUpdateRunsDirectory.'/code-fresh-queued.json'), true, 512, \JSON_THROW_ON_ERROR);
+
+        self::assertSame('failed', $staleDatabaseJob['status']);
+        self::assertStringContainsString('längre än 2 timmar', $staleDatabaseJob['output']);
+        self::assertSame('queued', $freshDatabaseJob['status']);
+        self::assertSame('running', $runningDatabaseJob['status']);
+        self::assertSame('failed', $stalePostRun['status']);
+        self::assertStringContainsString('längre än 2 timmar', $stalePostRun['taskResults'][0]['output']);
+        self::assertSame('queued', $freshPostRun['status']);
+        self::assertSame('failed', $staleCodeRun['status']);
+        self::assertStringContainsString('längre än 2 timmar', $staleCodeRun['output']);
+        self::assertSame('queued', $freshCodeRun['status']);
+    }
+
+    public function testAdminCanMarkStaleRunningJobsAsFailedFromJobView(): void
+    {
+        $admin = $this->createSuperAdminUser();
+        $this->client->loginUser($admin);
+
+        $databaseJobsDirectory = dirname(__DIR__, 2).'/var/database_jobs';
+        $codeUpdateRunsDirectory = dirname(__DIR__, 2).'/var/code_update_runs';
+        $postUpdateRunsDirectory = dirname(__DIR__, 2).'/var/post_update_runs';
+        mkdir($databaseJobsDirectory, 0777, true);
+        mkdir($codeUpdateRunsDirectory, 0777, true);
+        mkdir($postUpdateRunsDirectory, 0777, true);
+
+        $oldStartedAt = (new \DateTimeImmutable('-7 hours'))->format(DATE_ATOM);
+        $freshStartedAt = (new \DateTimeImmutable('-1 hour'))->format(DATE_ATOM);
+
+        file_put_contents($databaseJobsDirectory.'/db-stale-running.json', json_encode([
+            'id' => 'db-stale-running',
+            'queuedAt' => $oldStartedAt,
+            'startedAt' => $oldStartedAt,
+            'finishedAt' => null,
+            'status' => 'running',
+            'action' => 'backup',
+            'label' => 'Skapa databasbackup',
+            'databasePath' => dirname(__DIR__, 2).'/var/driftpunkt_test.db',
+            'succeeded' => null,
+            'resultSummary' => null,
+            'output' => 'Startade men blev aldrig klar',
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        file_put_contents($databaseJobsDirectory.'/db-fresh-running.json', json_encode([
+            'id' => 'db-fresh-running',
+            'queuedAt' => $freshStartedAt,
+            'startedAt' => $freshStartedAt,
+            'finishedAt' => null,
+            'status' => 'running',
+            'action' => 'backup',
+            'label' => 'Skapa databasbackup',
+            'databasePath' => dirname(__DIR__, 2).'/var/driftpunkt_test.db',
+            'succeeded' => null,
+            'resultSummary' => null,
+            'output' => 'Pågår',
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        file_put_contents($postUpdateRunsDirectory.'/post-stale-running.json', json_encode([
+            'id' => 'post-stale-running',
+            'queuedAt' => $oldStartedAt,
+            'startedAt' => $oldStartedAt,
+            'finishedAt' => null,
+            'status' => 'running',
+            'succeeded' => null,
+            'selectedTasks' => ['composer_install'],
+            'taskResults' => [],
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        file_put_contents($codeUpdateRunsDirectory.'/code-stale-running.json', json_encode([
+            'id' => 'code-stale-running',
+            'packageId' => 'driftpunkt-package',
+            'packageName' => 'driftpunkt/driftpunkt',
+            'packageVersion' => '2.4.0',
+            'queuedAt' => $oldStartedAt,
+            'startedAt' => $oldStartedAt,
+            'finishedAt' => null,
+            'status' => 'running',
+            'succeeded' => null,
+            'output' => 'Pågår',
+            'backupFilename' => null,
+        ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+
+        $crawler = $this->client->request('GET', '/portal/admin/jobs');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Rensa fastnade pågående jobb', (string) $crawler->html());
+
+        $this->client->submit(
+            $crawler->filter('form[action*="/portal/admin/jobs/purge-stale-running"]')->form(),
+        );
+
+        self::assertResponseRedirects('/portal/admin/jobs?job_source=all&job_status=all');
+        $this->client->followRedirect();
+
+        $html = (string) $this->client->getResponse()->getContent();
+        self::assertStringContainsString('Rensade 3 fastnade pågående jobb', $html);
+        self::assertStringContainsString('Rensade fastnade pågående jobb', $html);
+        self::assertStringContainsString('super-admin@test.local', $html);
+
+        $staleDatabaseJob = json_decode((string) file_get_contents($databaseJobsDirectory.'/db-stale-running.json'), true, 512, \JSON_THROW_ON_ERROR);
+        $freshDatabaseJob = json_decode((string) file_get_contents($databaseJobsDirectory.'/db-fresh-running.json'), true, 512, \JSON_THROW_ON_ERROR);
+        $stalePostRun = json_decode((string) file_get_contents($postUpdateRunsDirectory.'/post-stale-running.json'), true, 512, \JSON_THROW_ON_ERROR);
+        $staleCodeRun = json_decode((string) file_get_contents($codeUpdateRunsDirectory.'/code-stale-running.json'), true, 512, \JSON_THROW_ON_ERROR);
+
+        self::assertSame('failed', $staleDatabaseJob['status']);
+        self::assertStringContainsString('längre än 6 timmar', $staleDatabaseJob['output']);
+        self::assertSame('running', $freshDatabaseJob['status']);
+        self::assertSame('failed', $stalePostRun['status']);
+        self::assertStringContainsString('längre än 6 timmar', $stalePostRun['taskResults'][0]['output']);
+        self::assertSame('failed', $staleCodeRun['status']);
+        self::assertStringContainsString('längre än 6 timmar', $staleCodeRun['output']);
     }
 
     public function testAdminCanCreateDatabaseBackupFromDatabaseSection(): void
@@ -951,9 +1592,13 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertResponseIsSuccessful();
 
         $html = (string) $crawler->html();
+        self::assertStringNotContainsString('Jobbhistorik', $html);
+        self::assertStringNotContainsString('Databashantering', $html);
+        self::assertStringNotContainsString('Optimera databas', $html);
         self::assertStringNotContainsString('href="/portal/admin/updates"', $html);
         self::assertStringNotContainsString('href="/portal/admin/database"', $html);
         self::assertStringNotContainsString('href="/portal/admin/jobs"', $html);
+        self::assertStringNotContainsString('action="/portal/admin/database/optimize"', $html);
         self::assertStringNotContainsString('action="/portal/admin/underhall"', $html);
 
         foreach (['/portal/admin/updates', '/portal/admin/database', '/portal/admin/jobs'] as $path) {
@@ -970,6 +1615,9 @@ final class AdminIdentityFlowTest extends WebTestCase
         $this->client->request('POST', '/portal/admin/database/backups/create');
         self::assertResponseStatusCodeSame(403);
 
+        $this->client->request('POST', '/portal/admin/database/optimize');
+        self::assertResponseStatusCodeSame(403);
+
         $this->client->request('POST', '/portal/admin/database/migrations/run');
         self::assertResponseStatusCodeSame(403);
 
@@ -978,6 +1626,130 @@ final class AdminIdentityFlowTest extends WebTestCase
 
         $this->client->request('POST', '/portal/admin/underhall');
         self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testRegularAdminCannotSeeOrManagePlannedMaintenanceNews(): void
+    {
+        $article = (new NewsArticle('Planerat servicefönster', 'Databasarbete i natt.', 'Vi uppdaterar databasen under servicefönstret.'))
+            ->setCategory(NewsCategory::PLANNED_MAINTENANCE)
+            ->setMaintenanceStartsAt(new \DateTimeImmutable('2026-04-27 22:00'))
+            ->setMaintenanceEndsAt(new \DateTimeImmutable('2026-04-27 23:00'));
+        $this->entityManager->persist($article);
+        $this->entityManager->flush();
+
+        $admin = $this->createRegularAdminUser();
+        $this->client->loginUser($admin);
+
+        $crawler = $this->client->request('GET', '/portal/admin/nyheter');
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $crawler->html();
+        self::assertStringNotContainsString('Planerat servicefönster', $html);
+        self::assertStringNotContainsString('data-news-preset="maintenance"', $html);
+        self::assertStringNotContainsString('value="planned_maintenance"', $html);
+        self::assertStringNotContainsString('name="maintenance_starts_at"', $html);
+
+        $token = (string) $crawler->filter('form[method="post"][action="/portal/admin/nyheter"] input[name="_token"]')->attr('value');
+        $this->client->request('POST', '/portal/admin/nyheter', [
+            '_token' => $token,
+            'title' => 'Otillåtet underhåll',
+            'summary' => 'Ska inte skapas av vanlig admin.',
+            'body' => 'Vanlig admin ska inte kunna publicera planerat underhåll.',
+            'category' => NewsCategory::PLANNED_MAINTENANCE->value,
+            'maintenance_starts_at' => '2026-04-28T22:00',
+            'maintenance_ends_at' => '2026-04-28T23:00',
+            'is_published' => '1',
+        ]);
+
+        self::assertResponseRedirects('/portal/admin/nyheter');
+        self::assertNull($this->entityManager->getRepository(NewsArticle::class)->findOneBy(['title' => 'Otillåtet underhåll']));
+
+        foreach ([
+            sprintf('/portal/admin/nyheter/%d', $article->getId()),
+            sprintf('/portal/admin/nyheter/%d/arkivera', $article->getId()),
+            sprintf('/portal/admin/nyheter/%d/ta-bort', $article->getId()),
+        ] as $path) {
+            $this->client->request('POST', $path, ['_token' => 'blocked-before-csrf']);
+            self::assertResponseStatusCodeSame(403);
+        }
+    }
+
+    public function testRegularAdminCannotUpdateMaintenanceNoticeFromHomepageSettings(): void
+    {
+        $systemSettings = static::getContainer()->get(SystemSettings::class);
+        self::assertInstanceOf(SystemSettings::class, $systemSettings);
+        $systemSettings->setInt(SystemSettings::MAINTENANCE_NOTICE_LOOKAHEAD_DAYS, 9);
+
+        $admin = $this->createRegularAdminUser();
+        $this->client->loginUser($admin);
+
+        $crawler = $this->client->request('GET', '/portal/admin/settings-content');
+        self::assertResponseIsSuccessful();
+        self::assertStringNotContainsString('name="maintenance_notice_lookahead_days"', (string) $crawler->html());
+
+        $token = (string) $crawler->filter('form[action="/portal/admin/startsida"] input[name="_token"]')->attr('value');
+        $this->client->request('POST', '/portal/admin/startsida', [
+            '_token' => $token,
+            'news_technician_contributions_enabled' => '1',
+            'home_support_widget_title' => 'Support',
+            'home_support_widget_intro' => 'Hjälptext',
+            'home_support_widget_links' => '',
+            'home_status_section_title' => 'Status',
+            'home_status_section_intro' => 'Statusinfo',
+            'home_status_section_max_items' => '4',
+            'maintenance_notice_lookahead_days' => '30',
+        ]);
+
+        self::assertResponseRedirects('/portal/admin/settings-content');
+        self::assertSame(9, $systemSettings->getMaintenanceNoticeSettings()['lookaheadDays']);
+    }
+
+    public function testRegularAdminCannotSeeOrUseAddonSection(): void
+    {
+        $addon = (new AddonModule('ops-maintenance', 'Ops Maintenance', 'Systemnära addon.'))
+            ->setInstallStatus('installed')
+            ->setHealthStatus('healthy')
+            ->setVerifiedAt(new \DateTimeImmutable('2026-04-21 11:00'))
+            ->setSetupChecklist("Verifiera installation\nVerifiera rollback")
+            ->setEnabled(false);
+        $releaseLog = new AddonReleaseLog(
+            $addon,
+            'owner-addon@example.test',
+            '1.0.0',
+            'status installed · health healthy',
+            'Första releasen.',
+        );
+        $this->entityManager->persist($addon);
+        $this->entityManager->persist($releaseLog);
+        $this->entityManager->flush();
+
+        $admin = $this->createRegularAdminUser();
+        $this->client->loginUser($admin);
+
+        $crawler = $this->client->request('GET', '/portal/admin');
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $crawler->html();
+        self::assertStringNotContainsString('Addons', $html);
+        self::assertStringNotContainsString('Addonkatalog', $html);
+        self::assertStringNotContainsString('Ops Maintenance', $html);
+        self::assertStringNotContainsString('href="/portal/admin/addons"', $html);
+
+        $this->client->request('GET', '/portal/admin/addons');
+        self::assertResponseStatusCodeSame(403);
+
+        foreach ([
+            '/portal/admin/addons',
+            '/portal/admin/addons/upload-package',
+            sprintf('/portal/admin/addons/%d', $addon->getId()),
+            sprintf('/portal/admin/addons/%d/packages/activate', $addon->getId()),
+            sprintf('/portal/admin/addons/%d/toggle-enabled', $addon->getId()),
+            sprintf('/portal/admin/addons/%d/release', $addon->getId()),
+            sprintf('/portal/admin/addons/release-logs/%d/revoke', $releaseLog->getId()),
+        ] as $path) {
+            $this->client->request('POST', $path, ['_token' => 'blocked-before-csrf']);
+            self::assertResponseStatusCodeSame(403);
+        }
     }
 
     public function testSuperAdminOverviewShowsMaintenanceToolsButHidesTicketOperations(): void
@@ -990,6 +1762,8 @@ final class AdminIdentityFlowTest extends WebTestCase
 
         $html = (string) $crawler->html();
         self::assertStringContainsString('Super Admin', $html);
+        self::assertStringContainsString('Jobbhistorik', $html);
+        self::assertStringContainsString('Databashantering', $html);
         self::assertStringContainsString('href="/portal/admin/updates"', $html);
         self::assertStringContainsString('href="/portal/admin/database"', $html);
         self::assertStringContainsString('href="/portal/admin/jobs"', $html);
@@ -1042,6 +1816,42 @@ final class AdminIdentityFlowTest extends WebTestCase
         $html = (string) $this->client->getResponse()->getContent();
         self::assertStringContainsString('driftpunkt/test-release', $html);
         self::assertStringContainsString('Klar för uppdatering', $html);
+        self::assertStringContainsString('Pakettyp: äldre paket', $html);
+        self::assertStringContainsString('SHA-256', $html);
+        self::assertStringContainsString('Visa förkontroll', $html);
+    }
+
+    public function testUpdatesSectionKeepsOlderHistoryCollapsed(): void
+    {
+        $admin = $this->createSuperAdminUser();
+        $this->client->loginUser($admin);
+
+        $this->createStagedUpdatePackageFixtures(4);
+        $this->createCodeUpdateBackupFixtures(4);
+        $this->createCodeUpdateApplyRunFixtures(4);
+        $this->createPostUpdateRunFixtures(4);
+
+        $crawler = $this->client->request('GET', '/portal/admin/updates');
+        self::assertResponseIsSuccessful();
+
+        self::assertSame(3, $crawler->filter('[data-update-history="recent-packages"] > [data-update-history-item="package"]')->count());
+        self::assertSame(1, $crawler->filter('details[data-update-history="older-packages"] [data-update-history-item="package"]')->count());
+        self::assertStringContainsString('driftpunkt/update-4', $crawler->filter('[data-update-history="recent-packages"]')->text());
+        self::assertStringNotContainsString('driftpunkt/update-1', $crawler->filter('[data-update-history="recent-packages"]')->text());
+        self::assertStringContainsString('driftpunkt/update-1', $crawler->filter('details[data-update-history="older-packages"]')->text());
+
+        self::assertSame(3, $crawler->filter('[data-update-history="recent-apply-runs"] > [data-update-history-item="apply-run"]')->count());
+        self::assertSame(1, $crawler->filter('details[data-update-history="older-apply-runs"] [data-update-history-item="apply-run"]')->count());
+        self::assertSame(3, $crawler->filter('[data-update-history="recent-apply-runs"] [data-update-log-details]')->count());
+
+        self::assertSame(3, $crawler->filter('[data-update-history="recent-backups"] > [data-update-history-item="backup"]')->count());
+        self::assertSame(1, $crawler->filter('details[data-update-history="older-backups"] [data-update-history-item="backup"]')->count());
+        self::assertStringContainsString('driftpunkt_code_backup_4.zip', $crawler->filter('[data-update-history="recent-backups"]')->text());
+        self::assertStringContainsString('driftpunkt_code_backup_1.zip', $crawler->filter('details[data-update-history="older-backups"]')->text());
+
+        self::assertSame(3, $crawler->filter('[data-update-history="recent-post-update-runs"] > [data-update-history-item="post-update-run"]')->count());
+        self::assertSame(1, $crawler->filter('details[data-update-history="older-post-update-runs"] [data-update-history-item="post-update-run"]')->count());
+        self::assertSame(3, $crawler->filter('[data-update-history="recent-post-update-runs"] [data-update-log-details]')->count());
     }
 
     public function testAdminSeesPostUpdateTasksAndGetsValidationErrorWithoutSelection(): void
@@ -1853,9 +2663,38 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertSame('7', $zipArchiveAfterDaysSetting->getSettingValue());
     }
 
-    public function testAdminCanToggleKnowledgeBaseSettingsPerAudience(): void
+    public function testRegularAdminCannotManageKnowledgeBaseModes(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createRegularAdminUser();
+        $this->client->loginUser($admin);
+
+        $crawler = $this->client->request('GET', '/portal/admin/knowledge-base');
+        self::assertResponseIsSuccessful();
+        self::assertSame(0, $crawler->filter('button:contains("Spara kunskapsbasinställningar")')->count());
+        self::assertStringNotContainsString('Kunskapsbasens lägen', (string) $crawler->html());
+
+        $this->client->request('POST', '/portal/admin/kunskapsbas-inställningar', [
+            '_token' => 'blocked-before-csrf-validation',
+            'knowledge_base_public_enabled' => '1',
+            'knowledge_base_customer_enabled' => '1',
+            'knowledge_base_public_smart_tips_enabled' => '1',
+            'knowledge_base_public_faq_enabled' => '1',
+            'knowledge_base_customer_smart_tips_enabled' => '1',
+            'knowledge_base_customer_faq_enabled' => '1',
+            'knowledge_base_public_technician_contributions_enabled' => '1',
+            'knowledge_base_customer_technician_contributions_enabled' => '1',
+        ]);
+
+        self::assertResponseStatusCodeSame(403);
+        self::assertNull($this->entityManager->getRepository(SystemSetting::class)->find(SystemSettings::FEATURE_KNOWLEDGE_BASE_PUBLIC_ENABLED));
+        self::assertNull($this->entityManager->getRepository(SystemSetting::class)->find(SystemSettings::FEATURE_KNOWLEDGE_BASE_CUSTOMER_ENABLED));
+        self::assertNull($this->entityManager->getRepository(SystemSetting::class)->find(SystemSettings::FEATURE_KNOWLEDGE_BASE_PUBLIC_TECHNICIAN_CONTRIBUTIONS_ENABLED));
+        self::assertNull($this->entityManager->getRepository(SystemSetting::class)->find(SystemSettings::FEATURE_KNOWLEDGE_BASE_CUSTOMER_TECHNICIAN_CONTRIBUTIONS_ENABLED));
+    }
+
+    public function testSuperAdminCanToggleKnowledgeBaseSettingsPerAudience(): void
+    {
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
 
         $crawler = $this->client->request('GET', '/portal/admin/knowledge-base');
@@ -1974,7 +2813,7 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     public function testAdminCanFilterAddonsByStatusAndDate(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
 
         $mailServer = new MailServer('Support SMTP', MailServerDirection::OUTGOING, 'smtp.example.test', 587);
         $knowledgeBaseEntry = new KnowledgeBaseEntry(
@@ -2004,9 +2843,69 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertStringContainsString('value="mail"', $html);
     }
 
+    public function testAddonSectionHighlightsActiveAndActionableStates(): void
+    {
+        $admin = $this->createSuperAdminUser();
+
+        $activeAddon = (new AddonModule('active-addon', 'Aktivt addon', 'Syns tydligt som aktivt.'))
+            ->setVersion('1.0.0')
+            ->setInstallStatus(AddonModule::INSTALL_STATUS_INSTALLED)
+            ->setHealthStatus(AddonModule::HEALTH_STATUS_HEALTHY)
+            ->setVerifiedAt(new \DateTimeImmutable('2026-04-21 10:00'))
+            ->setSetupChecklist("Verifiera install\nVerifiera vy")
+            ->setImpactAreas("Ärenden\n/portal/admin/status")
+            ->setReleasedAt(new \DateTimeImmutable('2026-04-21 11:00'))
+            ->setReleasedByEmail('owner-addon@example.test')
+            ->setEnabled(true);
+        $inactiveAddon = (new AddonModule('inactive-addon', 'Inaktivt addon', 'Är installerat men avstängt.'))
+            ->setVersion('1.1.0')
+            ->setInstallStatus(AddonModule::INSTALL_STATUS_INSTALLED)
+            ->setHealthStatus(AddonModule::HEALTH_STATUS_HEALTHY)
+            ->setVerifiedAt(new \DateTimeImmutable('2026-04-21 12:00'))
+            ->setSetupChecklist('Verifiera install')
+            ->setEnabled(false);
+        $blockedAddon = (new AddonModule('blocked-addon', 'Blockerat addon', 'Kräver åtgärd innan drift.'))
+            ->setVersion('0.8.0')
+            ->setInstallStatus(AddonModule::INSTALL_STATUS_BLOCKED)
+            ->setHealthStatus(AddonModule::HEALTH_STATUS_WARNING)
+            ->setNotes('Saknar API-nyckel.')
+            ->setEnabled(false);
+        $mailServer = new MailServer('Support SMTP', MailServerDirection::OUTGOING, 'smtp.example.test', 587);
+
+        $this->entityManager->persist($activeAddon);
+        $this->entityManager->persist($inactiveAddon);
+        $this->entityManager->persist($blockedAddon);
+        $this->entityManager->persist($mailServer);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($admin);
+        $crawler = $this->client->request('GET', '/portal/admin/addons');
+        self::assertResponseIsSuccessful();
+
+        self::assertSame(1, $crawler->filter('[data-addon-status-card="active"]')->count());
+        self::assertSame(1, $crawler->filter('[data-addon-status-card="needs-action"]')->count());
+        self::assertSame(1, $crawler->filter('[data-addon-status-card="unreleased"]')->count());
+        self::assertSame(1, $crawler->filter('[data-addon-quick-filter="needs-action"]')->count());
+        self::assertSame(1, $crawler->filter('[data-addon-quick-filter="unreleased"]')->count());
+        self::assertStringContainsString('2', $crawler->filter('[data-addon-status-card="active"]')->text());
+        self::assertStringContainsString('1', $crawler->filter('[data-addon-status-card="needs-action"]')->text());
+        self::assertStringContainsString('2', $crawler->filter('[data-addon-status-card="unreleased"]')->text());
+        self::assertStringContainsString('Behöver åtgärd', $crawler->filter('[data-addon-quick-filter="needs-action"]')->text());
+        self::assertStringContainsString('Ej släppta', $crawler->filter('[data-addon-quick-filter="unreleased"]')->text());
+
+        self::assertSame(1, $crawler->filter('[data-addon-slug="active-addon"][data-addon-card-state="active"]')->count());
+        self::assertSame(1, $crawler->filter('[data-addon-slug="inactive-addon"][data-addon-card-state="inactive"]')->count());
+        self::assertSame(1, $crawler->filter('[data-addon-slug="blocked-addon"][data-addon-card-state="needs-action"]')->count());
+        self::assertSame(3, $crawler->filter('[data-addon-details]')->count());
+        self::assertStringContainsString('Teknisk metadata', $crawler->filter('[data-addon-details="active-addon"]')->text());
+
+        self::assertSame(1, $crawler->filter('[data-addon-module-state="active"]')->reduce(static fn ($node): bool => str_contains($node->text(), 'Mailintegration'))->count());
+        self::assertSame(1, $crawler->filter('[data-addon-module-state="empty"]')->reduce(static fn ($node): bool => str_contains($node->text(), 'Kunskapsbasmodul'))->count());
+    }
+
     public function testAddonSectionIsReadOnlyForManualRegistration(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
 
         $crawler = $this->client->request('GET', '/portal/admin/addons');
@@ -2047,7 +2946,7 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     public function testAddonSectionDoesNotAllowEditingRegisteredAddon(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $addon = new AddonModule('ops-calendar', 'Ops Calendar', 'Visar jour- och beredskapsschema.');
         $addon
             ->setVersion('0.9.0')
@@ -2111,7 +3010,7 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     public function testAdminCanUploadAddonZipPackageAndRegisterItAutomatically(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
 
         $crawler = $this->client->request('GET', '/portal/admin/addons');
@@ -2146,7 +3045,7 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     public function testAdminCanRollbackAddonPackageToEarlierVersion(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $this->client->loginUser($admin);
 
         $crawler = $this->client->request('GET', '/portal/admin/addons');
@@ -2193,7 +3092,7 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     public function testNonOwnerAdminCannotReleaseAddon(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $addon = (new AddonModule('release-candidate', 'Release Candidate', 'Redo för release men skyddad.'))
             ->setInstallStatus('installed')
             ->setHealthStatus('healthy')
@@ -2267,11 +3166,11 @@ final class AdminIdentityFlowTest extends WebTestCase
         $releasedAtLabel = $releaseLogs[0]->getReleasedAt()->format('Y-m-d H:i');
 
         $html = (string) $this->client->getCrawler()->html();
-        self::assertStringContainsString('Registrerade addons', $html);
-        self::assertStringContainsString('Aktiva addons', $html);
-        self::assertStringContainsString('Inaktiva addons', $html);
+        self::assertStringContainsString('data-addon-status-card="active"', $html);
+        self::assertStringContainsString('data-addon-status-card="unreleased"', $html);
+        self::assertStringContainsString('data-addon-card-state="active"', $html);
+        self::assertStringContainsString('Systemmoduler och kopplingar', $html);
         self::assertStringNotContainsString('Släppta addons', $html);
-        self::assertStringNotContainsString('Blockerade addons', $html);
         self::assertStringNotContainsString('Senaste släpp', $html);
         self::assertStringNotContainsString('Release till ärendesystemet', $html);
         self::assertStringNotContainsString('Rekommenderat addonflöde', $html);
@@ -2375,11 +3274,11 @@ final class AdminIdentityFlowTest extends WebTestCase
         $revokedAtLabel = $releaseLog->getRevokedAt()?->format('Y-m-d H:i');
 
         $html = (string) $this->client->getCrawler()->html();
-        self::assertStringContainsString('Registrerade addons', $html);
-        self::assertStringContainsString('Aktiva addons', $html);
-        self::assertStringContainsString('Inaktiva addons', $html);
+        self::assertStringContainsString('data-addon-status-card="needs-action"', $html);
+        self::assertStringContainsString('data-addon-status-card="unreleased"', $html);
+        self::assertStringContainsString('data-addon-card-state="needs-action"', $html);
+        self::assertStringContainsString('Systemmoduler och kopplingar', $html);
         self::assertStringNotContainsString('Släppta addons', $html);
-        self::assertStringNotContainsString('Blockerade addons', $html);
         self::assertStringNotContainsString('Senaste släpp', $html);
         self::assertStringNotContainsString('Release till ärendesystemet', $html);
         self::assertStringNotContainsString('Rekommenderat addonflöde', $html);
@@ -2460,7 +3359,7 @@ final class AdminIdentityFlowTest extends WebTestCase
 
     public function testAdminNewsShowsMigrationWarningWhenNewsSchemaIsOutdated(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $connection = $this->entityManager->getConnection();
 
         $connection->executeStatement('DROP TABLE IF EXISTS news_articles');
@@ -2491,9 +3390,43 @@ final class AdminIdentityFlowTest extends WebTestCase
         self::assertStringContainsString('archived_at', $html);
     }
 
+    public function testRegularAdminNewsSchemaWarningHidesDatabaseDetails(): void
+    {
+        $admin = $this->createRegularAdminUser();
+        $connection = $this->entityManager->getConnection();
+
+        $connection->executeStatement('DROP TABLE IF EXISTS news_articles');
+        $connection->executeStatement('CREATE TABLE news_articles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            title VARCHAR(180) NOT NULL,
+            summary CLOB NOT NULL,
+            body CLOB NOT NULL,
+            image_url VARCHAR(2048) DEFAULT NULL,
+            maintenance_starts_at DATETIME DEFAULT NULL,
+            maintenance_ends_at DATETIME DEFAULT NULL,
+            is_published BOOLEAN NOT NULL,
+            published_at DATETIME NOT NULL,
+            is_pinned BOOLEAN NOT NULL,
+            category VARCHAR(255) NOT NULL,
+            author_id INTEGER DEFAULT NULL,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )');
+
+        $this->client->loginUser($admin);
+        $this->client->request('GET', '/portal/admin/nyheter');
+
+        self::assertResponseIsSuccessful();
+
+        $html = (string) $this->client->getCrawler()->html();
+        self::assertStringContainsString('Nyhetsmodulen behöver superadminåtgärd', $html);
+        self::assertStringNotContainsString('Nyhetsdatabasen behöver migreras', $html);
+        self::assertStringNotContainsString('archived_at', $html);
+    }
+
     public function testAddonSectionShowsNewsEditorPlusStatusCard(): void
     {
-        $admin = $this->createAdminUser();
+        $admin = $this->createSuperAdminUser();
         $addon = (new AddonModule('news-editor-plus', 'News Editor Plus', 'Utökad editor för nyhetsmodulen.'))
             ->setVersion('1.0.0')
             ->setInstallStatus('installed')
@@ -2940,6 +3873,92 @@ final class AdminIdentityFlowTest extends WebTestCase
 
         $this->entityManager->flush();
         $this->entityManager->clear();
+    }
+
+    private function createStagedUpdatePackageFixtures(int $count): void
+    {
+        $directory = dirname(__DIR__, 2).'/var/code_update_staging';
+        mkdir($directory, 0777, true);
+
+        for ($index = 1; $index <= $count; ++$index) {
+            $packageDirectory = $directory.'/package-'.$index;
+            mkdir($packageDirectory, 0777, true);
+            file_put_contents($packageDirectory.'/manifest.json', json_encode([
+                'id' => 'package-'.$index,
+                'originalFilename' => 'driftpunkt-update-'.$index.'.zip',
+                'packageName' => 'driftpunkt/update-'.$index,
+                'packageVersion' => '2.0.'.$index,
+                'uploadedAt' => sprintf('2026-04-%02dT10:00:00+02:00', $index),
+                'valid' => true,
+                'validationMessages' => [],
+                'fileCount' => 12 + $index,
+                'includesVendor' => true,
+                'packageRoot' => $packageDirectory.'/extracted/package',
+                'appliedAt' => null,
+                'applicationBackupFilename' => null,
+            ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+        }
+    }
+
+    private function createCodeUpdateBackupFixtures(int $count): void
+    {
+        $directory = dirname(__DIR__, 2).'/var/code_update_backups';
+        mkdir($directory, 0777, true);
+
+        for ($index = 1; $index <= $count; ++$index) {
+            $path = $directory.'/driftpunkt_code_backup_'.$index.'.zip';
+            file_put_contents($path, str_repeat('x', 1024 * $index));
+            touch($path, (new \DateTimeImmutable(sprintf('2026-04-%02dT11:00:00+02:00', $index)))->getTimestamp());
+        }
+    }
+
+    private function createCodeUpdateApplyRunFixtures(int $count): void
+    {
+        $directory = dirname(__DIR__, 2).'/var/code_update_runs';
+        mkdir($directory, 0777, true);
+
+        for ($index = 1; $index <= $count; ++$index) {
+            file_put_contents($directory.'/apply-run-'.$index.'.json', json_encode([
+                'id' => 'apply-run-'.$index,
+                'packageId' => 'package-'.$index,
+                'packageName' => 'driftpunkt/update-'.$index,
+                'packageVersion' => '2.0.'.$index,
+                'queuedAt' => sprintf('2026-04-%02dT12:00:00+02:00', $index),
+                'startedAt' => sprintf('2026-04-%02dT12:00:10+02:00', $index),
+                'finishedAt' => sprintf('2026-04-%02dT12:02:00+02:00', $index),
+                'status' => 'completed',
+                'succeeded' => true,
+                'output' => 'Appliceringslogg '.$index,
+                'backupFilename' => 'driftpunkt_code_backup_'.$index.'.zip',
+            ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+        }
+    }
+
+    private function createPostUpdateRunFixtures(int $count): void
+    {
+        $directory = dirname(__DIR__, 2).'/var/post_update_runs';
+        mkdir($directory, 0777, true);
+
+        for ($index = 1; $index <= $count; ++$index) {
+            file_put_contents($directory.'/post-update-run-'.$index.'.json', json_encode([
+                'id' => 'post-update-run-'.$index,
+                'queuedAt' => sprintf('2026-04-%02dT13:00:00+02:00', $index),
+                'startedAt' => sprintf('2026-04-%02dT13:00:05+02:00', $index),
+                'finishedAt' => sprintf('2026-04-%02dT13:01:00+02:00', $index),
+                'status' => 'completed',
+                'succeeded' => true,
+                'selectedTasks' => ['composer_install'],
+                'taskResults' => [
+                    [
+                        'id' => 'composer_install',
+                        'label' => 'Composer install '.$index,
+                        'exitCode' => 0,
+                        'succeeded' => true,
+                        'output' => 'Efterlogg '.$index,
+                    ],
+                ],
+            ], \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
+        }
     }
 
     private function createValidUpdateZip(): string
