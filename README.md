@@ -64,6 +64,124 @@ php bin/console app:install:fresh --env=prod
 
 8. Sign in with the configured administrator account, change default credentials, review branding/language settings, and verify the public status page.
 
+## Install on a new Debian server
+
+This flow installs Driftpunkt without Docker on a clean Debian server. Replace `driftpunkt.example.com`, passwords, and mail settings before production use.
+
+1. Install the tools needed to unpack the release package:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y unzip
+```
+
+2. Download or copy `driftpunkt-install-1.0.9.zip` and `driftpunkt-install-1.0.9.zip.sha256` to the server, then verify the package:
+
+```bash
+sha256sum -c driftpunkt-install-1.0.9.zip.sha256
+```
+
+3. Unpack the release into `/var/www/driftpunkt`:
+
+```bash
+rm -rf /tmp/driftpunkt-install
+mkdir -p /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.9.zip -d /tmp/driftpunkt-install
+sudo mkdir -p /var/www/driftpunkt
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.9/. /var/www/driftpunkt/
+cd /var/www/driftpunkt
+```
+
+4. Run the Debian setup script. It installs Apache, PHP packages, MariaDB, Composer, logrotate, and Driftpunkt systemd timers:
+
+```bash
+DOMAIN=driftpunkt.example.com sudo -E bash deploy/debian/setup.sh
+```
+
+5. Edit `/var/www/driftpunkt/.env.local` and set real values for `APP_SECRET`, `DEFAULT_URI`, `DATABASE_URL`, `MAILER_DSN`, and `MAILER_FROM`:
+
+```bash
+sudo nano /var/www/driftpunkt/.env.local
+```
+
+6. Create the MariaDB database and user. Use the same password in `DATABASE_URL`:
+
+```bash
+sudo mariadb
+```
+
+```sql
+CREATE DATABASE driftpunkt CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'driftpunkt'@'localhost' IDENTIFIED BY 'change-this-database-password';
+GRANT ALL PRIVILEGES ON driftpunkt.* TO 'driftpunkt'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+7. Initialize Driftpunkt:
+
+```bash
+sudo -u www-data php /var/www/driftpunkt/bin/console app:install:fresh --env=prod
+```
+
+8. Reload Apache and add HTTPS, for example with Certbot:
+
+```bash
+sudo apache2ctl configtest
+sudo systemctl reload apache2
+sudo apt-get install -y certbot python3-certbot-apache
+sudo certbot --apache -d driftpunkt.example.com
+```
+
+## Install on a new NAS with Docker Compose
+
+This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
+
+1. Copy `driftpunkt-install-1.0.9.zip` and `driftpunkt-install-1.0.9.zip.sha256` to the NAS, then verify the package:
+
+```bash
+sha256sum -c driftpunkt-install-1.0.9.zip.sha256
+```
+
+2. Unpack the release into a persistent NAS folder:
+
+```bash
+rm -rf /tmp/driftpunkt-install
+mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
+unzip driftpunkt-install-1.0.9.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.9/. /volume1/docker/driftpunkt/
+cd /volume1/docker/driftpunkt
+```
+
+3. Create and edit the NAS environment file:
+
+```bash
+cp deploy/nas/.env.example deploy/nas/.env
+nano deploy/nas/.env
+```
+
+Set real values for `APP_SECRET`, `DEFAULT_URI`, `MARIADB_PASSWORD`, `MARIADB_ROOT_PASSWORD`, `DATABASE_URL`, `MAILER_DSN`, and `MAILER_FROM`.
+
+4. Create persistent data folders and start the stack:
+
+```bash
+mkdir -p deploy/nas/data/var deploy/nas/data/mariadb
+docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env up -d --build
+```
+
+5. Initialize Driftpunkt inside the app container:
+
+```bash
+docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env exec --user www-data app php bin/console app:install:fresh --env=prod
+```
+
+6. Open the URL from `DEFAULT_URI`, sign in, change default credentials, and confirm that the app and scheduler containers are healthy:
+
+```bash
+docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env ps
+docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env logs -f app scheduler
+```
+
 ## Upgrade an existing installation
 
 1. Pick the newest `driftpunkt-upgrade-*.zip` that is newer than the installed version. Older upgrade packages are retained so installations can move forward even when they are a few releases behind.
