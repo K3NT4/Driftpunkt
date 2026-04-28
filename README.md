@@ -28,17 +28,25 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 ## Packages
 
-- Fresh installation package: `packages/driftpunkt-install-1.0.9.zip`
+- Fresh installation package: `packages/driftpunkt-install-1.0.10.zip`
 - Upgrade packages kept here: up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
+- Installation guides are included in `docs/` for general, Debian, and NAS deployments.
 - Public README assets exported here: 9.
 
 ## What This Repository Contains
 
 - `packages/`: install and upgrade zip files.
 - `packages/*.sha256`: checksum files for package verification.
+- `docs/`: public installation guides copied from the release source.
 - `assets/`: logo and screenshots used by this README.
 - `PUBLIC_EXPORT_MANIFEST.md`: export summary with package versions and checksums.
+
+## Installation Guides
+
+- [General installation and deployment](docs/installation_and_deployment.md)
+- [Debian server setup](docs/debian_server_setup.md)
+- [NAS Docker setup](docs/nas_docker_setup.md)
 
 ## Fresh installation
 
@@ -49,20 +57,21 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.9.zip.sha256
+sha256sum -c driftpunkt-install-1.0.10.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
 4. Unpack the zip file into that directory.
-5. Configure the environment file for your deployment. Start from the example files included inside the package and set real secrets, database credentials, mail settings, and domain-specific values.
-6. Start the database and web runtime for your deployment model.
-7. Run the installer from the unpacked application directory:
+5. Point the web server document root to the unpacked application directory's `htdocs/` folder. On shared hosting where the fixed public directory is already named `/htdocs`, unpack the whole package there and keep the package root `.htaccess` enabled.
+6. Configure the environment file for your deployment. Start from the example files included inside the package and set real secrets, database credentials, mail settings, and domain-specific values.
+7. Start the database and web runtime for your deployment model.
+8. Run the installer from the unpacked application directory:
 
 ```bash
 php bin/console app:install:fresh --env=prod
 ```
 
-8. Sign in with the configured administrator account, change default credentials, review branding/language settings, and verify the public status page.
+9. Sign in with the configured administrator account, change default credentials, review branding/language settings, and verify the public status page.
 
 ## Install on a new Debian server
 
@@ -75,10 +84,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.9.zip` and `driftpunkt-install-1.0.9.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.10.zip` and `driftpunkt-install-1.0.10.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.9.zip.sha256
+sha256sum -c driftpunkt-install-1.0.10.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -86,9 +95,9 @@ sha256sum -c driftpunkt-install-1.0.9.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.9.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.10.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.9/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.10/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -124,7 +133,7 @@ EXIT;
 sudo -u www-data php /var/www/driftpunkt/bin/console app:install:fresh --env=prod
 ```
 
-8. Reload Apache and add HTTPS, for example with Certbot:
+8. Confirm that Apache serves `/var/www/driftpunkt/htdocs`, then reload Apache and add HTTPS, for example with Certbot:
 
 ```bash
 sudo apache2ctl configtest
@@ -137,10 +146,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.9.zip` and `driftpunkt-install-1.0.9.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.10.zip` and `driftpunkt-install-1.0.10.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.9.zip.sha256
+sha256sum -c driftpunkt-install-1.0.10.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -148,8 +157,8 @@ sha256sum -c driftpunkt-install-1.0.9.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.9.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.9/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.10.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.10/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -194,17 +203,19 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 ```
 
 4. Apply the package through the Driftpunkt admin update flow when available, or unpack it according to your deployment procedure.
-5. Run database migrations, cache refresh, service reloads, and any other post-update steps listed in the package metadata and release notes.
-6. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
+5. Confirm that the web server document root points to `htdocs/`, or that the package root `.htaccess` is active when the whole package lives in a fixed `/htdocs` directory.
+6. Run database migrations, cache refresh, service reloads, and any other post-update steps listed in the package metadata and release notes.
+7. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.10.zip`
 - `packages/driftpunkt-upgrade-1.0.9.zip`
 - `packages/driftpunkt-upgrade-1.0.8.zip`
-- `packages/driftpunkt-upgrade-1.0.7.zip`
 
 ## Notes
 
 - Keep private `.env`, backup, database dump, and customer files outside this repository.
+- Driftpunkt release packages prefer `htdocs/` as document root. If the full package must live directly in a fixed `/htdocs` web root, verify that `.htaccess` blocks `config/`, `src/`, `vendor/`, and `var/` before production use.
 - Review `PUBLIC_EXPORT_MANIFEST.md` after every export before committing to the public repository.
 - If checksum verification fails, do not install the package. Rebuild and export the release from the private repository.
