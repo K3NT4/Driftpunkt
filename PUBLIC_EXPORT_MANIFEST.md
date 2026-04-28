@@ -7,7 +7,7 @@ Created: 2026-04-28T08:05:30+00:00
 - Public exports contain release packages and selected public installation documentation only.
 - The latest installation package is included.
 - Up to the latest 3 upgrade packages are included.
-- Public installation guides are included in `docs/`.
+- Public installation guides are included in `docs/`, including a combined PDF guide.
 - Selected logo and screenshot assets are included for README presentation.
 - Application source code, private modules, internal release tooling, environment files, and deployment secrets are intentionally excluded.
 
@@ -37,3 +37,4 @@ Created: 2026-04-28T08:05:30+00:00
 - `docs/installation_and_deployment.md`
 - `docs/debian_server_setup.md`
 - `docs/nas_docker_setup.md`
+- `docs/driftpunkt-installation-guides-1.0.10.pdf`
