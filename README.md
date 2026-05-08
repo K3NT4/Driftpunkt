@@ -2,7 +2,7 @@
 
 ![Driftpunkt](assets/branding/logo-wide.png)
 
-Driftpunkt is a support and operations platform for handling tickets, customer communication, technician work queues, operational status updates, knowledge base content, reports, and maintenance workflows.
+Driftpunkt is a support and operations platform for handling tickets, customer communication, technician work queues, operational status updates, knowledge base content, reports, company administration, and maintenance workflows.
 
 This public repository contains packaged Driftpunkt releases only. It does not publish the private application source code, internal modules, environment files, customer data, or deployment secrets.
 
@@ -23,12 +23,15 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 - Public pages for status, news, search, contact, and policy information.
 - Customer ticket creation and customer-facing case follow-up.
 - Technician queues for prioritization, comments, SLA follow-up, and knowledge base work.
-- Admin tools for identity, settings, reports, maintenance mode, imports, updates, and operational tasks.
+- Admin tools for identity, paginated company management, settings, reports, maintenance mode, imports, updates, and operational tasks.
+- Company hierarchy management where subsidiaries stay grouped with their parent company and search opens relevant groups.
+- Mail ingestion, draft review, company monthly reports, public ticket intake, read-only ticket API, and package-based updates.
 - Release packages with bundled dependencies, metadata, release notes, and SHA-256 checksums.
 
 ## Packages
 
-- Fresh installation package: `packages/driftpunkt-install-1.0.12.zip`
+- Current exported release: `1.0.22`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.22.zip`
 - Upgrade packages kept here: up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -49,7 +52,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.12.zip.sha256
+sha256sum -c driftpunkt-install-1.0.22.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -76,10 +79,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.12.zip` and `driftpunkt-install-1.0.12.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.22.zip` and `driftpunkt-install-1.0.22.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.12.zip.sha256
+sha256sum -c driftpunkt-install-1.0.22.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -87,9 +90,9 @@ sha256sum -c driftpunkt-install-1.0.12.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.12.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.22.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.12/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.22/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -138,10 +141,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.12.zip` and `driftpunkt-install-1.0.12.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.22.zip` and `driftpunkt-install-1.0.22.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.12.zip.sha256
+sha256sum -c driftpunkt-install-1.0.22.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -149,8 +152,8 @@ sha256sum -c driftpunkt-install-1.0.12.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.12.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.12/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.22.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.22/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -197,13 +200,14 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 4. Apply the package through the Driftpunkt admin update flow when available, or unpack it according to your deployment procedure.
 5. Confirm that the web server document root points to `htdocs/`, or that the package root `.htaccess` is active when the whole package lives in a fixed `/htdocs` directory.
 6. Run database migrations, cache refresh, service reloads, and any other post-update steps listed in the package metadata and release notes.
-7. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
+7. For version 1.0.21 or later, also verify Admin -> Identity links to the dedicated company page and Admin -> Companies paginates company groups correctly.
+8. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
 
 ## Available upgrade packages
 
-- `packages/driftpunkt-upgrade-1.0.12.zip`
-- `packages/driftpunkt-upgrade-1.0.11.zip`
-- `packages/driftpunkt-upgrade-1.0.10.zip`
+- `packages/driftpunkt-upgrade-1.0.22.zip`
+- `packages/driftpunkt-upgrade-1.0.21.zip`
+- `packages/driftpunkt-upgrade-1.0.20.zip`
 
 ## Notes
 
