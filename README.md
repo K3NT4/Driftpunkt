@@ -30,11 +30,45 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 ## Packages
 
-- Current exported release: `1.0.24`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.24.zip`
+- Current exported release: `1.0.27`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.27.zip`
 - Upgrade packages kept here: up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
+
+## Latest Release Notes
+
+These notes are copied from the packaged release metadata for the current exported version.
+
+### Driftpunkt 1.0.27
+
+### Fixat och förbättrat
+- Fjärrsupportverktygen är nu kopplade till SupportDesk-addonets faktiska driftstatus. AnyDesk och TeamViewer kan inte aktiveras om addonet saknas, är avstängt, inte är friskt eller inte är släppt till ärendesystemet.
+- Teknikerns ärendedetalj döljer SupportDesk-genvägar när addonet inte är redo, så gamla aktiva inställningar inte leder till trasiga `/portal/technician/supportdesk`-länkar.
+- Superadmin kan spara egna HTTPS-nedladdningslänkar för AnyDesk och TeamViewer. Tomma värden använder fortsatt standardlänkar i SupportDesk, medan osäkra eller ogiltiga länkar stoppas.
+- Inställningsnavigatorn i admin visar systeminställningspaneler på rätt sida och använder scrollmarginal så ankarlänkar landar tydligare under toppytan.
+- Publik startsida och driftstatussida använder CSS-escapade ikonvärden för att ikoner ska renderas korrekt även när sidan översätts.
+- Norska översättningar har putsats för mer naturliga texter i login, nyheter, kunskapsbas, underhåll och import/export.
+
+### Säkerhet och behörighet
+- Ärendeimport och ärendeexport är nu superadmin-funktioner. Vanliga admins får inte längre menyval, direkta admin-URL:er eller POST-väg för importpayload.
+- Import/export-texter i svenska, engelska och norska beskriver nu superadmin-kravet tydligare.
+- Fjärrsupportaktivering har server-side-skydd även om någon postar formuläret manuellt.
+
+### Databas och drift
+- Nya migrationer: nej.
+- Kräver cache-refresh: ja.
+- Kräver omstart/reload: rekommenderas efter uppdatering så PHP/OPcache och Apache laddar ny kod.
+- Nya systeminställningar kan sparas för anpassade fjärrsupportlänkar:
+  - `remote_support.anydesk_download_url`
+  - `remote_support.teamviewer_download_url`
+
+### Kontroll efter uppdatering
+- Öppna `/portal/admin/settings` som superadmin och kontrollera att inställningsnavigatorns kort hoppar till rätt paneler.
+- Kontrollera att AnyDesk/TeamViewer är låsta i fjärrsupportpanelen tills SupportDesk-addonet är installerat, aktiverat, friskt och släppt.
+- Öppna ett ärende som tekniker och verifiera att SupportDesk-knappar bara visas när SupportDesk-addonet är redo.
+- Logga in som vanlig admin och verifiera att import/export inte visas i adminmenyn och att direkta import/export-URL:er ger 403.
+- Växla till norska och kontrollera att startsidans och driftstatussidans ikoner fortfarande renderas.
 
 ## What This Repository Contains
 
@@ -52,7 +86,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.24.zip.sha256
+sha256sum -c driftpunkt-install-1.0.27.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -79,10 +113,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.24.zip` and `driftpunkt-install-1.0.24.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.27.zip` and `driftpunkt-install-1.0.27.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.24.zip.sha256
+sha256sum -c driftpunkt-install-1.0.27.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -90,9 +124,9 @@ sha256sum -c driftpunkt-install-1.0.24.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.24.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.27.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.24/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.27/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -141,10 +175,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.24.zip` and `driftpunkt-install-1.0.24.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.27.zip` and `driftpunkt-install-1.0.27.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.24.zip.sha256
+sha256sum -c driftpunkt-install-1.0.27.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -152,8 +186,8 @@ sha256sum -c driftpunkt-install-1.0.24.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.24.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.24/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.27.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.27/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -205,9 +239,9 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 
 ## Available upgrade packages
 
-- `packages/driftpunkt-upgrade-1.0.24.zip`
-- `packages/driftpunkt-upgrade-1.0.23.zip`
-- `packages/driftpunkt-upgrade-1.0.22.zip`
+- `packages/driftpunkt-upgrade-1.0.27.zip`
+- `packages/driftpunkt-upgrade-1.0.26.zip`
+- `packages/driftpunkt-upgrade-1.0.25.zip`
 
 ## Notes
 
