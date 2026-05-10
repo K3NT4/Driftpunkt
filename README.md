@@ -30,8 +30,8 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 ## Packages
 
-- Current exported release: `1.0.29`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.29.zip`
+- Current exported release: `1.0.30`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.30.zip`
 - Upgrade packages kept here: up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -40,36 +40,26 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.29
+### Driftpunkt 1.0.30
 
 ### Fixat och förbättrat
-- Superadmin kan nu tilldela tekniker adminbehörighet från `/portal/admin/identity`.
-- Superadmin kan ta bort användare, Team & Roller och företag via säkra raderingsflöden med preview, tydliga bekräftelser och auditlogg.
-- Användar- och teamradering med kopplade ärenden kan nu antingen flytta ärenden till ett skyddat slaskföretag eller radera dem permanent.
-- Företagsradering använder samma val för kopplade ärenden och blockerar fortsatt företag som har användare eller dotterbolag kvar.
-- Borttagning av inaktiva addons avregistrerar katalogposten och inaktiverar paketversionerna utan att radera runtime-filer som prod-cache fortfarande kan referera till.
-- Importerade addonpaket får alltid en säker runtime-`templates/`-mapp, även när paketet inte skickar med egna Twig-mallar.
+- Arkiverade/borttagna användare visas nu i en egen grupp, `Borttagna användare`, i identitetsadmin.
+- Anonymiserade admin- och teknikerkonton ligger inte längre kvar under Administratörer eller Tekniker efter radering.
 
 ### Säkerhet och behörighet
-- Vanlig admin blockeras från att tilldela admin- eller superadminbehörighet, både i UI och via direkt POST.
-- Raderingsroutes för användare, team och företag kräver `ROLE_SUPER_ADMIN`.
-- Själv-radering och radering/inaktivering av sista aktiva superadmin blockeras.
-- Permanent radering av kopplade ärenden kräver extra bekräftelser för ärenden, bilagor/arkivfiler och backup.
-- Slaskföretaget skapas automatiskt, är inaktivt och skyddas från radering.
-- Standardvärden finns för `DRIFTPUNKT_SESSION_IDLE_TIMEOUT` och `ADDON_RELEASE_OWNER_EMAIL` så saknade env-värden inte fäller prod-containern.
+- När ett konto måste arkiveras för historikens skull tas admin-, superadmin- och teknikerbehörighet bort.
+- Arkiverade konton får en icke-privilegierad kontotyp och tomma extra roller, så de inte kan råka återaktiveras med gammal adminbehörighet.
+- Befintlig historik, kommentarer och ärendelänkar bevaras fortsatt för spårbarhet.
 
 ### Databas och drift
 - Nya migrationer: nej.
 - Kräver cache-refresh: ja.
 - Kräver omstart/reload: rekommenderas efter uppdatering så PHP/OPcache och Apache laddar ny kod.
-- Slaskföretaget skapas först när det behövs vid radering av användare, team eller företag med kopplade ärenden.
 
 ### Kontroll efter uppdatering
-- Logga in som superadmin och kontrollera att tekniker kan ändras till admin under `/portal/admin/identity`.
-- Kontrollera att vanlig admin inte ser raderingspaneler för användare, team eller företag.
-- Testa ett raderingsflöde med kopplade ärenden och välj "Spara ärenden och flytta till slaskföretag".
-- Kontrollera att ärendet flyttas till `Slask / Okopplade ärenden`, blir internt och att auditloggen får en rad för åtgärden.
-- Testa att addoninställningar kan sparas och att uppladdade addons utan egna Twig-mallar inte kraschar adminytan.
+- Ta bort ett testkonto med historik som admin eller tekniker och kontrollera att det hamnar under `Borttagna användare`.
+- Kontrollera att det anonymiserade kontot inte längre visar Admin, Super Admin eller Tekniker som typ.
+- Kontrollera att vanliga aktiva/inaktiva admins fortsatt ligger under Administratörer.
 
 ## What This Repository Contains
 
@@ -87,7 +77,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.29.zip.sha256
+sha256sum -c driftpunkt-install-1.0.30.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -114,10 +104,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.29.zip` and `driftpunkt-install-1.0.29.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.30.zip` and `driftpunkt-install-1.0.30.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.29.zip.sha256
+sha256sum -c driftpunkt-install-1.0.30.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -125,9 +115,9 @@ sha256sum -c driftpunkt-install-1.0.29.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.29.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.30.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.29/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.30/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -176,10 +166,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.29.zip` and `driftpunkt-install-1.0.29.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.30.zip` and `driftpunkt-install-1.0.30.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.29.zip.sha256
+sha256sum -c driftpunkt-install-1.0.30.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -187,8 +177,8 @@ sha256sum -c driftpunkt-install-1.0.29.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.29.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.29/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.30.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.30/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -240,9 +230,9 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.30.zip`
 - `packages/driftpunkt-upgrade-1.0.29.zip`
 - `packages/driftpunkt-upgrade-1.0.28.zip`
-- `packages/driftpunkt-upgrade-1.0.27.zip`
 
 ## Notes
 
