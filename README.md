@@ -30,8 +30,8 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 ## Packages
 
-- Current exported release: `1.0.32`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.32.zip`
+- Current exported release: `1.0.33`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.33.zip`
 - Upgrade packages kept here: up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -40,32 +40,24 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.32
+### Driftpunkt 1.0.33
 
-### Fixed and Improved
-- Added a global timezone setting under `Admin -> System Settings -> Time & Region`.
-- The default timezone is `Europe/Stockholm`, with full IANA timezone validation.
-- Daylight saving time and standard time are handled automatically by PHP timezone rules.
-- Admin views, technician and customer portals, public pages, email templates, and CSV exports now use the central Driftpunkt date/time formatter.
-- `datetime-local` fields for maintenance windows and news publishing are parsed in the configured global timezone.
-- Public repository release notes for this version are written in English so the exported public README stays fully English.
+### Highlights
 
-### Security and Permissions
-- Only superadmins can change the global timezone.
-- Regular admins can see the active timezone but cannot submit timezone changes.
-- Timezone changes are CSRF-protected and recorded in the system audit log.
+- Fixes production cache warmup after the global timezone release.
+- Symfony `cache:*` console commands now use the safe default timezone without reading system settings from the database.
+- Doctrine metadata cache warmup can now run before any app-level database-backed timezone lookup.
 
-### Database and Operations
-- New migrations: no.
-- Requires cache refresh: yes.
-- Requires restart/reload: recommended after update so PHP/OPcache and Apache load the new formatter and Twig extension code.
+### Operations
 
-### Post-Update Checks
-- Open `Admin -> System Settings -> Time & Region` as a superadmin and confirm the selected timezone, current time, UTC offset, and daylight-saving status.
-- Change the timezone to `UTC`, save, and confirm that visible admin timestamps update accordingly.
-- Switch back to the production timezone, usually `Europe/Stockholm`.
-- Create or edit a scheduled maintenance/news datetime and confirm it is displayed in the selected timezone.
-- Verify the public repository README after export and confirm that the release notes section is in English.
+- No database migration is required for this release.
+- Apply this upgrade after 1.0.32 if the update log reports `DoctrineMetadataCacheWarmer must load metadata first`.
+- The normal post-update step `cache:warmup --env=prod` should complete successfully after this hotfix.
+
+### Verification
+
+- Run `php bin/console cache:warmup --env=prod` after applying the package.
+- Open the admin area and confirm the selected timezone still appears under `Admin -> System Settings -> Time & Region`.
 
 ## What This Repository Contains
 
@@ -83,7 +75,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.32.zip.sha256
+sha256sum -c driftpunkt-install-1.0.33.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -110,10 +102,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.32.zip` and `driftpunkt-install-1.0.32.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.33.zip` and `driftpunkt-install-1.0.33.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.32.zip.sha256
+sha256sum -c driftpunkt-install-1.0.33.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -121,9 +113,9 @@ sha256sum -c driftpunkt-install-1.0.32.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.32.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.33.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.32/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.33/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -172,10 +164,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.32.zip` and `driftpunkt-install-1.0.32.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.33.zip` and `driftpunkt-install-1.0.33.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.32.zip.sha256
+sha256sum -c driftpunkt-install-1.0.33.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -183,8 +175,8 @@ sha256sum -c driftpunkt-install-1.0.32.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.32.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.32/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.33.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.33/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -236,9 +228,9 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.33.zip`
 - `packages/driftpunkt-upgrade-1.0.32.zip`
 - `packages/driftpunkt-upgrade-1.0.31.zip`
-- `packages/driftpunkt-upgrade-1.0.30.zip`
 
 ## Notes
 
