@@ -30,9 +30,10 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 ## Packages
 
-- Current exported release: `1.0.33`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.33.zip`
-- Upgrade packages kept here: up to the latest 3 upgrade builds available during export.
+- Current exported release: `1.0.37`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.37.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.37.zip`
+- Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
 
@@ -40,24 +41,35 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.33
+### Driftpunkt 1.0.37
 
 ### Highlights
 
-- Fixes production cache warmup after the global timezone release.
-- Symfony `cache:*` console commands now use the safe default timezone without reading system settings from the database.
-- Doctrine metadata cache warmup can now run before any app-level database-backed timezone lookup.
+- Upgrade packages are now marked as cumulative for Driftpunkt 1.x, so the newest `driftpunkt-upgrade-*.zip` is the normal path even when an installation is several releases behind.
+- Release metadata now includes `cumulativeUpgrade` and `minimumSupportedVersion` for upgrade packages.
+- The admin update panel shows the installed version, version comparison, and cumulative package status before applying a package.
+- Public repository exports now present the newest cumulative upgrade package first and describe older packages as fallback and release history.
+
+### Improved
+
+- The code updater skips files that are already identical while still removing obsolete managed files from the installation.
+- Runtime data such as `.env*`, `var/`, and uploaded branding assets remain protected when a full cumulative package is applied.
+- README and operations guides now document the cumulative update policy for Debian, NAS, the admin flow, and the public repository.
 
 ### Operations
 
 - No database migration is required for this release.
-- Apply this upgrade after 1.0.32 if the update log reports `DoctrineMetadataCacheWarmer must load metadata first`.
-- The normal post-update step `cache:warmup --env=prod` should complete successfully after this hotfix.
+- Requires cache refresh: yes.
+- Requires restart/reload: recommended after update so PHP/OPcache and Apache load the new code.
+- Normally use the newest `driftpunkt-upgrade-1.0.37.zip` even if the installation is several releases behind.
 
 ### Verification
 
-- Run `php bin/console cache:warmup --env=prod` after applying the package.
-- Open the admin area and confirm the selected timezone still appears under `Admin -> System Settings -> Time & Region`.
+- Upload `driftpunkt-upgrade-1.0.37.zip` in Admin -> Updates and confirm that the package is shown as cumulative.
+- Confirm that the installed version and version comparison are visible in the package row.
+- Apply the package in maintenance mode and verify that Composer install, migrations, and cache refresh complete successfully.
+- Confirm that `.env*`, uploaded branding, and runtime data under `var/` remain in place after the update.
+- Export the public repository and confirm that the README lists the newest cumulative upgrade package first.
 
 ## What This Repository Contains
 
@@ -75,7 +87,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.33.zip.sha256
+sha256sum -c driftpunkt-install-1.0.37.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -102,10 +114,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.33.zip` and `driftpunkt-install-1.0.33.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.37.zip` and `driftpunkt-install-1.0.37.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.33.zip.sha256
+sha256sum -c driftpunkt-install-1.0.37.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -113,9 +125,9 @@ sha256sum -c driftpunkt-install-1.0.33.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.33.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.37.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.33/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.37/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -164,10 +176,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.33.zip` and `driftpunkt-install-1.0.33.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.37.zip` and `driftpunkt-install-1.0.37.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.33.zip.sha256
+sha256sum -c driftpunkt-install-1.0.37.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -175,8 +187,8 @@ sha256sum -c driftpunkt-install-1.0.33.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.33.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.33/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.37.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.37/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -211,7 +223,7 @@ docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env logs -f app
 
 ## Upgrade an existing installation
 
-1. Pick the newest `driftpunkt-upgrade-*.zip` that is newer than the installed version. Older upgrade packages are retained so installations can move forward even when they are a few releases behind.
+1. Use the newest cumulative `driftpunkt-upgrade-*.zip` package first. It contains the full current codebase and is the normal path even when the installed site is several releases behind.
 2. Back up the database and application files before applying the upgrade.
 3. Verify the checksum before using the package:
 
@@ -224,13 +236,14 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 5. Confirm that the web server document root points to `htdocs/`, or that the package root `.htaccess` is active when the whole package lives in a fixed `/htdocs` directory.
 6. Run database migrations, cache refresh, service reloads, and any other post-update steps listed in the package metadata and release notes.
 7. For version 1.0.21 or later, also verify Admin -> Identity links to the dedicated company page and Admin -> Companies paginates company groups correctly.
-8. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
+8. Older upgrade packages are kept as fallback and history, not as required intermediate steps.
+9. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.37.zip`
 - `packages/driftpunkt-upgrade-1.0.33.zip`
 - `packages/driftpunkt-upgrade-1.0.32.zip`
-- `packages/driftpunkt-upgrade-1.0.31.zip`
 
 ## Notes
 
