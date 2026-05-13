@@ -30,9 +30,9 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 ## Packages
 
-- Current exported release: `1.0.38`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.38.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.38.zip`
+- Current exported release: `1.0.43`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.43.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.43.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -41,42 +41,30 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.38
+### Driftpunkt 1.0.43
 
 ### Highlights
 
-- Local ticket attachments are now deduplicated per ticket using exact `sha256` content hash plus file size.
-- Duplicate attachment protection covers incoming mail attachments, draft approval, and manual customer or technician uploads.
-- Skipped duplicates are reported in processing notes, audit entries, and portal feedback so operators can see what happened without creating extra attachment rows.
-- A new `app:ticket-attachments:backfill-hashes` command prepares older local attachments for deduplication.
-
-### Improved
-
-- Incoming mail attachment metadata now stores `contentHash`, and older metadata can be completed lazily when the original ingest file still exists.
-- Existing local and zip-archived ticket attachments can be hashed through the backfill command with `--dry-run`, `--limit`, and `--ticket=REF`.
-- External attachment links remain ignored by attachment deduplication because they do not have local file content.
-- Technician ticket overview preferences for filters, quick controls, and bulk actions are handled more consistently.
-- Import/export navigation remains scoped to the admin portal instead of appearing in the technician ticket navigation.
+- Technician inventory overview now groups computer and printer lists per company.
+- Inventory row editing now opens in a wider dialog instead of inline table forms.
+- Customer inventory pages now follow the customer portal layout and sidebar.
+- Superadmin can restrict each company inventory list to selected active customer users.
+- Admin mail configuration is split into focused pages for overview, servers, inboxes, outgoing profiles, incoming mail and draft reviews.
 
 ### Operations
 
-- Database migration required: yes. The release adds nullable `contentHash` storage and an index for ticket comment attachments.
+- Database migration required: yes, adds per-list customer access control for inventory lists.
 - Requires cache refresh: yes.
 - Requires restart/reload: recommended after update so PHP/OPcache and Apache load the new code.
-- Optional after deployment:
-
-```bash
-php bin/console app:ticket-attachments:backfill-hashes --dry-run
-php bin/console app:ticket-attachments:backfill-hashes
-```
 
 ### Verification
 
-- Run migrations and confirm the `ticket_comment_attachments.content_hash` column is present.
-- Upload or ingest the same local file twice into one ticket and confirm only one ticket attachment is created.
-- Upload or ingest the same local file into two different tickets and confirm both tickets can keep their own attachment.
-- Run the backfill command with `--dry-run`, then without it, and confirm hashes are filled for existing local attachments.
-- Export the public repository and confirm that `driftpunkt-install-1.0.38.zip` and `driftpunkt-upgrade-1.0.38.zip` are listed with matching `.sha256` files.
+- Confirm technicians see one inventory entry per company with separate computer and printer list actions.
+- Confirm editing an inventory row opens the modal and still writes an audit log.
+- Confirm customer users only see inventory lists they are allowed to access.
+- Confirm admin mail overview links to the focused mail configuration pages.
+- Confirm mail server, mailbox and outgoing profile forms redirect back to their own pages after save.
+- Confirm incoming mail filters and draft review filters work on their new URLs.
 
 ## What This Repository Contains
 
@@ -94,7 +82,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.38.zip.sha256
+sha256sum -c driftpunkt-install-1.0.43.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -121,10 +109,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.38.zip` and `driftpunkt-install-1.0.38.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.43.zip` and `driftpunkt-install-1.0.43.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.38.zip.sha256
+sha256sum -c driftpunkt-install-1.0.43.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -132,9 +120,9 @@ sha256sum -c driftpunkt-install-1.0.38.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.38.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.43.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.38/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.43/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -183,10 +171,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.38.zip` and `driftpunkt-install-1.0.38.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.43.zip` and `driftpunkt-install-1.0.43.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.38.zip.sha256
+sha256sum -c driftpunkt-install-1.0.43.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -194,8 +182,8 @@ sha256sum -c driftpunkt-install-1.0.38.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.38.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.38/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.43.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.43/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -248,9 +236,7 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 
 ## Available upgrade packages
 
-- `packages/driftpunkt-upgrade-1.0.38.zip`
-- `packages/driftpunkt-upgrade-1.0.37.zip`
-- `packages/driftpunkt-upgrade-1.0.33.zip`
+- `packages/driftpunkt-upgrade-1.0.43.zip`
 
 ## Notes
 
