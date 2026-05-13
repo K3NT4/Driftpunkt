@@ -1,6 +1,6 @@
 # Public Export Manifest
 
-Created: 2026-05-13T18:28:50+02:00
+Created: 2026-05-13T21:41:59+02:00
 
 ## Export Policy
 
@@ -16,8 +16,9 @@ Created: 2026-05-13T18:28:50+02:00
 
 | Type | Version | Package | SHA-256 |
 | --- | --- | --- | --- |
-| install | 1.0.43 | `packages/driftpunkt-install-1.0.43.zip` | `db4a6dfaca15e14e26f972b96e202ecec52be163dd105a6b6e1c1173860e9403` |
-| upgrade | 1.0.43 | `packages/driftpunkt-upgrade-1.0.43.zip` | `5d2f93e51812b0911c67ad3a0d0259d1c6348a30dfa3f0595fc56da195f89f54` |
+| install | 1.0.44 | `packages/driftpunkt-install-1.0.44.zip` | `1916a52f48fc49e16b215856754dc69d318ff77e90b8c0ca1daf5fcb1bdf7643` |
+| upgrade | 1.0.44 | `packages/driftpunkt-upgrade-1.0.44.zip` | `40fc44832bff9326625013765822cadda70482fb4a74a28e8bc1db272caed0f8` |
+| upgrade | 1.0.43 | `packages/driftpunkt-upgrade-1.0.43.zip` | `548bf9f409bcbf12c55640042ad08104bb93733e58ba02f1a272f5d93c309c16` |
 
 ## Exported README Assets
 
@@ -30,3 +31,7 @@ Created: 2026-05-13T18:28:50+02:00
 - `assets/screenshots/login-admin.png`
 - `assets/screenshots/login-technician.png`
 - `assets/screenshots/login-customer.png`
+
+## Release Packages Not Exported
+
+- `dist/driftpunkt-install-1.0.43.zip`

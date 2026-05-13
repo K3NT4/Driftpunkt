@@ -30,9 +30,9 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 ## Packages
 
-- Current exported release: `1.0.43`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.43.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.43.zip`
+- Current exported release: `1.0.44`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.44.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.44.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -41,30 +41,32 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.43
+### Driftpunkt 1.0.44
 
 ### Highlights
 
-- Technician inventory overview now groups computer and printer lists per company.
-- Inventory row editing now opens in a wider dialog instead of inline table forms.
-- Customer inventory pages now follow the customer portal layout and sidebar.
-- Superadmin can restrict each company inventory list to selected active customer users.
-- Admin mail configuration is split into focused pages for overview, servers, inboxes, outgoing profiles, incoming mail and draft reviews.
+- Admin system settings are split into focused subpages for core system settings, tickets and files, access and organization, support tools, and public content.
+- The admin overview now includes an operational cockpit for maintenance state, active tickets, SLA risk, jobs, database status, and installed version.
+- Tickets now support the `In progress` lifecycle state, separating assigned work from work that a technician has actively started.
+- Tickets are moved from new to open when internal routing is added, and to in progress when technicians add internal work notes or update checklist progress.
+- Coordinator views, reports, customer ticket presentation, bulk selection, and imports now treat in-progress tickets as active work.
+- The translation editor excludes editorial news and knowledge base article content from UI translation overrides and prunes obsolete overrides after save.
 
 ### Operations
 
-- Database migration required: yes, adds per-list customer access control for inventory lists.
+- Database migration required: no.
 - Requires cache refresh: yes.
-- Requires restart/reload: recommended after update so PHP/OPcache and Apache load the new code.
+- Requires restart/reload: recommended after update so PHP/OPcache and Apache load the new code and enum state.
 
 ### Verification
 
-- Confirm technicians see one inventory entry per company with separate computer and printer list actions.
-- Confirm editing an inventory row opens the modal and still writes an audit log.
-- Confirm customer users only see inventory lists they are allowed to access.
-- Confirm admin mail overview links to the focused mail configuration pages.
-- Confirm mail server, mailbox and outgoing profile forms redirect back to their own pages after save.
-- Confirm incoming mail filters and draft review filters work on their new URLs.
+- Confirm Admin -> System settings opens the new grouped subpages and that each form redirects back to its focused page after save.
+- Confirm the admin overview shows the operational cockpit for both superadmin and regular admin, with superadmin-only cards hidden from regular admin.
+- Confirm routed new tickets become open automatically when assigned to a technician, team, mailbox default team, public ticket route, draft approval, or import route.
+- Confirm internal technician comments and checklist updates move routed new/open tickets to in progress without changing waiting-customer or closed tickets.
+- Confirm coordinator filters and reports show the in-progress count and that customer-facing ticket lists present in-progress tickets clearly.
+- Confirm CSV and external JSON imports map ongoing labels such as "Under arbete" and "In progress" to the in-progress status.
+- Confirm translation overrides no longer include news article or knowledge base body content.
 
 ## What This Repository Contains
 
@@ -82,7 +84,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.43.zip.sha256
+sha256sum -c driftpunkt-install-1.0.44.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -109,10 +111,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.43.zip` and `driftpunkt-install-1.0.43.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.44.zip` and `driftpunkt-install-1.0.44.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.43.zip.sha256
+sha256sum -c driftpunkt-install-1.0.44.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -120,9 +122,9 @@ sha256sum -c driftpunkt-install-1.0.43.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.43.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.44.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.43/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.44/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -171,10 +173,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.43.zip` and `driftpunkt-install-1.0.43.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.44.zip` and `driftpunkt-install-1.0.44.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.43.zip.sha256
+sha256sum -c driftpunkt-install-1.0.44.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -182,8 +184,8 @@ sha256sum -c driftpunkt-install-1.0.43.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.43.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.43/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.44.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.44/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -236,6 +238,7 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.44.zip`
 - `packages/driftpunkt-upgrade-1.0.43.zip`
 
 ## Notes
