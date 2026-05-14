@@ -20,13 +20,87 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 ## What Driftpunkt Includes
 
-- Public pages for status, news, search, contact, and policy information.
-- Customer ticket creation and customer-facing case follow-up.
-- Technician queues for prioritization, comments, SLA follow-up, and knowledge base work.
-- Admin tools for identity, paginated company management, settings, reports, maintenance mode, imports, updates, and operational tasks.
-- Company hierarchy management where subsidiaries stay grouped with their parent company and search opens relevant groups.
-- Mail ingestion, draft review, company monthly reports, public ticket intake, read-only ticket API, and package-based updates.
-- Release packages with bundled dependencies, metadata, release notes, and SHA-256 checksums.
+- A public website for the homepage, operational status, news, search, contact details, public knowledge base content, and legal policy pages.
+- Public ticket intake for visitors when the feature is enabled, plus authenticated customer portals for ongoing support dialogue.
+- Customer accounts for both company customers and private customers, including password reset, language switching, ticket follow-up, comments, feedback, and customer-visible knowledge base content.
+- Customer-facing resources such as allowlisted company reports, computer lists, and printer lists under a translated "My resources" menu when those resources are enabled.
+- Technician and ticket coordinator portals for queue work, triage, comments, assignment, SLA follow-up, reports, activity, notifications, and company inventory lookup.
+- Full ticket lifecycle support with statuses, priorities, impact levels, request types, routing rules, teams, multiple responsible technicians, internal notes, customer-visible replies, attachments, checklists, playbooks, and customer feedback reminders.
+- Admin tools for identity, companies, company hierarchies, teams, mail, ticket categories, intake templates, routing, SLA policies, public content, reports, logs, background jobs, settings, updates, and maintenance mode.
+- Mail ingestion through spool or mailbox polling, incoming mail review, correction drafts, mailbox routing, outgoing profiles, ticket notification emails, and technician/customer links back to the related ticket.
+- Knowledge base and news management with public, customer, technician, and admin-facing workflows, optional technician contributions, smart tips, FAQ-style content, and status communication.
+- Operational tooling for read-only ticket API access, monthly company reports, database jobs, backups, restore/optimize tasks, migration runs, code update staging, package application, addon package registration, log export, and controlled cleanup.
+- Localization and personalization for Swedish, English, and Norwegian UI text, personal default language in technician/coordinator workflows, branding assets, MFA settings, remote support shortcuts, and portal theme templates.
+- Release packages with bundled dependencies, metadata, release notes, post-update guidance, and SHA-256 checksums.
+
+## Profiles and What They Can Do
+
+Visible features depend on enabled settings, company access, and role permissions, but Driftpunkt currently supports these main profiles:
+
+### Public Visitor
+
+- Read the public homepage, operational status, news, public knowledge base articles, contact page, and legal pages.
+- Search public content from the server-rendered website.
+- Create a public support ticket without signing in when public ticket intake is enabled.
+- Follow general status and maintenance information published by the service team.
+
+### Company Customer
+
+- Sign in to the customer portal and follow tickets connected to the customer account or shared through the company.
+- Create tickets, add customer comments, see ticket status, and participate in the support dialogue for tickets they can access.
+- Read customer-visible knowledge base content and operational status information.
+- Leave feedback on resolved or closed tickets when customer feedback is enabled.
+- Open company resources such as reports, computer lists, and printer lists when the company has the feature enabled and the specific user has been granted access.
+- Use customer reports only when explicitly allowlisted by an admin for that company user.
+- Switch portal language between Swedish, English, and Norwegian.
+
+### Private Customer
+
+- Register a private customer account when self-registration is enabled.
+- Sign in, reset password, create personal support tickets, comment on accessible tickets, and follow personal case status.
+- Read customer-visible knowledge base and status information.
+- Provide feedback on completed tickets when the feedback workflow is enabled.
+- Private customers are separate from company report/resource access, which is controlled per company user.
+
+### Technician
+
+- Work from a technician overview built around assigned tickets, team tickets, queue health, SLA pressure, recent activity, and notifications.
+- Create tickets, take over tickets, assign work, update status, priority, impact, request type, routing, SLA fields, checklist progress, and internal work notes.
+- Reply to customers, add internal comments, use ticket attachments when enabled, and follow links from technician notification emails back to the related ticket.
+- See all tickets or only permitted tickets depending on the technician access setting.
+- Use knowledge base and news contribution workflows when enabled.
+- Use technician inventory views, remote support shortcuts, secure login/MFA, personal default language, and selectable portal theme templates.
+
+### Ticket Coordinator
+
+- Use a coordinator overview for unassigned work, stale tickets, waiting customer cases, SLA risk, workload, and triage signals.
+- Distribute tickets to technicians or teams, follow company and queue health, add comments, and keep cases moving without needing full admin access.
+- Open coordinator reports for inflow, backlog, status, priority, impact, request type, escalation, SLA, risk, and ticket aging.
+- View company data plus computer and printer inventory when data exists and access is available.
+- Save a personal default language so the coordinator portal opens in the preferred language on the next login.
+
+### Admin
+
+- Manage regular operational administration: tickets, companies, users that are not privileged beyond their permission level, teams, categories, routing rules, intake templates, SLA policies, and support settings.
+- Configure customer portal features, company hierarchy visibility, ticket attachments, feedback, monthly company reports, MFA policy, remote support tools, public ticket intake, and customer self-registration.
+- Manage public content such as homepage settings, contact information, news, status messaging, knowledge base settings, translation languages, UI translation overrides, privacy policy, terms, and cookie policy.
+- Manage mail servers, support inboxes, outgoing mail profiles, incoming mail review, correction drafts, and mailbox-based ticket creation.
+- Use admin reports for ticket inflow, backlog, SLA health, risk, companies, and internal workload.
+- Review application logs and notification logs, with super-admin-only controls hidden where appropriate.
+
+### Super Admin
+
+- Has full system and operational access, including all admin and technician capabilities.
+- Create or assign privileged profiles such as super admin, admin, and ticket coordinator.
+- Manage destructive or infrastructure-sensitive actions such as database backup/download/restore/optimize, migration execution, code update staging/application, post-update tasks, job retry/purge, log export/cleanup, test ticket purge, branding, support branding, and addon package lifecycle.
+- Configure global maintenance mode, timezone, system status monitor settings, public ticket form controls, privileged mail tests, knowledge base controls, remote support download URLs, and secure update flows.
+
+### System and Automation
+
+- Poll support mailboxes or process mail spool input and create tickets or draft reviews from incoming messages.
+- Run due operational tasks for mail polling, SLA checks, monthly reports, customer feedback reminders, attachment archiving, database jobs, and post-update steps.
+- Provide a read-only token-based ticket API for controlled exports.
+- Build and apply cumulative install/upgrade packages with vendor dependencies included, release metadata, and checksum verification.
 
 ## Packages
 
