@@ -30,7 +30,7 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 - Mail ingestion through spool or mailbox polling, incoming mail review, correction drafts, mailbox routing, outgoing profiles, ticket notification emails, and technician/customer links back to the related ticket.
 - Knowledge base and news management with public, customer, technician, and admin-facing workflows, optional technician contributions, smart tips, FAQ-style content, and status communication.
 - Operational tooling for read-only ticket API access, monthly company reports, database jobs, backups, restore/optimize tasks, migration runs, code update staging, package application, addon package registration, log export, and controlled cleanup.
-- Localization and personalization for Swedish, English, and Norwegian UI text, personal default language in technician/coordinator workflows, branding assets, MFA settings, remote support shortcuts, and portal theme templates.
+- Localization and personalization for Swedish, English, and Norwegian UI text, personal default language in technician, coordinator, admin, and super admin workflows, global default/selectable language governance, branding assets, MFA settings, remote support shortcuts, and portal theme templates.
 - Release packages with bundled dependencies, metadata, release notes, post-update guidance, and SHA-256 checksums.
 
 ## Profiles and What They Can Do
@@ -83,7 +83,7 @@ Visible features depend on enabled settings, company access, and role permission
 
 - Manage regular operational administration: tickets, companies, users that are not privileged beyond their permission level, teams, categories, routing rules, intake templates, SLA policies, and support settings.
 - Configure customer portal features, company hierarchy visibility, ticket attachments, feedback, monthly company reports, MFA policy, remote support tools, public ticket intake, and customer self-registration.
-- Manage public content such as homepage settings, contact information, news, status messaging, knowledge base settings, translation languages, UI translation overrides, privacy policy, terms, and cookie policy.
+- Manage public content such as homepage settings, contact information, news, status messaging, knowledge base settings, translation languages, selectable language settings, UI translation overrides, privacy policy, terms, and cookie policy.
 - Manage mail servers, support inboxes, outgoing mail profiles, incoming mail review, correction drafts, and mailbox-based ticket creation.
 - Use admin reports for ticket inflow, backlog, SLA health, risk, companies, and internal workload.
 - Review application logs and notification logs, with super-admin-only controls hidden where appropriate.
@@ -93,7 +93,7 @@ Visible features depend on enabled settings, company access, and role permission
 - Has full system and operational access, including all admin and technician capabilities.
 - Create or assign privileged profiles such as super admin, admin, and ticket coordinator.
 - Manage destructive or infrastructure-sensitive actions such as database backup/download/restore/optimize, migration execution, code update staging/application, post-update tasks, job retry/purge, log export/cleanup, test ticket purge, branding, support branding, and addon package lifecycle.
-- Configure global maintenance mode, timezone, system status monitor settings, public ticket form controls, privileged mail tests, knowledge base controls, remote support download URLs, and secure update flows.
+- Configure global maintenance mode, timezone, default language, selectable languages, system status monitor settings, public ticket form controls, privileged mail tests, knowledge base controls, remote support download URLs, and secure update flows.
 
 ### System and Automation
 
@@ -104,9 +104,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.46`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.46.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.46.zip`
+- Current exported release: `1.0.47`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.47.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.47.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -115,28 +115,28 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.46
+### Driftpunkt 1.0.47
 
 ### Highlights
 
-- Hotfix for the customer report access migration used by the 1.0.45 release.
-- The migration no longer calls the removed Doctrine DBAL 4 `Table::changeColumn()` API.
-- MariaDB installations now change the `report_access_restricted` default with explicit SQL and still backfill existing companies to restricted report access.
-- Installations that hit the 1.0.45 migration error before the migration was recorded can apply 1.0.46 and rerun migrations normally.
-- If the 1.0.45 upgrade was interrupted, unpack or apply `driftpunkt-upgrade-1.0.46.zip` and rerun `php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --all-or-nothing --env=prod`.
+- Admin and super admin users can save a personal default language from the admin language settings page.
+- Super admins can set the global default language and choose which installed languages should be selectable in the UI.
+- Locale resolution now respects selectable languages and falls back to the global default when a stored or session locale is disabled.
+- Admin navigation, secure sign-in/MFA warnings, language settings, and translation group labels now have broader Swedish, English, and Norwegian translation keys.
+- Public export documentation now describes the new language governance model.
 
 ### Operations
 
-- Database migration required: yes, the existing customer report access migration must run successfully.
-- Requires cache refresh: yes.
-- Requires restart/reload: recommended after update so PHP/OPcache and Apache load the patched migration and release metadata.
+- Database migration required: no.
+- Cache refresh required: yes.
+- Restart or reload recommended: yes, so PHP/OPcache loads the updated locale resolver and release metadata.
 
 ### Verification
 
-- Confirm `DoctrineMigrations\Version20260514100000` no longer references `Table::changeColumn()`.
-- Confirm the migration can plan its SQL without throwing a DBAL method error.
-- Confirm MariaDB upgrades set `companies.report_access_restricted` default to enabled and update existing company rows to restricted report access.
-- Confirm release packages build successfully and that both install and upgrade package checksums validate.
+- Confirm admins can save English or Norwegian as their personal default language and keep that language after navigating away or signing in again.
+- Confirm super admins can disable a selectable language and that direct `/sprak/<disabled>` requests fall back to the global default.
+- Confirm the global language settings form always keeps the default language selectable.
+- Confirm release packages build successfully and package checksums validate.
 
 ## What This Repository Contains
 
@@ -154,7 +154,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.46.zip.sha256
+sha256sum -c driftpunkt-install-1.0.47.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -181,10 +181,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.46.zip` and `driftpunkt-install-1.0.46.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.47.zip` and `driftpunkt-install-1.0.47.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.46.zip.sha256
+sha256sum -c driftpunkt-install-1.0.47.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -192,9 +192,9 @@ sha256sum -c driftpunkt-install-1.0.46.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.46.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.47.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.46/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.47/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -243,10 +243,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.46.zip` and `driftpunkt-install-1.0.46.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.47.zip` and `driftpunkt-install-1.0.47.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.46.zip.sha256
+sha256sum -c driftpunkt-install-1.0.47.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -254,8 +254,8 @@ sha256sum -c driftpunkt-install-1.0.46.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.46.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.46/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.47.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.47/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -308,7 +308,7 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 
 ### Interrupted 1.0.45 Migration
 
-Version `1.0.46` fixes the 1.0.45 customer report migration error `Call to undefined method Doctrine\DBAL\Schema\Table::changeColumn()`. If an upgrade stopped on that error, apply `driftpunkt-upgrade-1.0.46.zip` and rerun the migration step after the 1.0.46 files are in place:
+Version `1.0.46` and later fix the 1.0.45 customer report migration error `Call to undefined method Doctrine\DBAL\Schema\Table::changeColumn()`. If an upgrade stopped on that error, apply the latest `driftpunkt-upgrade-<version>.zip` and rerun the migration step after the fixed files are in place:
 
 ```bash
 php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --all-or-nothing --env=prod
@@ -318,9 +318,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.47.zip`
 - `packages/driftpunkt-upgrade-1.0.46.zip`
 - `packages/driftpunkt-upgrade-1.0.45.zip`
-- `packages/driftpunkt-upgrade-1.0.44.zip`
 
 ## Notes
 
