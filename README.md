@@ -49,6 +49,7 @@ These notes are copied from the packaged release metadata for the current export
 - The migration no longer calls the removed Doctrine DBAL 4 `Table::changeColumn()` API.
 - MariaDB installations now change the `report_access_restricted` default with explicit SQL and still backfill existing companies to restricted report access.
 - Installations that hit the 1.0.45 migration error before the migration was recorded can apply 1.0.46 and rerun migrations normally.
+- If the 1.0.45 upgrade was interrupted, unpack or apply `driftpunkt-upgrade-1.0.46.zip` and rerun `php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --all-or-nothing --env=prod`.
 
 ### Operations
 
@@ -230,6 +231,16 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 7. For version 1.0.21 or later, also verify Admin -> Identity links to the dedicated company page and Admin -> Companies paginates company groups correctly.
 8. Older upgrade packages are kept as fallback and history, not as required intermediate steps.
 9. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
+
+### Interrupted 1.0.45 Migration
+
+Version `1.0.46` fixes the 1.0.45 customer report migration error `Call to undefined method Doctrine\DBAL\Schema\Table::changeColumn()`. If an upgrade stopped on that error, apply `driftpunkt-upgrade-1.0.46.zip` and rerun the migration step after the 1.0.46 files are in place:
+
+```bash
+php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --all-or-nothing --env=prod
+```
+
+The failed 1.0.45 run stops before Doctrine records the migration as completed, so the patched 1.0.46 migration can normally run again without manual database edits. Always confirm that a fresh database backup exists before resuming an interrupted production upgrade.
 
 ## Available upgrade packages
 
