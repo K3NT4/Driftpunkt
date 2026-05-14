@@ -30,9 +30,9 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 ## Packages
 
-- Current exported release: `1.0.44`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.44.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.44.zip`
+- Current exported release: `1.0.45`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.45.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.45.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -41,32 +41,34 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.44
+### Driftpunkt 1.0.45
 
 ### Highlights
 
-- Admin system settings are split into focused subpages for core system settings, tickets and files, access and organization, support tools, and public content.
-- The admin overview now includes an operational cockpit for maintenance state, active tickets, SLA risk, jobs, database status, and installed version.
-- Tickets now support the `In progress` lifecycle state, separating assigned work from work that a technician has actively started.
-- Tickets are moved from new to open when internal routing is added, and to in progress when technicians add internal work notes or update checklist progress.
-- Coordinator views, reports, customer ticket presentation, bulk selection, and imports now treat in-progress tickets as active work.
-- The translation editor excludes editorial news and knowledge base article content from UI translation overrides and prunes obsolete overrides after save.
+- Customer reports are now strictly allowlist-based per company user. A company can have customer reports enabled globally, but no customer sees the report area until an admin explicitly selects that user.
+- The customer report page has been reshaped into a customer-facing case overview with simpler flow, risk, and ticket statistics instead of internal report sections.
+- Customer portal resources are grouped under a translated "My resources" menu that can show reports, computers, and printers when each resource is available.
+- Technician users can save a personal default language, and the technician portal now applies Swedish, English, and Norwegian labels more consistently after login.
+- The technician overview has a more focused cockpit layout for assigned work, team work, SLA pressure, activity, notifications, and queue health.
+- Technician notification emails now include clearer ticket links/buttons and a more polished message structure.
+- Additional technician theme templates are available so users can tune the portal appearance without code changes.
+- Ticket coordinators can save their own default language, get a broader Swedish/English/Norwegian translation pass, and can read company data plus computer/printer inventory when available.
 
 ### Operations
 
-- Database migration required: no.
+- Database migration required: yes, for the customer report access default restriction.
 - Requires cache refresh: yes.
-- Requires restart/reload: recommended after update so PHP/OPcache and Apache load the new code and enum state.
+- Requires restart/reload: recommended after update so PHP/OPcache and Apache load the new portal templates, translations, and services.
 
 ### Verification
 
-- Confirm Admin -> System settings opens the new grouped subpages and that each form redirects back to its focused page after save.
-- Confirm the admin overview shows the operational cockpit for both superadmin and regular admin, with superadmin-only cards hidden from regular admin.
-- Confirm routed new tickets become open automatically when assigned to a technician, team, mailbox default team, public ticket route, draft approval, or import route.
-- Confirm internal technician comments and checklist updates move routed new/open tickets to in progress without changing waiting-customer or closed tickets.
-- Confirm coordinator filters and reports show the in-progress count and that customer-facing ticket lists present in-progress tickets clearly.
-- Confirm CSV and external JSON imports map ongoing labels such as "Under arbete" and "In progress" to the in-progress status.
-- Confirm translation overrides no longer include news article or knowledge base body content.
+- Confirm a company with customer reports enabled does not expose `/portal/customer/reports` until an admin selects the specific company user.
+- Confirm selected customer users see the translated "My resources" menu and can open their customer-facing report overview.
+- Confirm non-selected customer users receive a not-found response for the customer report route.
+- Confirm technician users can choose Swedish, English, or Norwegian as default language and that the next login opens with that language.
+- Confirm the technician overview, technician inventory pages, and technician emails use the selected language and include ticket links where relevant.
+- Confirm ticket coordinators can choose their default language, see coordinator pages translated, and can open company computer/printer inventory when data exists.
+- Confirm release packages build successfully and that both install and upgrade package checksums validate.
 
 ## What This Repository Contains
 
@@ -84,7 +86,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.44.zip.sha256
+sha256sum -c driftpunkt-install-1.0.45.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -111,10 +113,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.44.zip` and `driftpunkt-install-1.0.44.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.45.zip` and `driftpunkt-install-1.0.45.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.44.zip.sha256
+sha256sum -c driftpunkt-install-1.0.45.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -122,9 +124,9 @@ sha256sum -c driftpunkt-install-1.0.44.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.44.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.45.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.44/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.45/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -173,10 +175,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.44.zip` and `driftpunkt-install-1.0.44.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.45.zip` and `driftpunkt-install-1.0.45.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.44.zip.sha256
+sha256sum -c driftpunkt-install-1.0.45.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -184,8 +186,8 @@ sha256sum -c driftpunkt-install-1.0.44.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.44.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.44/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.45.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.45/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -238,6 +240,7 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.45.zip`
 - `packages/driftpunkt-upgrade-1.0.44.zip`
 - `packages/driftpunkt-upgrade-1.0.43.zip`
 
