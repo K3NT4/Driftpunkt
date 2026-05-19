@@ -122,6 +122,7 @@ These notes are copied from the packaged release metadata for the current export
 - Internal staff can now belong to multiple technician teams through a real membership model.
 - `users.technician_team_id` remains the primary technician team for default routing, quick assignment to the actor's team, and shared team filter presets.
 - The new `technician_team_memberships` table is backfilled from existing primary team assignments during migration.
+- The rebuilt 1.0.52 packages create membership foreign keys with MariaDB-compatible SQL.
 - Admin identity management now supports additional technician teams for super admins, admins, ticket coordinators, and technicians.
 - Additional teams are rejected for non-internal users, require a primary technician team, and cannot reference inactive teams.
 - Technician ticket read/collaboration scope, dashboards, closed-ticket views, "My teams" filters, and coordinator team views now use all technician team memberships.
