@@ -104,9 +104,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.47`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.47.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.47.zip`
+- Current exported release: `1.0.52`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.52.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.52.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -115,27 +115,34 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.47
+### Driftpunkt 1.0.52
 
 ### Highlights
 
-- Admin and super admin users can save a personal default language from the admin language settings page.
-- Super admins can set the global default language and choose which installed languages should be selectable in the UI.
-- Locale resolution now respects selectable languages and falls back to the global default when a stored or session locale is disabled.
-- Admin navigation, secure sign-in/MFA warnings, language settings, and translation group labels now have broader Swedish, English, and Norwegian translation keys.
-- Public export documentation now describes the new language governance model.
+- Internal staff can now belong to multiple technician teams through a real membership model.
+- `users.technician_team_id` remains the primary technician team for default routing, quick assignment to the actor's team, and shared team filter presets.
+- The new `technician_team_memberships` table is backfilled from existing primary team assignments during migration.
+- Admin identity management now supports additional technician teams for super admins, admins, ticket coordinators, and technicians.
+- Additional teams are rejected for non-internal users, require a primary technician team, and cannot reference inactive teams.
+- Technician ticket read/collaboration scope, dashboards, closed-ticket views, "My teams" filters, and coordinator team views now use all technician team memberships.
+- Tickets still have exactly one assigned team through `Ticket.assignedTeam`.
+- Team deletion now cleans both primary links and extra memberships while preserving unrelated team memberships on the user.
 
 ### Operations
 
-- Database migration required: no.
+- Database migration required: yes. The release adds `technician_team_memberships` and backfills it from `users.technician_team_id`.
 - Cache refresh required: yes.
-- Restart or reload recommended: yes, so PHP/OPcache loads the updated locale resolver and release metadata.
+- Restart or reload recommended: yes, so PHP/OPcache loads the updated Doctrine mappings, portal controllers, templates, and access policy.
 
 ### Verification
 
-- Confirm admins can save English or Norwegian as their personal default language and keep that language after navigating away or signing in again.
-- Confirm super admins can disable a selectable language and that direct `/sprak/<disabled>` requests fall back to the global default.
-- Confirm the global language settings form always keeps the default language selectable.
+- Confirm the migration creates `technician_team_memberships` and existing users with a primary technician team receive a membership row.
+- Confirm an admin can assign one primary team and one or more additional teams to an internal technician.
+- Confirm additional teams are rejected without a primary team and when an inactive team is selected.
+- Confirm a technician with two teams can see and collaborate on tickets assigned to either team when broad technician read access is disabled.
+- Confirm detail editing remains limited to the responsible technician or explicitly assigned additional technician.
+- Confirm dashboard counts, closed-ticket lists, "My teams" filters, and coordinator team views include all technician memberships.
+- Confirm deleting a team removes the deleted team from both primary and additional memberships without removing the user's other teams.
 - Confirm release packages build successfully and package checksums validate.
 
 ## What This Repository Contains
@@ -154,7 +161,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.47.zip.sha256
+sha256sum -c driftpunkt-install-1.0.52.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -181,10 +188,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.47.zip` and `driftpunkt-install-1.0.47.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.52.zip` and `driftpunkt-install-1.0.52.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.47.zip.sha256
+sha256sum -c driftpunkt-install-1.0.52.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -192,9 +199,9 @@ sha256sum -c driftpunkt-install-1.0.47.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.47.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.52.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.47/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.52/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -243,10 +250,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.47.zip` and `driftpunkt-install-1.0.47.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.52.zip` and `driftpunkt-install-1.0.52.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.47.zip.sha256
+sha256sum -c driftpunkt-install-1.0.52.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -254,8 +261,8 @@ sha256sum -c driftpunkt-install-1.0.47.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.47.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.47/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.52.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.52/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -318,9 +325,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.52.zip`
+- `packages/driftpunkt-upgrade-1.0.51.zip`
 - `packages/driftpunkt-upgrade-1.0.47.zip`
-- `packages/driftpunkt-upgrade-1.0.46.zip`
-- `packages/driftpunkt-upgrade-1.0.45.zip`
 
 ## Notes
 
