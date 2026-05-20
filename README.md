@@ -104,9 +104,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.52`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.52.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.52.zip`
+- Current exported release: `1.0.53`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.53.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.53.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -115,35 +115,27 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.52
+### Driftpunkt 1.0.53
 
 ### Highlights
 
-- Internal staff can now belong to multiple technician teams through a real membership model.
-- `users.technician_team_id` remains the primary technician team for default routing, quick assignment to the actor's team, and shared team filter presets.
-- The new `technician_team_memberships` table is backfilled from existing primary team assignments during migration.
-- The rebuilt 1.0.52 packages create membership foreign keys with MariaDB-compatible SQL.
-- Admin identity management now supports additional technician teams for super admins, admins, ticket coordinators, and technicians.
-- Additional teams are rejected for non-internal users, require a primary technician team, and cannot reference inactive teams.
-- Technician ticket read/collaboration scope, dashboards, closed-ticket views, "My teams" filters, and coordinator team views now use all technician team memberships.
-- Tickets still have exactly one assigned team through `Ticket.assignedTeam`.
-- Team deletion now cleans both primary links and extra memberships while preserving unrelated team memberships on the user.
+- Adds a repair migration for installations that received 1.0.52 code while the `technician_team_memberships` migration did not complete.
+- The repair migration creates the missing membership table with MariaDB-compatible foreign key SQL and backfills rows from `users.technician_team_id`.
+- Prevents admin identity/company workflows from failing with a 500 error caused by a missing `technician_team_memberships` table after an interrupted update.
+- Keeps the 1.0.52 multi-team membership model unchanged: users can have one primary technician team plus any number of additional team memberships, while tickets still have one assigned team.
 
 ### Operations
 
-- Database migration required: yes. The release adds `technician_team_memberships` and backfills it from `users.technician_team_id`.
+- Database migration required: yes. The release adds `DoctrineMigrations\Version20260520013000` as an idempotent repair step.
 - Cache refresh required: yes.
-- Restart or reload recommended: yes, so PHP/OPcache loads the updated Doctrine mappings, portal controllers, templates, and access policy.
+- Restart or reload recommended: yes, so PHP/OPcache loads the repaired migration set and 1.0.53 metadata.
 
 ### Verification
 
-- Confirm the migration creates `technician_team_memberships` and existing users with a primary technician team receive a membership row.
-- Confirm an admin can assign one primary team and one or more additional teams to an internal technician.
-- Confirm additional teams are rejected without a primary team and when an inactive team is selected.
-- Confirm a technician with two teams can see and collaborate on tickets assigned to either team when broad technician read access is disabled.
-- Confirm detail editing remains limited to the responsible technician or explicitly assigned additional technician.
-- Confirm dashboard counts, closed-ticket lists, "My teams" filters, and coordinator team views include all technician memberships.
-- Confirm deleting a team removes the deleted team from both primary and additional memberships without removing the user's other teams.
+- Confirm `doctrine:migrations:migrate --env=prod` creates `technician_team_memberships` when it is missing.
+- Confirm the table contains one membership row for existing users that have `users.technician_team_id`.
+- Confirm `/portal/admin/identity` and `/portal/admin/companies` open without a 500 error after migration.
+- Confirm the MariaDB SQL does not contain `NOT DEFERRABLE` or `INITIALLY IMMEDIATE`.
 - Confirm release packages build successfully and package checksums validate.
 
 ## What This Repository Contains
@@ -162,7 +154,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.52.zip.sha256
+sha256sum -c driftpunkt-install-1.0.53.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -189,10 +181,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.52.zip` and `driftpunkt-install-1.0.52.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.53.zip` and `driftpunkt-install-1.0.53.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.52.zip.sha256
+sha256sum -c driftpunkt-install-1.0.53.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -200,9 +192,9 @@ sha256sum -c driftpunkt-install-1.0.52.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.52.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.53.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.52/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.53/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -251,10 +243,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.52.zip` and `driftpunkt-install-1.0.52.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.53.zip` and `driftpunkt-install-1.0.53.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.52.zip.sha256
+sha256sum -c driftpunkt-install-1.0.53.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -262,8 +254,8 @@ sha256sum -c driftpunkt-install-1.0.52.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.52.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.52/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.53.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.53/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -326,9 +318,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.53.zip`
 - `packages/driftpunkt-upgrade-1.0.52.zip`
 - `packages/driftpunkt-upgrade-1.0.51.zip`
-- `packages/driftpunkt-upgrade-1.0.47.zip`
 
 ## Notes
 
