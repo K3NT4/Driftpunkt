@@ -104,9 +104,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.53`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.53.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.53.zip`
+- Current exported release: `1.0.63`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.63.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.63.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -115,28 +115,29 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.53
+### Driftpunkt 1.0.63
 
 ### Highlights
 
-- Adds a repair migration for installations that received 1.0.52 code while the `technician_team_memberships` migration did not complete.
-- The repair migration creates the missing membership table with MariaDB-compatible foreign key SQL and backfills rows from `users.technician_team_id`.
-- Prevents admin identity/company workflows from failing with a 500 error caused by a missing `technician_team_memberships` table after an interrupted update.
-- Keeps the 1.0.52 multi-team membership model unchanged: users can have one primary technician team plus any number of additional team memberships, while tickets still have one assigned team.
+- Import / Export / Shadow people now renumbers the existing imported ticket when a requester shadow person is linked to, or used to create, a customer account in a company with a custom ticket sequence.
+- The ticket is not duplicated during that move: ticket id, imported history, comments, attachments, and the shadow-person link stay on the same ticket while the audit log records the old and new ticket references.
+- Companies without a custom ticket sequence keep the existing `DP-*` reference, and assignee/technician shadow-person linking is unchanged.
+- Department and functional customer accounts still work without a submitted email address; Driftpunkt generates an internal `@no-mail.invalid` address and disables customer email notifications for those accounts.
+- The public repository release is refreshed from 1.0.53 to 1.0.63, including the cumulative improvements for secure internal ticket links, customer access controls, inventory lists, shadow people, technician/coordinator views, ticket status email behavior, mail ingestion, logs, languages, and release packaging.
 
 ### Operations
 
-- Database migration required: yes. The release adds `DoctrineMigrations\Version20260520013000` as an idempotent repair step.
+- Database migration required: yes when upgrading an installation that has pending migrations from releases after 1.0.53; this 1.0.63 change itself does not add a new migration.
 - Cache refresh required: yes.
-- Restart or reload recommended: yes, so PHP/OPcache loads the repaired migration set and 1.0.53 metadata.
+- Restart or reload recommended: yes, so PHP/OPcache loads updated controller code, entity code, tests, README content, and release metadata.
 
 ### Verification
 
-- Confirm `doctrine:migrations:migrate --env=prod` creates `technician_team_memberships` when it is missing.
-- Confirm the table contains one membership row for existing users that have `users.technician_team_id`.
-- Confirm `/portal/admin/identity` and `/portal/admin/companies` open without a 500 error after migration.
-- Confirm the MariaDB SQL does not contain `NOT DEFERRABLE` or `INITIALLY IMMEDIATE`.
-- Confirm release packages build successfully and package checksums validate.
+- Link a requester shadow person to an existing customer in a company with custom prefix/sequence and confirm the same ticket is renumbered, for example from `DP-*` to `VAX-1001`.
+- Link a requester shadow person to a customer in a company without a custom sequence and confirm the original `DP-*` ticket reference is kept.
+- Create a department/functional account from a requester shadow person without posting an email address and confirm the generated account uses `@no-mail.invalid` and has email notifications disabled.
+- Confirm the public export README shows current release `1.0.63` and lists `driftpunkt-install-1.0.63.zip` plus `driftpunkt-upgrade-1.0.63.zip`.
+- Confirm release package checksum validation succeeds before applying the package.
 
 ## What This Repository Contains
 
@@ -154,7 +155,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.53.zip.sha256
+sha256sum -c driftpunkt-install-1.0.63.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -181,10 +182,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.53.zip` and `driftpunkt-install-1.0.53.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.63.zip` and `driftpunkt-install-1.0.63.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.53.zip.sha256
+sha256sum -c driftpunkt-install-1.0.63.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -192,9 +193,9 @@ sha256sum -c driftpunkt-install-1.0.53.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.53.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.63.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.53/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.63/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -243,10 +244,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.53.zip` and `driftpunkt-install-1.0.53.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.63.zip` and `driftpunkt-install-1.0.63.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.53.zip.sha256
+sha256sum -c driftpunkt-install-1.0.63.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -254,8 +255,8 @@ sha256sum -c driftpunkt-install-1.0.53.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.53.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.53/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.63.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.63/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -318,9 +319,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.63.zip`
 - `packages/driftpunkt-upgrade-1.0.53.zip`
 - `packages/driftpunkt-upgrade-1.0.52.zip`
-- `packages/driftpunkt-upgrade-1.0.51.zip`
 
 ## Notes
 
