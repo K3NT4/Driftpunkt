@@ -1,6 +1,6 @@
 # Public Export Manifest
 
-Created: 2026-05-21T21:58:11+02:00
+Created: 2026-05-25T20:32:38+02:00
 
 ## Export Policy
 
@@ -16,10 +16,10 @@ Created: 2026-05-21T21:58:11+02:00
 
 | Type | Version | Package | SHA-256 |
 | --- | --- | --- | --- |
-| install | 1.0.63 | `packages/driftpunkt-install-1.0.63.zip` | `803b426d75a813b3ce7857b574c4df497e54215a8f852defb25c6db83598d3a3` |
+| install | 1.0.68 | `packages/driftpunkt-install-1.0.68.zip` | `1a3837f69d8b3412d22c37e21786d8ba08cb1f14beabdb4199f577f9728d61f9` |
+| upgrade | 1.0.68 | `packages/driftpunkt-upgrade-1.0.68.zip` | `506872684d9ebcda9e4df1a94e790af3cdf8145b849d8a8d83181e33c28d8eae` |
+| upgrade | 1.0.67 | `packages/driftpunkt-upgrade-1.0.67.zip` | `3a63f77e0d45c8cccf0e5dea39ec9067bb9737e2533fac701f39435395c26324` |
 | upgrade | 1.0.63 | `packages/driftpunkt-upgrade-1.0.63.zip` | `0ef7eef2645175f149a89bf6dd1c4dfd828fc586d12600c4dfb1d6235788a32c` |
-| upgrade | 1.0.53 | `packages/driftpunkt-upgrade-1.0.53.zip` | `ab7fefb6bb195c494907dee826d56cf81f17285eaf12a84456051fd9577ef669` |
-| upgrade | 1.0.52 | `packages/driftpunkt-upgrade-1.0.52.zip` | `601698c59bdd9103a053b104333a6a7b553fd73354ff78c29e6c94ea1b6aa703` |
 
 ## Exported README Assets
 
@@ -43,9 +43,13 @@ Created: 2026-05-21T21:58:11+02:00
 - `dist/driftpunkt-install-1.0.51.zip`
 - `dist/driftpunkt-install-1.0.52.zip`
 - `dist/driftpunkt-install-1.0.53.zip`
+- `dist/driftpunkt-install-1.0.63.zip`
+- `dist/driftpunkt-install-1.0.67.zip`
 - `dist/driftpunkt-upgrade-1.0.43.zip`
 - `dist/driftpunkt-upgrade-1.0.44.zip`
 - `dist/driftpunkt-upgrade-1.0.45.zip`
 - `dist/driftpunkt-upgrade-1.0.46.zip`
 - `dist/driftpunkt-upgrade-1.0.47.zip`
 - `dist/driftpunkt-upgrade-1.0.51.zip`
+- `dist/driftpunkt-upgrade-1.0.52.zip`
+- `dist/driftpunkt-upgrade-1.0.53.zip`
