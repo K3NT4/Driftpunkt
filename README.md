@@ -104,9 +104,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.68`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.68.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.68.zip`
+- Current exported release: `1.0.70`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.70.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.70.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -115,29 +115,29 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.68
+### Driftpunkt 1.0.70
 
 ### Highlights
 
-- Ticket summaries now use the same safe rich-text pipeline as ticket comments across customer, technician, and admin create/edit flows.
-- The rich-text editor now supports headings, checklists, inline code, code blocks, undo/redo, keyboard shortcuts, live status messages, and safer plain-text paste handling.
-- Ticket lists and dashboards render summaries as plain text, while ticket detail views render allowed formatting safely.
-- The comment and summary formatter now sanitizes headings, checklists, code blocks, unsafe links, script/style content, and dangerous attributes before storage.
-- Tests cover formatted ticket summaries from both customer and technician flows, customer comment sanitization, and rich-text plain-text conversion.
+- Release packages have been rebuilt from the verified 1.0.69 codebase with new `1.0.70` version metadata.
+- The admin interface version, Composer metadata, archive names, and package `release-metadata.json` now all point to the same current release version.
+- `symfony/polyfill-intl-idn` has been updated to a patched version after Composer audit reported CVE-2026-46644.
+- The global ticket SLA toggle in the admin interface can now be turned off correctly and keeps the disabled checkbox state after saving.
+- The cumulative upgrade package remains suitable for upgrading older Driftpunkt 1.x installations directly to this release.
+- No database migrations are introduced beyond the packaged 1.0.69 feature set and the dependency security patch.
 
 ### Operations
 
 - Database migration required: no.
 - Cache refresh required: yes.
-- Restart or reload recommended: yes, so PHP/OPcache loads the updated controller, formatter, Twig filters, templates, tests, README content, and release metadata.
+- Restart or reload recommended: yes, so PHP/OPcache loads the updated vendor package, release metadata, README content, and package manifests.
 
 ### Verification
 
-- Create a customer ticket with formatted summary text and confirm the detail view keeps safe formatting while customer lists show plain text.
-- Create a technician ticket with a heading, checklist, and code block in the summary and confirm unsafe HTML is removed before storage.
-- Add a customer comment containing unsafe HTML and confirm stored content contains only allowed markup.
-- Confirm existing ticket lists and dashboards still render summaries without raw HTML tags.
+- Confirm the admin overview shows Driftpunkt `1.0.70` after the update.
+- Confirm `release-metadata.json` in the uploaded package reports version `1.0.70`.
 - Run `composer audit` and confirm no security vulnerability advisories are reported for the installed lock file.
+- Confirm no database migrations are pending after applying the package.
 - Confirm release package checksum validation succeeds before applying the package.
 
 ## What This Repository Contains
@@ -156,7 +156,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.68.zip.sha256
+sha256sum -c driftpunkt-install-1.0.70.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -183,10 +183,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.68.zip` and `driftpunkt-install-1.0.68.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.70.zip` and `driftpunkt-install-1.0.70.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.68.zip.sha256
+sha256sum -c driftpunkt-install-1.0.70.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -194,9 +194,9 @@ sha256sum -c driftpunkt-install-1.0.68.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.68.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.70.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.68/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.70/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -245,10 +245,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.68.zip` and `driftpunkt-install-1.0.68.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.70.zip` and `driftpunkt-install-1.0.70.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.68.zip.sha256
+sha256sum -c driftpunkt-install-1.0.70.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -256,8 +256,8 @@ sha256sum -c driftpunkt-install-1.0.68.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.68.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.68/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.70.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.70/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -320,9 +320,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.70.zip`
 - `packages/driftpunkt-upgrade-1.0.68.zip`
 - `packages/driftpunkt-upgrade-1.0.67.zip`
-- `packages/driftpunkt-upgrade-1.0.63.zip`
 
 ## Notes
 
