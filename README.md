@@ -104,9 +104,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.72`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.72.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.72.zip`
+- Current exported release: `1.0.75`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.75.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.75.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -115,29 +115,31 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.72
+### Driftpunkt 1.0.75
 
 ### Highlights
 
-- Customer picker fields now show the customer name, email address, and full parent/subsidiary company path where it helps distinguish similarly named customers.
-- The clearer customer picker labels are used when technicians create tickets, admins edit requesters, coordinators create phone tickets, mail drafts are approved, and shadow people are linked.
-- Shadow people can still be linked by the exact visible customer label, with regression coverage for customers inside subsidiary hierarchies.
-- The admin identity form now makes the distinction between company customers and private customers explicit: `Kund (företag krävs)` and `Privatkund (utan företag)`.
-- The manual customer creation rules remain unchanged: company customers require a company, while private customers can be created without one.
+- Symfony dependencies have been upgraded from the 8.0 series to Symfony 8.1.
+- Twig, Symfony Flex, and related Composer dependencies are refreshed in the lock file for the new Symfony runtime.
+- The Symfony configuration reference has been regenerated for 8.1 so local configuration checks match the installed packages.
+- Functional tests have been adjusted for the current Symfony 8.1 test client and response behavior.
+- The cumulative upgrade package remains suitable for upgrading older Driftpunkt 1.x installations directly to this release.
+- No database migrations are introduced beyond the packaged 1.0.74 codebase.
 
 ### Operations
 
 - Database migration required: no.
 - Cache refresh required: yes.
-- Restart or reload recommended: yes, so PHP/OPcache loads the updated Twig runtime, templates, translations, README content, and release metadata.
+- Restart or reload recommended: yes, so PHP/OPcache loads the updated Symfony runtime, Composer autoloader, templates, README content, release notes, and release metadata.
+- When using the admin updater, verify that the actual Apache/PHP user can write the managed code paths and `var/`; on `mpm-itk` or `AssignUserID` hosts this can be the vhost user rather than `www-data`.
 
 ### Verification
 
-- Confirm the admin overview shows Driftpunkt `1.0.72` after the update.
-- Confirm customer picker options include email address and parent/subsidiary company context where applicable.
-- Confirm shadow people can be linked to an existing customer selected from the visible customer label.
-- Confirm the admin identity form labels distinguish company customers from private customers.
+- Confirm the admin overview shows Driftpunkt `1.0.75` after the update.
+- Confirm `release-metadata.json` in the uploaded package reports version `1.0.75`.
+- Confirm `php bin/console about --env=prod --no-debug` reports Symfony `v8.1.0` or newer in the 8.1 series.
 - Confirm no database migrations are pending after applying the package.
+- Confirm login, ticket list, ticket detail, comments, mail administration, and update overview load normally in the test environment.
 - Confirm release package checksum validation succeeds before applying the package.
 
 ## What This Repository Contains
@@ -156,7 +158,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.72.zip.sha256
+sha256sum -c driftpunkt-install-1.0.75.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -183,10 +185,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.72.zip` and `driftpunkt-install-1.0.72.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.75.zip` and `driftpunkt-install-1.0.75.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.72.zip.sha256
+sha256sum -c driftpunkt-install-1.0.75.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -194,9 +196,9 @@ sha256sum -c driftpunkt-install-1.0.72.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.72.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.75.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.72/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.75/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -245,10 +247,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.72.zip` and `driftpunkt-install-1.0.72.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.75.zip` and `driftpunkt-install-1.0.75.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.72.zip.sha256
+sha256sum -c driftpunkt-install-1.0.75.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -256,8 +258,8 @@ sha256sum -c driftpunkt-install-1.0.72.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.72.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.72/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.75.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.75/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -320,9 +322,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.75.zip`
+- `packages/driftpunkt-upgrade-1.0.73.zip`
 - `packages/driftpunkt-upgrade-1.0.72.zip`
-- `packages/driftpunkt-upgrade-1.0.71.zip`
-- `packages/driftpunkt-upgrade-1.0.70.zip`
 
 ## Notes
 
