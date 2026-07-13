@@ -1,6 +1,6 @@
 # Public Export Manifest
 
-Created: 2026-07-13T19:03:43+02:00
+Created: 2026-07-13T19:26:28+02:00
 
 ## Export Policy
 
@@ -16,8 +16,8 @@ Created: 2026-07-13T19:03:43+02:00
 
 | Type | Version | Package | SHA-256 |
 | --- | --- | --- | --- |
-| install | 1.0.87 | `packages/driftpunkt-install-1.0.87.zip` | `e3667abe247a9a6aae5c6552dcc2315bd7d6b637aa1b91d94942c521ec2344e8` |
-| upgrade | 1.0.87 | `packages/driftpunkt-upgrade-1.0.87.zip` | `ff7d0dfbde26f9bbf2745df4ff1747ec40e4c75117e36257a6269ef73341b3cc` |
+| install | 1.0.87 | `packages/driftpunkt-install-1.0.87.zip` | `976e8df04ae065dc5a273d38f0b06152f651f6077cd3648191c7865edd5672cc` |
+| upgrade | 1.0.87 | `packages/driftpunkt-upgrade-1.0.87.zip` | `8f561b052a26b6c453cab1db931c5de1505d7c6b05e026ddd7c327254b76553b` |
 | upgrade | 1.0.76 | `packages/driftpunkt-upgrade-1.0.76.zip` | `e6983e3c2d3a8ec858009bfe50c139f99363653458cc0e2ef6965f80b3352595` |
 | upgrade | 1.0.75 | `packages/driftpunkt-upgrade-1.0.75.zip` | `9cbdead9604e49dd781565b68363484c16d6023f39567425e31c54a56861fec7` |
 
