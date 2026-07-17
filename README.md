@@ -104,9 +104,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.87`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.87.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.87.zip`
+- Current exported release: `1.0.88`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.88.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.88.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -115,17 +115,14 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.87
+### Driftpunkt 1.0.88
 
 ### Highlights
 
-- Active coordinator ticket queues are now sorted consistently by creation time, with the newest ticket first even when an older ticket has a higher operational risk score or priority.
-- Risk indicators, follow-up panels, and dedicated risk filters remain available without changing the chronological queue order.
-- SLA navigation, SLA risk, overdue filters, and related SLA fields are only shown when SLA is enabled and is actually configured or used by an active ticket.
-- The My teams filter is only shown to ticket coordinators who belong to at least one primary or additional team.
-- Ticket coordinators can now send customer replies by email, add customer-visible notes without email, or keep comments internal both before and after technician assignment.
-- Internal notes remain the safe default. Customer-facing modes are blocked for completed, internal-only, and customerless tickets in both the interface and server-side validation.
-- Regression coverage verifies sorting, pagination, email delivery, status transitions, customer visibility, audit logging, and manipulated comment requests.
+- Ticket descriptions in the technician overview, customer portal ticket list, and verbose coordinator ticket cards now use the same compact preview.
+- Previews are limited to 160 characters, normalize line breaks and excess whitespace, end at a word boundary when possible, and use an ellipsis when truncated.
+- Full ticket descriptions remain unchanged and continue to be shown in ticket detail views.
+- Regression coverage verifies rich-text conversion, whitespace normalization, Unicode-safe truncation, and preservation of short descriptions.
 - No database migrations are introduced in this release.
 
 ### Operations
@@ -133,19 +130,16 @@ These notes are copied from the packaged release metadata for the current export
 - Database migration required: no.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
-- The cumulative upgrade package can be applied directly to the currently active Driftpunkt 1.0.86 installation.
+- The cumulative upgrade package can be applied directly to the currently active Driftpunkt 1.0.87 installation.
 - Back up the application and database before applying the package through the admin updater.
 
 ### Verification
 
-- Confirm the admin overview shows Driftpunkt `1.0.87` after the update.
-- Confirm `release-metadata.json` reports version `1.0.87` and includes these release notes.
-- Confirm active coordinator queues show the newest created ticket first across the available filters and pagination.
-- Confirm SLA-related coordinator controls are hidden when SLA is disabled or has not been configured.
-- Confirm the My teams filter is hidden for coordinators without any team membership.
-- Confirm a coordinator can send a customer reply before and after technician assignment and that the ticket changes to Waiting for customer.
-- Confirm customer-visible notes do not send email and internal notes remain hidden from the customer portal.
-- Confirm completed, internal-only, and customerless tickets only allow internal coordinator notes.
+- Confirm the admin overview shows Driftpunkt `1.0.88` after the update.
+- Confirm `release-metadata.json` reports version `1.0.88` and includes these release notes.
+- Confirm long ticket descriptions are shortened with an ellipsis in the technician overview.
+- Confirm the customer portal ticket list and verbose coordinator ticket cards use the same compact preview.
+- Confirm the complete ticket description remains visible in technician, customer, and coordinator ticket detail views.
 - Confirm the release package checksum before applying the package.
 
 ## What This Repository Contains
@@ -164,7 +158,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.87.zip.sha256
+sha256sum -c driftpunkt-install-1.0.88.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -191,10 +185,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.87.zip` and `driftpunkt-install-1.0.87.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.88.zip` and `driftpunkt-install-1.0.88.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.87.zip.sha256
+sha256sum -c driftpunkt-install-1.0.88.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -202,9 +196,9 @@ sha256sum -c driftpunkt-install-1.0.87.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.87.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.88.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.87/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.88/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -253,10 +247,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.87.zip` and `driftpunkt-install-1.0.87.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.88.zip` and `driftpunkt-install-1.0.88.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.87.zip.sha256
+sha256sum -c driftpunkt-install-1.0.88.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -264,8 +258,8 @@ sha256sum -c driftpunkt-install-1.0.87.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.87.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.87/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.88.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.88/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -328,9 +322,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.88.zip`
 - `packages/driftpunkt-upgrade-1.0.87.zip`
 - `packages/driftpunkt-upgrade-1.0.76.zip`
-- `packages/driftpunkt-upgrade-1.0.75.zip`
 
 ## Notes
 
