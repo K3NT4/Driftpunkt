@@ -24,7 +24,7 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 - Public ticket intake for visitors when the feature is enabled, plus authenticated customer portals for ongoing support dialogue.
 - Customer accounts for both company customers and private customers, including password reset, language switching, ticket follow-up, comments, feedback, and customer-visible knowledge base content.
 - Customer-facing resources such as allowlisted company reports, computer lists, and printer lists under a translated "My resources" menu when those resources are enabled.
-- Technician and ticket coordinator portals for queue work, triage, comments, assignment, SLA follow-up, reports, activity, notifications, and company inventory lookup.
+- Technician and ticket coordinator portals for queue work, triage, comments, assignment, conditional SLA follow-up, reports, activity, notifications, company inventory lookup, and internal issue or feature-request reporting.
 - Full ticket lifecycle support with statuses, priorities, impact levels, request types, routing rules, teams, multiple responsible technicians, internal notes, customer-visible replies, attachments, checklists, playbooks, and customer feedback reminders.
 - Admin tools for identity, companies, company hierarchies, teams, mail, ticket categories, intake templates, routing, SLA policies, public content, reports, logs, background jobs, settings, updates, and maintenance mode.
 - Mail ingestion through spool or mailbox polling, incoming mail review, correction drafts, mailbox routing, outgoing profiles, ticket notification emails, and technician/customer links back to the related ticket.
@@ -64,18 +64,20 @@ Visible features depend on enabled settings, company access, and role permission
 
 ### Technician
 
-- Work from a technician overview built around assigned tickets, team tickets, queue health, SLA pressure, recent activity, and notifications.
-- Create tickets, take over tickets, assign work, update status, priority, impact, request type, routing, SLA fields, checklist progress, and internal work notes.
+- Work from a technician overview built around assigned tickets, team tickets, queue health, recent activity, and notifications, with SLA cards and controls shown only when SLA is enabled and actively used.
+- Create tickets, take over tickets, assign work, update status, priority, impact, request type, routing, optional SLA fields, checklist progress, and internal work notes.
 - Reply to customers, add internal comments, use ticket attachments when enabled, and follow links from technician notification emails back to the related ticket.
 - See all tickets or only permitted tickets depending on the technician access setting.
 - Use knowledge base and news contribution workflows when enabled.
-- Use technician inventory views, remote support shortcuts, secure login/MFA, personal default language, and selectable portal theme templates.
+- Report bugs, improvements or feature requests, and missing customers to super administrators from the technician menu.
+- Use technician inventory views, remote support shortcuts, secure login/MFA with optional seven-day trusted devices, personal default language, and selectable portal theme templates.
 
 ### Ticket Coordinator
 
-- Use a coordinator overview for unassigned work, stale tickets, waiting customer cases, SLA risk, workload, and triage signals.
+- Use a coordinator overview for unassigned work, stale tickets, waiting customer cases, workload, and triage signals, with SLA signals shown only when SLA is in use.
 - Distribute tickets to technicians or teams, follow company and queue health, add comments, and keep cases moving without needing full admin access.
-- Open coordinator reports for inflow, backlog, status, priority, impact, request type, escalation, SLA, risk, and ticket aging.
+- Open clearer coordinator and customer reports by company and period for inflow, backlog, status, priority, impact, request type, escalation, risk, ticket aging, and SLA only when applicable.
+- Follow an expanded coordinator guide for assignment, open and closed tickets, comment visibility, reopening, and reporting, and submit internal reports from the same portal.
 - View company data plus computer and printer inventory when data exists and access is available.
 - Save a personal default language so the coordinator portal opens in the preferred language on the next login.
 
@@ -92,6 +94,8 @@ Visible features depend on enabled settings, company access, and role permission
 
 - Has full system and operational access, including all admin and technician capabilities.
 - Create or assign privileged profiles such as super admin, admin, and ticket coordinator.
+- Review internal reports from technicians and ticket coordinators, update their status, and leave reporter-visible feedback.
+- Reset or disable MFA for locked-out users without exposing their MFA secret or enrollment QR code; recovery actions are audit logged.
 - Manage destructive or infrastructure-sensitive actions such as database backup/download/restore/optimize, migration execution, code update staging/application, post-update tasks, job retry/purge, log export/cleanup, test ticket purge, branding, support branding, and addon package lifecycle.
 - Configure global maintenance mode, timezone, default language, selectable languages, system status monitor settings, public ticket form controls, privileged mail tests, knowledge base controls, remote support download URLs, and secure update flows.
 
@@ -104,9 +108,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.88`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.88.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.88.zip`
+- Current exported release: `1.0.90`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.90.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.90.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -115,31 +119,35 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.88
+### Driftpunkt 1.0.90
 
 ### Highlights
 
-- Ticket descriptions in the technician overview, customer portal ticket list, and verbose coordinator ticket cards now use the same compact preview.
-- Previews are limited to 160 characters, normalize line breaks and excess whitespace, end at a word boundary when possible, and use an ellipsis when truncated.
-- Full ticket descriptions remain unchanged and continue to be shown in ticket detail views.
-- Regression coverage verifies rich-text conversion, whitespace normalization, Unicode-safe truncation, and preservation of short descriptions.
-- No database migrations are introduced in this release.
+- Technician pages now hide SLA cards, queues, fields, timelines, bulk actions, and SLA-specific copy whenever SLA is not enabled and actively used.
+- Technicians and ticket coordinators now have a Report menu where they can submit bugs, improvements or feature requests, and requests for missing customers.
+- Reporters can follow the status of their recent reports and see feedback left by a super administrator.
+- Super administrators can review internal reports on the admin overview, update their status, and leave feedback for the reporter.
+- Internal report creation and status changes are written to the system audit log.
+- A new `internal_reports` table stores report content, reporter snapshots, workflow status, and superadmin feedback.
 
 ### Operations
 
-- Database migration required: no.
+- Database migration required: yes.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
-- The cumulative upgrade package can be applied directly to the currently active Driftpunkt 1.0.87 installation.
+- The cumulative upgrade package can be applied directly to an existing Driftpunkt 1.x installation, including 1.0.89.
 - Back up the application and database before applying the package through the admin updater.
 
 ### Verification
 
-- Confirm the admin overview shows Driftpunkt `1.0.88` after the update.
-- Confirm `release-metadata.json` reports version `1.0.88` and includes these release notes.
-- Confirm long ticket descriptions are shortened with an ellipsis in the technician overview.
-- Confirm the customer portal ticket list and verbose coordinator ticket cards use the same compact preview.
-- Confirm the complete ticket description remains visible in technician, customer, and coordinator ticket detail views.
+- Confirm the admin overview shows Driftpunkt `1.0.90` after the update.
+- Confirm `release-metadata.json` reports version `1.0.90`, minimum supported version `1.0.0`, requires database migrations, and includes these release notes.
+- Confirm no SLA labels, controls, cards, queues, or timelines are visible in the technician portal when SLA is disabled or unused.
+- Confirm SLA content remains visible when SLA is enabled and used.
+- Confirm technicians and ticket coordinators can submit all three internal report types from the Report menu.
+- Confirm customers cannot open the internal report page.
+- Confirm only a super administrator can see and update internal reports on the admin overview.
+- Confirm report creation and superadmin status updates are present in the system audit log.
 - Confirm the release package checksum before applying the package.
 
 ## What This Repository Contains
@@ -158,7 +166,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.88.zip.sha256
+sha256sum -c driftpunkt-install-1.0.90.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -185,10 +193,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.88.zip` and `driftpunkt-install-1.0.88.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.90.zip` and `driftpunkt-install-1.0.90.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.88.zip.sha256
+sha256sum -c driftpunkt-install-1.0.90.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -196,9 +204,9 @@ sha256sum -c driftpunkt-install-1.0.88.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.88.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.90.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.88/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.90/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -247,10 +255,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.88.zip` and `driftpunkt-install-1.0.88.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.90.zip` and `driftpunkt-install-1.0.90.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.88.zip.sha256
+sha256sum -c driftpunkt-install-1.0.90.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -258,8 +266,8 @@ sha256sum -c driftpunkt-install-1.0.88.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.88.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.88/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.90.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.90/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -322,9 +330,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.90.zip`
+- `packages/driftpunkt-upgrade-1.0.89.zip`
 - `packages/driftpunkt-upgrade-1.0.88.zip`
-- `packages/driftpunkt-upgrade-1.0.87.zip`
-- `packages/driftpunkt-upgrade-1.0.76.zip`
 
 ## Notes
 
