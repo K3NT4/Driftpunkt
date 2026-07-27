@@ -108,9 +108,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.90`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.90.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.90.zip`
+- Current exported release: `1.0.91`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.91.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.91.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -119,36 +119,40 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.90
+### Driftpunkt 1.0.91
 
 ### Highlights
 
-- Technician pages now hide SLA cards, queues, fields, timelines, bulk actions, and SLA-specific copy whenever SLA is not enabled and actively used.
-- Technicians and ticket coordinators now have a Report menu where they can submit bugs, improvements or feature requests, and requests for missing customers.
-- Reporters can follow the status of their recent reports and see feedback left by a super administrator.
-- Super administrators can review internal reports on the admin overview, update their status, and leave feedback for the reporter.
-- Internal report creation and status changes are written to the system audit log.
-- A new `internal_reports` table stores report content, reporter snapshots, workflow status, and superadmin feedback.
+- Bugs and improvement requests are delivered to a centrally configured recipient with a stable report reference, installation URL, and sanitized source-page URL; missing-customer reports remain local to the super administrator.
+- Super administrators can change the internal-report recipient and Reply-To mailbox directly in the operational cockpit. The database-backed values take effect immediately without restarting the application.
+- Replies from the configured central recipient are imported through an active IMAP mailbox, added to the report thread, and relayed to the original reporter.
+- Failed central notifications are retried automatically with backoff and can also be retried manually by a super administrator.
+- The super-admin overview shows readiness checks for the recipient, outbound mail transport, Reply-To mailbox, and recent mail polling.
+- Super administrators can download a sanitized GitHub issue template that omits reporter details, installation URLs, and source URLs.
+- Report submissions are rate-limited, and sensitive query parameters and URL fragments are removed before source URLs are stored.
+- Official package builds now require sequential semantic version steps and matching release notes, preventing accidental skipped releases.
 
 ### Operations
 
 - Database migration required: yes.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
-- The cumulative upgrade package can be applied directly to an existing Driftpunkt 1.x installation, including 1.0.89.
+- Configure the central recipient and Reply-To address in the super-admin operational cockpit after updating.
+- The Reply-To address must exactly match an active and complete IMAP support mailbox for reply import to work.
+- Ensure `app:mail:poll` and `app:internal-reports:retry-notifications` run regularly through systemd, cron, or the Docker scheduler.
+- The cumulative upgrade package can be applied directly to an existing Driftpunkt 1.x installation, including 1.0.90.
 - Back up the application and database before applying the package through the admin updater.
 
 ### Verification
 
-- Confirm the admin overview shows Driftpunkt `1.0.90` after the update.
-- Confirm `release-metadata.json` reports version `1.0.90`, minimum supported version `1.0.0`, requires database migrations, and includes these release notes.
-- Confirm no SLA labels, controls, cards, queues, or timelines are visible in the technician portal when SLA is disabled or unused.
-- Confirm SLA content remains visible when SLA is enabled and used.
-- Confirm technicians and ticket coordinators can submit all three internal report types from the Report menu.
-- Confirm customers cannot open the internal report page.
-- Confirm only a super administrator can see and update internal reports on the admin overview.
-- Confirm report creation and superadmin status updates are present in the system audit log.
-- Confirm the release package checksum before applying the package.
+- Confirm the admin overview shows Driftpunkt `1.0.91` after the update.
+- Confirm `release-metadata.json` reports version `1.0.91`, minimum supported version `1.0.0`, requires database migrations, and includes these release notes.
+- Confirm only a super administrator can edit the internal-report recipient and Reply-To address.
+- Confirm a bug report reaches the configured recipient and uses the configured Reply-To address.
+- Reply to the notification without removing the report reference and confirm the response appears in the reporter's report thread.
+- Confirm a failed notification is retained locally and can be retried after the mail configuration is corrected.
+- Confirm missing-customer reports remain local and do not generate central email.
+- Confirm the release package checksums before applying the package.
 
 ## What This Repository Contains
 
@@ -166,7 +170,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.90.zip.sha256
+sha256sum -c driftpunkt-install-1.0.91.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -193,10 +197,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.90.zip` and `driftpunkt-install-1.0.90.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.91.zip` and `driftpunkt-install-1.0.91.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.90.zip.sha256
+sha256sum -c driftpunkt-install-1.0.91.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -204,9 +208,9 @@ sha256sum -c driftpunkt-install-1.0.90.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.90.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.91.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.90/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.91/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -255,10 +259,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.90.zip` and `driftpunkt-install-1.0.90.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.91.zip` and `driftpunkt-install-1.0.91.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.90.zip.sha256
+sha256sum -c driftpunkt-install-1.0.91.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -266,8 +270,8 @@ sha256sum -c driftpunkt-install-1.0.90.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.90.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.90/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.91.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.91/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -278,7 +282,7 @@ cp deploy/nas/.env.example deploy/nas/.env
 nano deploy/nas/.env
 ```
 
-Set real values for `APP_SECRET`, `DEFAULT_URI`, `MARIADB_PASSWORD`, `MARIADB_ROOT_PASSWORD`, `DATABASE_URL`, `MAILER_DSN`, and `MAILER_FROM`.
+Set real values for `APP_SECRET`, `DEFAULT_URI`, `MARIADB_PASSWORD`, `MARIADB_ROOT_PASSWORD`, `DATABASE_URL`, `MAILER_DSN`, and `MAILER_FROM`. After signing in, configure the internal-report recipient and reply mailbox in the super-admin cockpit.
 
 4. Create persistent data folders and start the stack:
 
@@ -330,9 +334,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.91.zip`
 - `packages/driftpunkt-upgrade-1.0.90.zip`
 - `packages/driftpunkt-upgrade-1.0.89.zip`
-- `packages/driftpunkt-upgrade-1.0.88.zip`
 
 ## Notes
 
