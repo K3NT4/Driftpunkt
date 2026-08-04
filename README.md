@@ -22,11 +22,11 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 - A public website for the homepage, operational status, news, search, contact details, public knowledge base content, and legal policy pages.
 - Public ticket intake for visitors when the feature is enabled, plus authenticated customer portals for ongoing support dialogue.
-- Customer accounts for both company customers and private customers, including password reset, language switching, ticket follow-up, comments, feedback, and customer-visible knowledge base content.
+- Customer accounts for both company customers and private customers, including password reset, language switching, ticket follow-up, comments, feedback, and customer-visible knowledge base content; super administrators can provision multiple company customers at once with secure temporary passwords.
 - Customer-facing resources such as allowlisted company reports, computer lists, and printer lists under a translated "My resources" menu when those resources are enabled.
 - Technician and ticket coordinator portals for queue work, triage, comments, assignment, conditional SLA follow-up, reports, activity, notifications, company inventory lookup, and internal issue or feature-request reporting.
 - Full ticket lifecycle support with statuses, priorities, impact levels, request types, routing rules, teams, multiple responsible technicians, internal notes, customer-visible replies, attachments, checklists, playbooks, and customer feedback reminders.
-- Admin tools for identity, companies, company hierarchies, teams, mail, ticket categories, intake templates, routing, SLA policies, public content, reports, logs, background jobs, settings, updates, and maintenance mode.
+- Admin tools for identity, companies, company hierarchies, teams, mail, ticket categories, intake templates, routing, SLA policies, public content, reports, logs, background jobs, settings, updates, and maintenance mode, with identity work split into focused user, customer, team, appearance, and triage sections.
 - Mail ingestion through spool or mailbox polling, incoming mail review, correction drafts, mailbox routing, outgoing profiles, ticket notification emails, and technician/customer links back to the related ticket.
 - Knowledge base and news management with public, customer, technician, and admin-facing workflows, optional technician contributions, smart tips, FAQ-style content, and status communication.
 - Operational tooling for read-only ticket API access, monthly company reports, database jobs, backups, restore/optimize tasks, migration runs, code update staging, package application, addon package registration, log export, and controlled cleanup.
@@ -94,6 +94,7 @@ Visible features depend on enabled settings, company access, and role permission
 
 - Has full system and operational access, including all admin and technician capabilities.
 - Create or assign privileged profiles such as super admin, admin, and ticket coordinator.
+- Create multiple company customer accounts in one operation, with automatic secure temporary passwords and forced password changes at first sign-in.
 - Review internal reports from technicians and ticket coordinators, update their status, and leave reporter-visible feedback.
 - Reset or disable MFA for locked-out users without exposing their MFA secret or enrollment QR code; recovery actions are audit logged.
 - Manage destructive or infrastructure-sensitive actions such as database backup/download/restore/optimize, migration execution, code update staging/application, post-update tasks, job retry/purge, log export/cleanup, test ticket purge, branding, support branding, and addon package lifecycle.
@@ -108,9 +109,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.91`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.91.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.91.zip`
+- Current exported release: `1.0.93`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.93.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.93.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -119,39 +120,32 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.91
+### Driftpunkt 1.0.93
 
 ### Highlights
 
-- Bugs and improvement requests are delivered to a centrally configured recipient with a stable report reference, installation URL, and sanitized source-page URL; missing-customer reports remain local to the super administrator.
-- Super administrators can change the internal-report recipient and Reply-To mailbox directly in the operational cockpit. The database-backed values take effect immediately without restarting the application.
-- Replies from the configured central recipient are imported through an active IMAP mailbox, added to the report thread, and relayed to the original reporter.
-- Failed central notifications are retried automatically with backoff and can also be retried manually by a super administrator.
-- The super-admin overview shows readiness checks for the recipient, outbound mail transport, Reply-To mailbox, and recent mail polling.
-- Super administrators can download a sanitized GitHub issue template that omits reporter details, installation URLs, and source URLs.
-- Report submissions are rate-limited, and sensitive query parameters and URL fragments are removed before source URLs are stored.
-- Official package builds now require sequential semantic version steps and matching release notes, preventing accidental skipped releases.
+- Users and companies administration is split into focused sections for users, company customers, teams and roles, appearance, and triage.
+- The default identity page now shows only user account creation and management instead of every identity-related form at once.
+- Companies remain on their dedicated paginated page and are linked directly from the new section navigation.
+- The selected identity section is retained in the administrator session so form submissions return to the correct workspace.
+- Company customer, appearance, and triage sections remain restricted to super administrators.
 
 ### Operations
 
-- Database migration required: yes.
+- Database migration required: no.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
-- Configure the central recipient and Reply-To address in the super-admin operational cockpit after updating.
-- The Reply-To address must exactly match an active and complete IMAP support mailbox for reply import to work.
-- Ensure `app:mail:poll` and `app:internal-reports:retry-notifications` run regularly through systemd, cron, or the Docker scheduler.
-- The cumulative upgrade package can be applied directly to an existing Driftpunkt 1.x installation, including 1.0.90.
+- The cumulative upgrade package can be applied directly to an existing Driftpunkt 1.x installation, including 1.0.92.
 - Back up the application and database before applying the package through the admin updater.
 
 ### Verification
 
-- Confirm the admin overview shows Driftpunkt `1.0.91` after the update.
-- Confirm `release-metadata.json` reports version `1.0.91`, minimum supported version `1.0.0`, requires database migrations, and includes these release notes.
-- Confirm only a super administrator can edit the internal-report recipient and Reply-To address.
-- Confirm a bug report reaches the configured recipient and uses the configured Reply-To address.
-- Reply to the notification without removing the report reference and confirm the response appears in the reporter's report thread.
-- Confirm a failed notification is retained locally and can be retried after the mail configuration is corrected.
-- Confirm missing-customer reports remain local and do not generate central email.
+- Confirm the admin overview shows Driftpunkt `1.0.93` after the update.
+- Confirm `release-metadata.json` reports version `1.0.93`, minimum supported version `1.0.0`, no required database migration, and includes these release notes.
+- Open Admin → Users and companies and confirm only the user workspace is shown by default.
+- Open each identity section and confirm only its related forms and lists are rendered.
+- Save a team or appearance setting and confirm the selected section remains active after redirect.
+- Sign in as a regular administrator and confirm super-administrator sections are unavailable.
 - Confirm the release package checksums before applying the package.
 
 ## What This Repository Contains
@@ -170,7 +164,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.91.zip.sha256
+sha256sum -c driftpunkt-install-1.0.93.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -197,10 +191,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.91.zip` and `driftpunkt-install-1.0.91.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.93.zip` and `driftpunkt-install-1.0.93.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.91.zip.sha256
+sha256sum -c driftpunkt-install-1.0.93.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -208,9 +202,9 @@ sha256sum -c driftpunkt-install-1.0.91.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.91.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.93.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.91/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.93/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -259,10 +253,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.91.zip` and `driftpunkt-install-1.0.91.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.93.zip` and `driftpunkt-install-1.0.93.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.91.zip.sha256
+sha256sum -c driftpunkt-install-1.0.93.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -270,8 +264,8 @@ sha256sum -c driftpunkt-install-1.0.91.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.91.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.91/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.93.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.93/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -334,9 +328,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.93.zip`
+- `packages/driftpunkt-upgrade-1.0.92.zip`
 - `packages/driftpunkt-upgrade-1.0.91.zip`
-- `packages/driftpunkt-upgrade-1.0.90.zip`
-- `packages/driftpunkt-upgrade-1.0.89.zip`
 
 ## Notes
 
