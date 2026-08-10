@@ -109,9 +109,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.93`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.93.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.93.zip`
+- Current exported release: `1.0.94`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.94.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.94.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -120,32 +120,36 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.93
+### Driftpunkt 1.0.94
 
 ### Highlights
 
-- Users and companies administration is split into focused sections for users, company customers, teams and roles, appearance, and triage.
-- The default identity page now shows only user account creation and management instead of every identity-related form at once.
-- Companies remain on their dedicated paginated page and are linked directly from the new section navigation.
-- The selected identity section is retained in the administrator session so form submissions return to the correct workspace.
-- Company customer, appearance, and triage sections remain restricted to super administrators.
+- Mail servers, support mailboxes, and outgoing profiles now use compact server-rendered administration lists with search, filters, sorting, and pagination of 25 records per page.
+- Mail configuration creation and editing open in responsive side panels, while provider and OAuth guidance remains collapsed until requested.
+- Stored passwords and OAuth secrets are never rendered back into HTML. Leaving a secret field empty while editing retains the stored value.
+- Mail configuration deletion is protected by CSRF, super-administrator authorization, inactive-state requirements, and dependency checks that prevent accidental data disconnection.
+- User administration now uses a compact server-rendered table with combined filters, quick counts, sorting, and pagination of 25 users per page.
+- User creation, editing, MFA recovery, and advanced deletion controls are rendered only for the selected user in a responsive side panel.
+- User filtering, counting, sorting, and pagination run in the database, and deletion analysis is calculated only for the selected user.
+- Active filters, sorting, and pagination are retained through relevant administrative mutations.
 
 ### Operations
 
 - Database migration required: no.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
-- The cumulative upgrade package can be applied directly to an existing Driftpunkt 1.x installation, including 1.0.92.
+- The cumulative upgrade package can be applied directly to an existing Driftpunkt 1.x installation, including 1.0.93.
 - Back up the application and database before applying the package through the admin updater.
 
 ### Verification
 
-- Confirm the admin overview shows Driftpunkt `1.0.93` after the update.
-- Confirm `release-metadata.json` reports version `1.0.93`, minimum supported version `1.0.0`, no required database migration, and includes these release notes.
-- Open Admin → Users and companies and confirm only the user workspace is shown by default.
-- Open each identity section and confirm only its related forms and lists are rendered.
-- Save a team or appearance setting and confirm the selected section remains active after redirect.
-- Sign in as a regular administrator and confirm super-administrator sections are unavailable.
+- Confirm the admin overview shows Driftpunkt `1.0.94` after the update.
+- Confirm `release-metadata.json` reports version `1.0.94`, minimum supported version `1.0.0`, no required database migration, and includes these release notes.
+- Open Admin → Mail and verify search, filters, pagination, responsive side panels, and collapsed provider guidance for servers, inboxes, and outgoing profiles.
+- Confirm stored mail passwords and OAuth secrets do not appear in the HTML and remain unchanged when their edit fields are left empty.
+- Verify active or referenced mail configuration cannot be deleted and that eligible inactive records require explicit confirmation.
+- Open Admin → Users and companies and verify combined filters, quick filters, sorting, pagination, and the selected-user side panel.
+- Confirm archived users remain read-only and that MFA recovery and deletion controls are limited to the selected user and appropriate administrator role.
 - Confirm the release package checksums before applying the package.
 
 ## What This Repository Contains
@@ -164,7 +168,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.93.zip.sha256
+sha256sum -c driftpunkt-install-1.0.94.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -191,10 +195,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.93.zip` and `driftpunkt-install-1.0.93.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.94.zip` and `driftpunkt-install-1.0.94.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.93.zip.sha256
+sha256sum -c driftpunkt-install-1.0.94.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -202,9 +206,9 @@ sha256sum -c driftpunkt-install-1.0.93.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.93.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.94.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.93/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.94/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -253,10 +257,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.93.zip` and `driftpunkt-install-1.0.93.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.94.zip` and `driftpunkt-install-1.0.94.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.93.zip.sha256
+sha256sum -c driftpunkt-install-1.0.94.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -264,8 +268,8 @@ sha256sum -c driftpunkt-install-1.0.93.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.93.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.93/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.94.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.94/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -328,9 +332,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.94.zip`
 - `packages/driftpunkt-upgrade-1.0.93.zip`
 - `packages/driftpunkt-upgrade-1.0.92.zip`
-- `packages/driftpunkt-upgrade-1.0.91.zip`
 
 ## Notes
 
