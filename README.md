@@ -70,14 +70,14 @@ Visible features depend on enabled settings, company access, and role permission
 - See all tickets or only permitted tickets depending on the technician access setting.
 - Use knowledge base and news contribution workflows when enabled.
 - Report bugs, improvements or feature requests, and missing customers to super administrators from the technician menu.
-- Use technician inventory views, remote support shortcuts, secure login/MFA with optional seven-day trusted devices, personal default language, and selectable portal theme templates.
+- Use technician inventory views, remote support shortcuts, secure login/MFA with optional seven-day trusted devices, personal default language, and selectable portal theme templates, including the burgundy Bordeaux theme.
 
 ### Ticket Coordinator
 
 - Use a coordinator overview for unassigned work, stale tickets, waiting customer cases, workload, and triage signals, with SLA signals shown only when SLA is in use.
 - Distribute tickets to technicians or teams, follow company and queue health, add comments, and keep cases moving without needing full admin access.
 - Open clearer coordinator and customer reports by company and period for inflow, backlog, status, priority, impact, request type, escalation, risk, ticket aging, and SLA only when applicable.
-- Follow an expanded coordinator guide for assignment, open and closed tickets, comment visibility, reopening, and reporting, and submit internal reports from the same portal.
+- Follow an expanded coordinator guide for assignment, tickets in progress, closed tickets, comment visibility, reopening, and reporting, and submit internal reports from the same portal.
 - View company data plus computer and printer inventory when data exists and access is available.
 - Save a personal default language so the coordinator portal opens in the preferred language on the next login.
 
@@ -109,9 +109,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.94`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.94.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.94.zip`
+- Current exported release: `1.0.96`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.96.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.96.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 9.
@@ -120,36 +120,30 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.94
+### Driftpunkt 1.0.96
 
 ### Highlights
 
-- Mail servers, support mailboxes, and outgoing profiles now use compact server-rendered administration lists with search, filters, sorting, and pagination of 25 records per page.
-- Mail configuration creation and editing open in responsive side panels, while provider and OAuth guidance remains collapsed until requested.
-- Stored passwords and OAuth secrets are never rendered back into HTML. Leaving a secret field empty while editing retains the stored value.
-- Mail configuration deletion is protected by CSRF, super-administrator authorization, inactive-state requirements, and dependency checks that prevent accidental data disconnection.
-- User administration now uses a compact server-rendered table with combined filters, quick counts, sorting, and pagination of 25 users per page.
-- User creation, editing, MFA recovery, and advanced deletion controls are rendered only for the selected user in a responsive side panel.
-- User filtering, counting, sorting, and pagination run in the database, and deletion analysis is calculated only for the selected user.
-- Active filters, sorting, and pagination are retained through relevant administrative mutations.
+- The coordinator work filter previously labelled "Open tickets" is now labelled "In progress", matching the ticket status selected by the filter.
+- Coordinator guidance is updated in Swedish, English, and Norwegian to distinguish assignment from ticket status.
+- A new personal portal theme named "Bordeaux" adds burgundy accents, a dark burgundy sidebar, and light rose-tinted page backgrounds.
+- Active navigation, primary actions, selection markers, and coordinator controls now use the selected theme accent more consistently.
 
 ### Operations
 
 - Database migration required: no.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
-- The cumulative upgrade package can be applied directly to an existing Driftpunkt 1.x installation, including 1.0.93.
+- The cumulative upgrade package can be applied directly to an existing Driftpunkt 1.x installation, including 1.0.95.
 - Back up the application and database before applying the package through the admin updater.
 
 ### Verification
 
-- Confirm the admin overview shows Driftpunkt `1.0.94` after the update.
-- Confirm `release-metadata.json` reports version `1.0.94`, minimum supported version `1.0.0`, no required database migration, and includes these release notes.
-- Open Admin → Mail and verify search, filters, pagination, responsive side panels, and collapsed provider guidance for servers, inboxes, and outgoing profiles.
-- Confirm stored mail passwords and OAuth secrets do not appear in the HTML and remain unchanged when their edit fields are left empty.
-- Verify active or referenced mail configuration cannot be deleted and that eligible inactive records require explicit confirmation.
-- Open Admin → Users and companies and verify combined filters, quick filters, sorting, pagination, and the selected-user side panel.
-- Confirm archived users remain read-only and that MFA recovery and deletion controls are limited to the selected user and appropriate administrator role.
+- Confirm the admin overview shows Driftpunkt `1.0.96` after the update.
+- Confirm `release-metadata.json` reports version `1.0.96`, minimum supported version `1.0.0`, no required database migration, and includes these release notes.
+- Open the coordinator portal and confirm the navigation and filter use "In progress" / "Under arbete" for tickets whose status is in progress.
+- Confirm "Assigned" still includes all non-closed tickets with an assigned technician, independently of the ticket status.
+- Open technician or coordinator settings, select the "Bordeaux" theme, save, and confirm burgundy accents are used for navigation, primary actions, and selection states.
 - Confirm the release package checksums before applying the package.
 
 ## What This Repository Contains
@@ -168,7 +162,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.94.zip.sha256
+sha256sum -c driftpunkt-install-1.0.96.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -195,10 +189,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.94.zip` and `driftpunkt-install-1.0.94.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.96.zip` and `driftpunkt-install-1.0.96.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.94.zip.sha256
+sha256sum -c driftpunkt-install-1.0.96.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -206,9 +200,9 @@ sha256sum -c driftpunkt-install-1.0.94.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.94.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.96.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.94/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.96/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -257,10 +251,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.94.zip` and `driftpunkt-install-1.0.94.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.96.zip` and `driftpunkt-install-1.0.96.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.94.zip.sha256
+sha256sum -c driftpunkt-install-1.0.96.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -268,8 +262,8 @@ sha256sum -c driftpunkt-install-1.0.94.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.94.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.94/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.96.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.96/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -332,9 +326,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.96.zip`
 - `packages/driftpunkt-upgrade-1.0.94.zip`
 - `packages/driftpunkt-upgrade-1.0.93.zip`
-- `packages/driftpunkt-upgrade-1.0.92.zip`
 
 ## Notes
 
