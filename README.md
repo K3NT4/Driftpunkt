@@ -119,9 +119,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.103`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.103.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.103.zip`
+- Current exported release: `1.0.106`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.106.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.106.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 16.
@@ -130,32 +130,28 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.103
+### Driftpunkt 1.0.106
 
 ### Highlights
 
-- Selected parent-company customers can choose the parent company or an explicitly allowed subsidiary when creating a ticket.
-- The selected company is validated server-side, and manipulated requests targeting unrelated or non-opted-in companies are rejected.
-- New tickets use the selected company's relationship and custom ticket reference sequence while retaining the signed-in customer as requester.
-- Customer ticket lists now show 20 tickets per page with clear result ranges and previous/next navigation.
-- Company, status, search, and sorting filters are preserved across paginated company ticket results.
-- Ticket cards are more compact while retaining status, company, requester, activity, and feedback information.
+- The customer portal top bar now has an always-visible and clearly labelled logout button next to the user menu.
+- Logout remains available inside the user menu for consistent access on desktop and mobile.
+- The top bar stacking order has been corrected so the expanded user menu appears above portal content.
+- Functional regression coverage verifies that the direct customer logout link is present.
 
 ### Operations
 
-- Database migration required: no new migration compared with 1.0.102.
-- Cumulative upgrades from 1.0.100 still apply the 1.0.101 ticket merge and company hierarchy migrations.
+- Database migration required: no new migration compared with 1.0.105.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
 - Back up the application and database before applying the cumulative upgrade package.
 
 ### Verification
 
-- Confirm the admin overview shows Driftpunkt `1.0.103`.
-- Sign in as a selected parent-company customer and create a ticket for an allowed subsidiary.
-- Confirm the ticket uses the subsidiary company and its custom reference prefix, when configured.
-- Confirm unrelated companies are absent from the selector and rejected if submitted manually.
-- Open company and completed ticket lists with more than 20 results and verify result counts, pagination, and preserved filters.
+- Confirm the admin overview shows Driftpunkt `1.0.106`.
+- Open any customer portal page and verify the visible **Logga ut** button appears beside the customer name.
+- Expand the customer menu and verify both menu entries appear above the page content.
+- Verify both logout links end the authenticated customer session.
 
 ## What This Repository Contains
 
@@ -173,7 +169,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.103.zip.sha256
+sha256sum -c driftpunkt-install-1.0.106.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -200,10 +196,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.103.zip` and `driftpunkt-install-1.0.103.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.106.zip` and `driftpunkt-install-1.0.106.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.103.zip.sha256
+sha256sum -c driftpunkt-install-1.0.106.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -211,9 +207,9 @@ sha256sum -c driftpunkt-install-1.0.103.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.103.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.106.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.103/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.106/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -262,10 +258,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.103.zip` and `driftpunkt-install-1.0.103.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.106.zip` and `driftpunkt-install-1.0.106.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.103.zip.sha256
+sha256sum -c driftpunkt-install-1.0.106.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -273,8 +269,8 @@ sha256sum -c driftpunkt-install-1.0.103.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.103.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.103/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.106.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.106/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -337,9 +333,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
-- `packages/driftpunkt-upgrade-1.0.103.zip`
-- `packages/driftpunkt-upgrade-1.0.102.zip`
-- `packages/driftpunkt-upgrade-1.0.101.zip`
+- `packages/driftpunkt-upgrade-1.0.106.zip`
+- `packages/driftpunkt-upgrade-1.0.105.zip`
+- `packages/driftpunkt-upgrade-1.0.104.zip`
 
 ## Notes
 

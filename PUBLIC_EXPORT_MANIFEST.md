@@ -1,6 +1,6 @@
 # Public Export Manifest
 
-Created: 2026-08-19T21:48:14+02:00
+Created: 2026-08-19T22:53:36+02:00
 
 ## Export Policy
 
@@ -16,10 +16,10 @@ Created: 2026-08-19T21:48:14+02:00
 
 | Type | Version | Package | SHA-256 |
 | --- | --- | --- | --- |
-| install | 1.0.103 | `packages/driftpunkt-install-1.0.103.zip` | `c39ab3d2fa8a10a6e77fb7f667bcc5996a5e38845cb88c70b8bce9296da6e7dc` |
-| upgrade | 1.0.103 | `packages/driftpunkt-upgrade-1.0.103.zip` | `507190fb956267815076b2819cf02f096bfc77ecf9989f1315fcc54615e2c937` |
-| upgrade | 1.0.102 | `packages/driftpunkt-upgrade-1.0.102.zip` | `cc7493f1d9d374bc460a996152de6fe086ddfe5eb558b0895c858f4dff55d02a` |
-| upgrade | 1.0.101 | `packages/driftpunkt-upgrade-1.0.101.zip` | `f361126a18bf4b70c533b3c2946afaff49fe93d81208490f73a55051d61b94a6` |
+| install | 1.0.106 | `packages/driftpunkt-install-1.0.106.zip` | `61d194036e0dd941045dccbcc2d41fddcac9404b109e5bc567884be7f6597938` |
+| upgrade | 1.0.106 | `packages/driftpunkt-upgrade-1.0.106.zip` | `7509303c87e31dd1942a90200f684906f8d0480f42fd64931b5050855064c5d3` |
+| upgrade | 1.0.105 | `packages/driftpunkt-upgrade-1.0.105.zip` | `db0ab568f7ed5b999f45454de961eb7011fb829f1c9bab35ca32516e5f0275db` |
+| upgrade | 1.0.104 | `packages/driftpunkt-upgrade-1.0.104.zip` | `a1bd0747bf299abba584fd9520e7c35a4b9c98d6263650e69807033b206311c8` |
 
 ## Exported README Assets
 
@@ -45,6 +45,9 @@ Created: 2026-08-19T21:48:14+02:00
 - `dist/driftpunkt-install-1.0.100.zip`
 - `dist/driftpunkt-install-1.0.101.zip`
 - `dist/driftpunkt-install-1.0.102.zip`
+- `dist/driftpunkt-install-1.0.103.zip`
+- `dist/driftpunkt-install-1.0.104.zip`
+- `dist/driftpunkt-install-1.0.105.zip`
 - `dist/driftpunkt-install-1.0.43.zip`
 - `dist/driftpunkt-install-1.0.44.zip`
 - `dist/driftpunkt-install-1.0.45.zip`
@@ -75,6 +78,9 @@ Created: 2026-08-19T21:48:14+02:00
 - `dist/driftpunkt-install-1.0.98.zip`
 - `dist/driftpunkt-install-1.0.99.zip`
 - `dist/driftpunkt-upgrade-1.0.100.zip`
+- `dist/driftpunkt-upgrade-1.0.101.zip`
+- `dist/driftpunkt-upgrade-1.0.102.zip`
+- `dist/driftpunkt-upgrade-1.0.103.zip`
 - `dist/driftpunkt-upgrade-1.0.43.zip`
 - `dist/driftpunkt-upgrade-1.0.44.zip`
 - `dist/driftpunkt-upgrade-1.0.45.zip`
