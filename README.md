@@ -119,9 +119,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.100`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.100.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.100.zip`
+- Current exported release: `1.0.103`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.103.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.103.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 16.
@@ -130,29 +130,32 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.100
+### Driftpunkt 1.0.103
 
 ### Highlights
 
-- The responsible technician is hidden and disabled in the coordinator's additional-technician selector.
-- Changing the responsible technician updates the selector immediately and removes any conflicting additional selection.
-- The ticket domain model rejects duplicate primary and additional technician assignments from all code paths, including manipulated form requests.
-- Existing coordinator assignment, notification, and access flows remain covered by expanded regression tests.
+- Selected parent-company customers can choose the parent company or an explicitly allowed subsidiary when creating a ticket.
+- The selected company is validated server-side, and manipulated requests targeting unrelated or non-opted-in companies are rejected.
+- New tickets use the selected company's relationship and custom ticket reference sequence while retaining the signed-in customer as requester.
+- Customer ticket lists now show 20 tickets per page with clear result ranges and previous/next navigation.
+- Company, status, search, and sorting filters are preserved across paginated company ticket results.
+- Ticket cards are more compact while retaining status, company, requester, activity, and feedback information.
 
 ### Operations
 
-- Database migration required: no new migration compared with 1.0.99.
+- Database migration required: no new migration compared with 1.0.102.
+- Cumulative upgrades from 1.0.100 still apply the 1.0.101 ticket merge and company hierarchy migrations.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
 - Back up the application and database before applying the cumulative upgrade package.
 
 ### Verification
 
-- Confirm the admin overview shows Driftpunkt `1.0.100`.
-- Open an active ticket as a coordinator and confirm the responsible technician is not selectable as an additional technician.
-- Change the responsible technician and confirm the newly selected technician disappears from the additional-technician list immediately.
-- Save the assignment and confirm the responsible technician is not listed among the ticket's additional technicians.
-- Confirm all other additional technicians remain assigned and can still access the ticket in the technician portal.
+- Confirm the admin overview shows Driftpunkt `1.0.103`.
+- Sign in as a selected parent-company customer and create a ticket for an allowed subsidiary.
+- Confirm the ticket uses the subsidiary company and its custom reference prefix, when configured.
+- Confirm unrelated companies are absent from the selector and rejected if submitted manually.
+- Open company and completed ticket lists with more than 20 results and verify result counts, pagination, and preserved filters.
 
 ## What This Repository Contains
 
@@ -170,7 +173,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.100.zip.sha256
+sha256sum -c driftpunkt-install-1.0.103.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -197,10 +200,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.100.zip` and `driftpunkt-install-1.0.100.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.103.zip` and `driftpunkt-install-1.0.103.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.100.zip.sha256
+sha256sum -c driftpunkt-install-1.0.103.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -208,9 +211,9 @@ sha256sum -c driftpunkt-install-1.0.100.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.100.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.103.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.100/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.103/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -259,10 +262,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.100.zip` and `driftpunkt-install-1.0.100.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.103.zip` and `driftpunkt-install-1.0.103.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.100.zip.sha256
+sha256sum -c driftpunkt-install-1.0.103.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -270,8 +273,8 @@ sha256sum -c driftpunkt-install-1.0.100.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.100.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.100/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.103.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.103/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -334,9 +337,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
-- `packages/driftpunkt-upgrade-1.0.100.zip`
-- `packages/driftpunkt-upgrade-1.0.99.zip`
-- `packages/driftpunkt-upgrade-1.0.98.zip`
+- `packages/driftpunkt-upgrade-1.0.103.zip`
+- `packages/driftpunkt-upgrade-1.0.102.zip`
+- `packages/driftpunkt-upgrade-1.0.101.zip`
 
 ## Notes
 

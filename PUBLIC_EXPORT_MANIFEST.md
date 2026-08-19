@@ -1,6 +1,6 @@
 # Public Export Manifest
 
-Created: 2026-08-18T20:54:36+02:00
+Created: 2026-08-19T21:48:14+02:00
 
 ## Export Policy
 
@@ -16,10 +16,10 @@ Created: 2026-08-18T20:54:36+02:00
 
 | Type | Version | Package | SHA-256 |
 | --- | --- | --- | --- |
-| install | 1.0.100 | `packages/driftpunkt-install-1.0.100.zip` | `a4a703b791444219aac9109269a06bdc96fafccc308c36b00bd4e0efbdb90df8` |
-| upgrade | 1.0.100 | `packages/driftpunkt-upgrade-1.0.100.zip` | `58c014a50e52a1479d42e543553e82f50ee74c70e6141fea928088fc4cd8d721` |
-| upgrade | 1.0.99 | `packages/driftpunkt-upgrade-1.0.99.zip` | `700d39ecb6ba5f5a925c17019abc9875fad2225713bc275e0d397403f8c65fcb` |
-| upgrade | 1.0.98 | `packages/driftpunkt-upgrade-1.0.98.zip` | `da6db9dc8d38df0e95979e7848f501f80482c537d105831d968fdb27803e272d` |
+| install | 1.0.103 | `packages/driftpunkt-install-1.0.103.zip` | `c39ab3d2fa8a10a6e77fb7f667bcc5996a5e38845cb88c70b8bce9296da6e7dc` |
+| upgrade | 1.0.103 | `packages/driftpunkt-upgrade-1.0.103.zip` | `507190fb956267815076b2819cf02f096bfc77ecf9989f1315fcc54615e2c937` |
+| upgrade | 1.0.102 | `packages/driftpunkt-upgrade-1.0.102.zip` | `cc7493f1d9d374bc460a996152de6fe086ddfe5eb558b0895c858f4dff55d02a` |
+| upgrade | 1.0.101 | `packages/driftpunkt-upgrade-1.0.101.zip` | `f361126a18bf4b70c533b3c2946afaff49fe93d81208490f73a55051d61b94a6` |
 
 ## Exported README Assets
 
@@ -42,6 +42,9 @@ Created: 2026-08-18T20:54:36+02:00
 
 ## Release Packages Not Exported
 
+- `dist/driftpunkt-install-1.0.100.zip`
+- `dist/driftpunkt-install-1.0.101.zip`
+- `dist/driftpunkt-install-1.0.102.zip`
 - `dist/driftpunkt-install-1.0.43.zip`
 - `dist/driftpunkt-install-1.0.44.zip`
 - `dist/driftpunkt-install-1.0.45.zip`
@@ -71,6 +74,7 @@ Created: 2026-08-18T20:54:36+02:00
 - `dist/driftpunkt-install-1.0.97.zip`
 - `dist/driftpunkt-install-1.0.98.zip`
 - `dist/driftpunkt-install-1.0.99.zip`
+- `dist/driftpunkt-upgrade-1.0.100.zip`
 - `dist/driftpunkt-upgrade-1.0.43.zip`
 - `dist/driftpunkt-upgrade-1.0.44.zip`
 - `dist/driftpunkt-upgrade-1.0.45.zip`
@@ -98,3 +102,5 @@ Created: 2026-08-18T20:54:36+02:00
 - `dist/driftpunkt-upgrade-1.0.94.zip`
 - `dist/driftpunkt-upgrade-1.0.96.zip`
 - `dist/driftpunkt-upgrade-1.0.97.zip`
+- `dist/driftpunkt-upgrade-1.0.98.zip`
+- `dist/driftpunkt-upgrade-1.0.99.zip`
