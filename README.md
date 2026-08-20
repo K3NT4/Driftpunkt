@@ -32,15 +32,15 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 - A public website for the homepage, operational status, news, search, contact details, public knowledge base content, and legal policy pages.
 - Public ticket intake for visitors when the feature is enabled, plus authenticated customer portals for ongoing support dialogue.
-- Customer accounts for both company customers and private customers, including password reset, language switching, ticket follow-up, comments, feedback, and customer-visible knowledge base content; super administrators can provision multiple company customers at once with secure temporary passwords.
+- Customer accounts for both company customers and private customers, including password reset, language switching, personal light, dark, system, and high-contrast portal themes, ticket follow-up, comments, feedback, and customer-visible knowledge base content; super administrators can provision multiple company customers at once with secure temporary passwords.
 - Customer-facing resources such as allowlisted company reports, computer lists, and printer lists under a translated "My resources" menu when those resources are enabled.
-- Technician and ticket coordinator portals for queue work, triage, comments, assignment, conditional SLA follow-up, reports, activity, notifications, company inventory lookup, and internal issue or feature-request reporting.
+- Technician and ticket coordinator portals for queue work, triage, comments, assignment, conditional SLA follow-up, reports, activity, notifications, company inventory lookup, and internal issue or feature-request reporting, with a focused two-column technician ticket workbench and clearer personal ticket filtering.
 - Full ticket lifecycle support with statuses, priorities, impact levels, request types, routing rules, teams, multiple responsible technicians, internal notes, customer-visible replies, attachments, checklists, playbooks, and customer feedback reminders.
 - Admin tools for identity, companies, company hierarchies, teams, mail, ticket categories, intake templates, routing, SLA policies, public content, reports, logs, background jobs, settings, updates, and maintenance mode, with identity work split into focused user, customer, team, appearance, and triage sections.
 - Mail ingestion through spool or mailbox polling, incoming mail review, correction drafts, mailbox routing, outgoing profiles, ticket notification emails, and technician/customer links back to the related ticket.
 - Knowledge base and news management with public, customer, technician, and admin-facing workflows, optional technician contributions, smart tips, FAQ-style content, and status communication.
 - Operational tooling for read-only ticket API access, monthly company reports, database jobs, backups, restore/optimize tasks, migration runs, code update staging, package application, addon package registration, log export, and controlled cleanup.
-- Localization and personalization for Swedish, English, and Norwegian UI text, personal default language in technician, coordinator, admin, and super admin workflows, global default/selectable language governance, branding assets, MFA settings, remote support shortcuts, and portal theme templates.
+- Localization and personalization for Swedish, English, and Norwegian UI text, personal default language in technician, coordinator, admin, and super admin workflows, global default/selectable language governance, customer portal themes, optional lightweight seasonal appearance, branding assets, MFA settings, remote support shortcuts, and internal portal theme templates.
 - Release packages with bundled dependencies, metadata, release notes, post-update guidance, and SHA-256 checksums.
 
 ## Profiles and What They Can Do
@@ -62,7 +62,7 @@ Visible features depend on enabled settings, company access, and role permission
 - Leave feedback on resolved or closed tickets when customer feedback is enabled.
 - Open company resources such as reports, computer lists, and printer lists when the company has the feature enabled and the specific user has been granted access.
 - Use customer reports only when explicitly allowlisted by an admin for that company user.
-- Switch portal language between Swedish, English, and Norwegian.
+- Switch portal language between Swedish, English, and Norwegian and choose a personal system, light, dark, or high-contrast portal theme.
 
 ### Private Customer
 
@@ -108,7 +108,7 @@ Visible features depend on enabled settings, company access, and role permission
 - Review internal reports from technicians and ticket coordinators, update their status, and leave reporter-visible feedback.
 - Reset or disable MFA for locked-out users without exposing their MFA secret or enrollment QR code; recovery actions are audit logged.
 - Manage destructive or infrastructure-sensitive actions such as database backup/download/restore/optimize, migration execution, code update staging/application, post-update tasks, job retry/purge, log export/cleanup, test ticket purge, branding, support branding, and addon package lifecycle.
-- Configure global maintenance mode, timezone, default language, selectable languages, system status monitor settings, public ticket form controls, privileged mail tests, knowledge base controls, remote support download URLs, and secure update flows.
+- Configure global maintenance mode, timezone, default language, selectable languages, optional seasonal appearance for the public homepage and customer portal, system status monitor settings, public ticket form controls, privileged mail tests, knowledge base controls, remote support download URLs, and secure update flows.
 
 ### System and Automation
 
@@ -119,9 +119,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.106`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.106.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.106.zip`
+- Current exported release: `1.0.108`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.108.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.108.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 16.
@@ -130,28 +130,33 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.106
+### Driftpunkt 1.0.108
 
 ### Highlights
 
-- The customer portal top bar now has an always-visible and clearly labelled logout button next to the user menu.
-- Logout remains available inside the user menu for consistent access on desktop and mobile.
-- The top bar stacking order has been corrected so the expanded user menu appears above portal content.
-- Functional regression coverage verifies that the direct customer logout link is present.
+- The technician ticket detail page now uses a focused two-column workbench with replies and conversation in the main area and status, resolution, assignment, and metadata in a compact sidebar.
+- Resolution text can be updated and audited without changing ticket status. Customer email remains limited to an actual transition to **Resolved**.
+- The technician's **My tickets** view has clearer search, status shortcuts, and ticket emphasis to make active work easier to find while preserving the personal scope.
+- The **Report** navigation item remains available when technicians and ticket coordinators move between portal pages.
+- Customers can choose system, light, dark, or high-contrast portal themes. The customer navigation also provides a clearer create-ticket action and account grouping.
+- Super administrators can enable a subtle static seasonal appearance on the public homepage, in the customer portal, in both places, or nowhere. It defaults to disabled and uses no images or animations.
+- The anonymous language selector keeps its unobtrusive fixed position when seasonal styling is enabled.
 
 ### Operations
 
-- Database migration required: no new migration compared with 1.0.105.
+- Database migration required: yes, `DoctrineMigrations\\Version20260820210000` adds per-user customer portal appearance preferences.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
 - Back up the application and database before applying the cumulative upgrade package.
 
 ### Verification
 
-- Confirm the admin overview shows Driftpunkt `1.0.106`.
-- Open any customer portal page and verify the visible **Logga ut** button appears beside the customer name.
-- Expand the customer menu and verify both menu entries appear above the page content.
-- Verify both logout links end the authenticated customer session.
+- Confirm the admin overview shows Driftpunkt `1.0.108` and all migrations complete successfully.
+- Open a technician ticket and verify the two-column workbench, reply controls, collapsed attachment section, and advanced fields.
+- Update a resolution without changing status and confirm it is audited without sending customer email.
+- Verify search and status shortcuts in **My tickets**, and confirm **Report** remains visible in technician and coordinator navigation.
+- Select each customer portal theme and confirm the preference persists.
+- As a super administrator, test homepage-only, customer-portal-only, both, and disabled seasonal visibility.
 
 ## What This Repository Contains
 
@@ -169,7 +174,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.106.zip.sha256
+sha256sum -c driftpunkt-install-1.0.108.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -196,10 +201,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.106.zip` and `driftpunkt-install-1.0.106.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.108.zip` and `driftpunkt-install-1.0.108.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.106.zip.sha256
+sha256sum -c driftpunkt-install-1.0.108.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -207,9 +212,9 @@ sha256sum -c driftpunkt-install-1.0.106.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.106.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.108.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.106/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.108/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -258,10 +263,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.106.zip` and `driftpunkt-install-1.0.106.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.108.zip` and `driftpunkt-install-1.0.108.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.106.zip.sha256
+sha256sum -c driftpunkt-install-1.0.108.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -269,8 +274,8 @@ sha256sum -c driftpunkt-install-1.0.106.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.106.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.106/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.108.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.108/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -333,9 +338,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.108.zip`
+- `packages/driftpunkt-upgrade-1.0.107.zip`
 - `packages/driftpunkt-upgrade-1.0.106.zip`
-- `packages/driftpunkt-upgrade-1.0.105.zip`
-- `packages/driftpunkt-upgrade-1.0.104.zip`
 
 ## Notes
 
