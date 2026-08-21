@@ -119,9 +119,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.109`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.109.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.109.zip`
+- Current exported release: `1.0.111`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.111.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.111.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 16.
@@ -130,14 +130,18 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.109
+### Driftpunkt 1.0.111
 
 ### Highlights
 
-- The ticket coordinator sidebar now keeps the same complete set of navigation items and ordering across the overview, new-ticket form, ticket detail, unknown-ticket review queue, and reports.
-- **Unknown tickets**, **Assigned**, and **In progress** no longer disappear when the coordinator moves between portal pages.
-- The **Closed tickets** badge uses the same global coordinator scope everywhere and consistently counts both resolved and closed tickets.
-- A guarded maintenance command can preview and remove legacy `[Utkast]` or `[Draft]` subject prefixes from completed tickets. Pending draft reviews are always excluded, and writes require an explicit ticket selection or `--all` confirmation.
+- Technician and customer ticket details now show the most recently saved reply first, followed by older comments.
+- The customer reply panel appears before the conversation, so customers can respond without scrolling through the entire ticket first.
+- Customer reply attachments and external sharing links use a compact, collapsed section matching the technician workflow.
+- Customers can expand the full customer-visible ticket activity history while every customer-visible comment remains available in the conversation.
+- Internal comments and internal-only activity remain hidden from customers.
+- The super-admin internal-report list now hides resolved reports by default and provides an explicit completed-history filter. Unresolved reports and failed central-email deliveries remain visible.
+- Submitted customer replies still redirect to the stable anchor for the newly persisted comment.
+- Authentication pages now place the configured logo on a light, subtly elevated surface so it remains legible against the top bar regardless of the logo colours.
 
 ### Operations
 
@@ -145,17 +149,17 @@ These notes are copied from the packaged release metadata for the current export
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
 - Back up the application and database before applying the cumulative upgrade package.
-- Preview legacy subject cleanup before applying it: `php bin/console app:tickets:normalize-legacy-draft-subjects --env=prod`.
-- Prefer explicitly reviewed references when applying cleanup: `php bin/console app:tickets:normalize-legacy-draft-subjects --env=prod --ticket=REFERENCE-1001 --apply`. Use `--all --apply` only after reviewing the complete preview.
-- Tickets with pending draft reviews are deliberately excluded. Resolve the review first, and do not blindly approve or reject historical reviews whose tickets were already moved or corrected because the normal review workflow can update ticket fields.
 
 ### Verification
 
-- Confirm the admin overview shows Driftpunkt `1.0.109` and the post-update checks complete successfully.
-- Visit the coordinator overview, new-ticket form, ticket detail, unknown-ticket queue, and reports; confirm the sidebar contains the same navigation items in the same order.
-- Confirm the **Closed tickets** badge displays the same value on each coordinator page.
-- Run the legacy draft-subject command without `--apply` and confirm it only previews eligible completed tickets while excluding pending reviews.
-- Apply cleanup to a reviewed test reference and confirm only the subject prefix changes while the ticket audit log records the maintenance action.
+- Confirm the admin overview shows Driftpunkt `1.0.111` and the post-update checks complete successfully.
+- Open the same ticket as a technician and a customer; confirm the latest reply appears first in both views.
+- Confirm the customer reply panel appears before the conversation and its attachment section is collapsed by default.
+- Expand the full ticket history and confirm all customer-visible activity remains available while internal comments and activity stay hidden.
+- Submit a customer reply and confirm the redirect targets the saved comment, labels it **You**, and shows it first.
+- Resolve an internal report and confirm it disappears from the default super-admin list, reappears with the completed-history filter, and failed unresolved deliveries remain visible.
+- Confirm the configured logo has a clear light surface on login, MFA, registration, and password-reset pages at desktop and mobile widths.
+- Regression-test the coordinator counts, merged tickets, homepage logo positions, browser icon, and seasonal appearance introduced in 1.0.110.
 
 ## What This Repository Contains
 
@@ -173,7 +177,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.109.zip.sha256
+sha256sum -c driftpunkt-install-1.0.111.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -200,10 +204,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.109.zip` and `driftpunkt-install-1.0.109.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.111.zip` and `driftpunkt-install-1.0.111.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.109.zip.sha256
+sha256sum -c driftpunkt-install-1.0.111.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -211,9 +215,9 @@ sha256sum -c driftpunkt-install-1.0.109.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.109.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.111.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.109/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.111/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -262,10 +266,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.109.zip` and `driftpunkt-install-1.0.109.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.111.zip` and `driftpunkt-install-1.0.111.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.109.zip.sha256
+sha256sum -c driftpunkt-install-1.0.111.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -273,8 +277,8 @@ sha256sum -c driftpunkt-install-1.0.109.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.109.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.109/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.111.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.111/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -337,9 +341,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.111.zip`
+- `packages/driftpunkt-upgrade-1.0.110.zip`
 - `packages/driftpunkt-upgrade-1.0.109.zip`
-- `packages/driftpunkt-upgrade-1.0.108.zip`
-- `packages/driftpunkt-upgrade-1.0.107.zip`
 
 ## Notes
 
