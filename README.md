@@ -119,9 +119,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.108`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.108.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.108.zip`
+- Current exported release: `1.0.109`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.109.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.109.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 16.
@@ -130,33 +130,32 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.108
+### Driftpunkt 1.0.109
 
 ### Highlights
 
-- The technician ticket detail page now uses a focused two-column workbench with replies and conversation in the main area and status, resolution, assignment, and metadata in a compact sidebar.
-- Resolution text can be updated and audited without changing ticket status. Customer email remains limited to an actual transition to **Resolved**.
-- The technician's **My tickets** view has clearer search, status shortcuts, and ticket emphasis to make active work easier to find while preserving the personal scope.
-- The **Report** navigation item remains available when technicians and ticket coordinators move between portal pages.
-- Customers can choose system, light, dark, or high-contrast portal themes. The customer navigation also provides a clearer create-ticket action and account grouping.
-- Super administrators can enable a subtle static seasonal appearance on the public homepage, in the customer portal, in both places, or nowhere. It defaults to disabled and uses no images or animations.
-- The anonymous language selector keeps its unobtrusive fixed position when seasonal styling is enabled.
+- The ticket coordinator sidebar now keeps the same complete set of navigation items and ordering across the overview, new-ticket form, ticket detail, unknown-ticket review queue, and reports.
+- **Unknown tickets**, **Assigned**, and **In progress** no longer disappear when the coordinator moves between portal pages.
+- The **Closed tickets** badge uses the same global coordinator scope everywhere and consistently counts both resolved and closed tickets.
+- A guarded maintenance command can preview and remove legacy `[Utkast]` or `[Draft]` subject prefixes from completed tickets. Pending draft reviews are always excluded, and writes require an explicit ticket selection or `--all` confirmation.
 
 ### Operations
 
-- Database migration required: yes, `DoctrineMigrations\\Version20260820210000` adds per-user customer portal appearance preferences.
+- Database migration required: no.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
 - Back up the application and database before applying the cumulative upgrade package.
+- Preview legacy subject cleanup before applying it: `php bin/console app:tickets:normalize-legacy-draft-subjects --env=prod`.
+- Prefer explicitly reviewed references when applying cleanup: `php bin/console app:tickets:normalize-legacy-draft-subjects --env=prod --ticket=REFERENCE-1001 --apply`. Use `--all --apply` only after reviewing the complete preview.
+- Tickets with pending draft reviews are deliberately excluded. Resolve the review first, and do not blindly approve or reject historical reviews whose tickets were already moved or corrected because the normal review workflow can update ticket fields.
 
 ### Verification
 
-- Confirm the admin overview shows Driftpunkt `1.0.108` and all migrations complete successfully.
-- Open a technician ticket and verify the two-column workbench, reply controls, collapsed attachment section, and advanced fields.
-- Update a resolution without changing status and confirm it is audited without sending customer email.
-- Verify search and status shortcuts in **My tickets**, and confirm **Report** remains visible in technician and coordinator navigation.
-- Select each customer portal theme and confirm the preference persists.
-- As a super administrator, test homepage-only, customer-portal-only, both, and disabled seasonal visibility.
+- Confirm the admin overview shows Driftpunkt `1.0.109` and the post-update checks complete successfully.
+- Visit the coordinator overview, new-ticket form, ticket detail, unknown-ticket queue, and reports; confirm the sidebar contains the same navigation items in the same order.
+- Confirm the **Closed tickets** badge displays the same value on each coordinator page.
+- Run the legacy draft-subject command without `--apply` and confirm it only previews eligible completed tickets while excluding pending reviews.
+- Apply cleanup to a reviewed test reference and confirm only the subject prefix changes while the ticket audit log records the maintenance action.
 
 ## What This Repository Contains
 
@@ -174,7 +173,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.108.zip.sha256
+sha256sum -c driftpunkt-install-1.0.109.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -201,10 +200,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.108.zip` and `driftpunkt-install-1.0.108.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.109.zip` and `driftpunkt-install-1.0.109.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.108.zip.sha256
+sha256sum -c driftpunkt-install-1.0.109.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -212,9 +211,9 @@ sha256sum -c driftpunkt-install-1.0.108.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.108.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.109.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.108/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.109/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -263,10 +262,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.108.zip` and `driftpunkt-install-1.0.108.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.109.zip` and `driftpunkt-install-1.0.109.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.108.zip.sha256
+sha256sum -c driftpunkt-install-1.0.109.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -274,8 +273,8 @@ sha256sum -c driftpunkt-install-1.0.108.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.108.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.108/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.109.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.109/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -338,9 +337,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.109.zip`
 - `packages/driftpunkt-upgrade-1.0.108.zip`
 - `packages/driftpunkt-upgrade-1.0.107.zip`
-- `packages/driftpunkt-upgrade-1.0.106.zip`
 
 ## Notes
 
