@@ -119,9 +119,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.111`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.111.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.111.zip`
+- Current exported release: `1.0.112`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.112.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.112.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 16.
@@ -130,36 +130,35 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.111
+### Driftpunkt 1.0.112
 
 ### Highlights
 
-- Technician and customer ticket details now show the most recently saved reply first, followed by older comments.
-- The customer reply panel appears before the conversation, so customers can respond without scrolling through the entire ticket first.
-- Customer reply attachments and external sharing links use a compact, collapsed section matching the technician workflow.
-- Customers can expand the full customer-visible ticket activity history while every customer-visible comment remains available in the conversation.
-- Internal comments and internal-only activity remain hidden from customers.
-- The super-admin internal-report list now hides resolved reports by default and provides an explicit completed-history filter. Unresolved reports and failed central-email deliveries remain visible.
-- Submitted customer replies still redirect to the stable anchor for the newly persisted comment.
-- Authentication pages now place the configured logo on a light, subtly elevated surface so it remains legible against the top bar regardless of the logo colours.
+- The current ticket owner can transfer primary responsibility directly to another active technician with CSRF and permission checks.
+- Ownership transfers update the responsible team, remove duplicate additional assignments, write an audit entry, and notify the new owner.
+- Merged source tickets, inactive recipients, non-technicians, and unauthorized transfer attempts remain blocked.
+- Customer-controlled inventory lists now include monitors and payment terminals with the same activation, per-user access, staff editing, coordinator read-only mode, searching, sorting, printing, CSV import, and CSV/Excel export used by existing lists.
+- Monitor inventory includes assignment, location, manufacturer, model, serial number, screen size, resolution, connection, fault state, and comments.
+- Payment terminal inventory includes terminal ID, provider, model, serial number, location, connection, operational state, comments, and a dedicated **Pay@Table** checkbox for table-side payments.
+- Monitor serial numbers and payment terminal IDs are validated as unique within each company list, including CSV imports.
 
 ### Operations
 
-- Database migration required: no.
+- Database migration required: yes. The migration only adds nullable inventory fields and a boolean Pay@Table field with a safe default; existing inventory rows are preserved.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
 - Back up the application and database before applying the cumulative upgrade package.
 
 ### Verification
 
-- Confirm the admin overview shows Driftpunkt `1.0.111` and the post-update checks complete successfully.
-- Open the same ticket as a technician and a customer; confirm the latest reply appears first in both views.
-- Confirm the customer reply panel appears before the conversation and its attachment section is collapsed by default.
-- Expand the full ticket history and confirm all customer-visible activity remains available while internal comments and activity stay hidden.
-- Submit a customer reply and confirm the redirect targets the saved comment, labels it **You**, and shows it first.
-- Resolve an internal report and confirm it disappears from the default super-admin list, reappears with the completed-history filter, and failed unresolved deliveries remain visible.
-- Confirm the configured logo has a clear light surface on login, MFA, registration, and password-reset pages at desktop and mobile widths.
-- Regression-test the coordinator counts, merged tickets, homepage logo positions, browser icon, and seasonal appearance introduced in 1.0.110.
+- Confirm the admin overview shows Driftpunkt `1.0.112` and all migration and post-update checks complete successfully.
+- Enable monitor and payment terminal lists for a test company and explicitly grant one customer user access to each list.
+- Create, update, search, sort, print, and export entries in both lists.
+- Confirm duplicate monitor serial numbers and duplicate payment terminal IDs are rejected without replacing existing imported data.
+- Enable **Pay@Table** on a payment terminal and confirm it remains enabled after reloading and is included in exports.
+- Transfer a ticket from its current owner to another active technician and confirm the owner, team, audit history, and notification.
+- Confirm non-owners, inactive recipients, and merged source tickets cannot use the transfer workflow.
+- Regression-test customer replies, coordinator views, and existing computer and printer inventory lists.
 
 ## What This Repository Contains
 
@@ -177,7 +176,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.111.zip.sha256
+sha256sum -c driftpunkt-install-1.0.112.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -204,10 +203,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.111.zip` and `driftpunkt-install-1.0.111.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.112.zip` and `driftpunkt-install-1.0.112.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.111.zip.sha256
+sha256sum -c driftpunkt-install-1.0.112.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -215,9 +214,9 @@ sha256sum -c driftpunkt-install-1.0.111.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.111.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.112.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.111/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.112/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -266,10 +265,10 @@ sudo certbot --apache -d driftpunkt.example.com
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.111.zip` and `driftpunkt-install-1.0.111.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.112.zip` and `driftpunkt-install-1.0.112.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.111.zip.sha256
+sha256sum -c driftpunkt-install-1.0.112.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -277,8 +276,8 @@ sha256sum -c driftpunkt-install-1.0.111.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.111.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.111/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.112.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.112/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -341,9 +340,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.112.zip`
 - `packages/driftpunkt-upgrade-1.0.111.zip`
 - `packages/driftpunkt-upgrade-1.0.110.zip`
-- `packages/driftpunkt-upgrade-1.0.109.zip`
 
 ## Notes
 
