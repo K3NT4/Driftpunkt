@@ -80,7 +80,7 @@ Visible features depend on enabled settings, company access, and role permission
 - See all tickets or only permitted tickets depending on the technician access setting.
 - Use knowledge base and news contribution workflows when enabled.
 - Report bugs, improvements or feature requests, and missing customers to super administrators from the technician menu.
-- Use technician inventory views, remote support shortcuts, secure login/MFA with optional seven-day trusted devices, personal default language, and selectable portal theme templates, including the burgundy Bordeaux theme.
+- Use technician inventory views, remote support shortcuts, secure login/MFA with configurable trusted devices (14 days by default), personal default language, and selectable portal theme templates, including the burgundy Bordeaux theme.
 
 ### Ticket Coordinator
 
@@ -119,9 +119,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.112`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.112.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.112.zip`
+- Current exported release: `1.0.115`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.115.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.115.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 16.
@@ -130,35 +130,53 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.112
+### Driftpunkt 1.0.115
 
-### Highlights
+### New
 
-- The current ticket owner can transfer primary responsibility directly to another active technician with CSRF and permission checks.
-- Ownership transfers update the responsible team, remove duplicate additional assignments, write an audit entry, and notify the new owner.
-- Merged source tickets, inactive recipients, non-technicians, and unauthorized transfer attempts remain blocked.
-- Customer-controlled inventory lists now include monitors and payment terminals with the same activation, per-user access, staff editing, coordinator read-only mode, searching, sorting, printing, CSV import, and CSV/Excel export used by existing lists.
-- Monitor inventory includes assignment, location, manufacturer, model, serial number, screen size, resolution, connection, fault state, and comments.
-- Payment terminal inventory includes terminal ID, provider, model, serial number, location, connection, operational state, comments, and a dedicated **Pay@Table** checkbox for table-side payments.
-- Monitor serial numbers and payment terminal IDs are validated as unique within each company list, including CSV imports.
+- Super administrators can manage MFA policy per role under **Settings → Access → MFA policy**.
+- The MFA encryption key can be generated, imported, and rotated securely in the admin interface without `DRIFTPUNKT_MFA_SECRET_KEY` in `.env`.
+- Trusted MFA devices can be configured for 0, 1, 7, 14, or 30 days, with 14 days as the default for new devices.
+- Mandatory MFA can be enabled per role with an individual 14-day activation grace period.
 
-### Operations
+### Improved
 
-- Database migration required: yes. The migration only adds nullable inventory fields and a boolean Pay@Table field with a safe default; existing inventory rows are preserved.
+- MFA remains optional by default, and the upgrade does not enable mandatory MFA for any existing role or user.
+- Existing seven-day trusted-device cookies retain their original expiration time.
+- Installation no longer creates accounts automatically; the first super administrator is created securely with `app:create-admin`.
+- Scheduled jobs use exclusive shared locks across web requests, cron, systemd, and Docker, together with atomic state storage and safe process timeouts.
+- The internal scheduler fallback continues to run mail polling in production when external cron or systemd scheduling is unavailable.
+- Mobile page width, Phone Support, form fields, ARIA support, and limited PWA functionality have been improved.
+- Production errors use a responsive Driftpunkt-branded error page instead of Symfony's generic English error page.
+
+### Fixed
+
+- Attachment previews verify server-detected MIME types and image content to prevent stored XSS.
+- Rate limiting uses Symfony's atomic RateLimiter with shared locking.
+- CSV exports neutralize cells that could otherwise be interpreted as formulas.
+- Scheduled maintenance without a start time, history separation, and strict inventory-date validation have been corrected.
+- Notification failures after saved ticket replies no longer cause HTTP 500 responses or duplicate-reply risk.
+- Monthly reports retrieve relevant tickets more efficiently without loading a company's complete ticket history.
+- Web-based upgrades use the local Composer launcher when available and otherwise invoke the server's global Composer binary correctly.
+
+### Database and operations
+
+- Database migration required: yes. Run the Doctrine migrations included in the package.
 - Cache refresh required: yes.
-- PHP/OPcache restart or reload recommended: yes.
-- Back up the application and database before applying the cumulative upgrade package.
+- PHP/OPcache restart or reload required: yes.
+- Back up both the application and database, and verify restore procedures before applying the upgrade.
+- Confirm that `APP_SECRET` is long, random, and unique to the installation before creating or importing the MFA key.
+- Keep the existing external cron/systemd schedule for `app:mail:poll`; the internal fallback is an additional safeguard and does not replace recommended external scheduling.
 
-### Verification
+### Post-upgrade verification
 
-- Confirm the admin overview shows Driftpunkt `1.0.112` and all migration and post-update checks complete successfully.
-- Enable monitor and payment terminal lists for a test company and explicitly grant one customer user access to each list.
-- Create, update, search, sort, print, and export entries in both lists.
-- Confirm duplicate monitor serial numbers and duplicate payment terminal IDs are rejected without replacing existing imported data.
-- Enable **Pay@Table** on a payment terminal and confirm it remains enabled after reloading and is included in exports.
-- Transfer a ticket from its current owner to another active technician and confirm the owner, team, audit history, and notification.
-- Confirm non-owners, inactive recipients, and merged source tickets cannot use the transfer workflow.
-- Regression-test customer replies, coordinator views, and existing computer and printer inventory lists.
+- Confirm that mandatory MFA has not been enabled automatically for any role.
+- Sign in as super administrator and open **Settings → Access → MFA policy**.
+- Create or import the MFA encryption key and verify its status and fingerprint.
+- Verify optional MFA, the selected trusted-device period, and existing trusted-device behavior.
+- Run `php bin/console app:mail:poll --env=prod -vvv` and verify mailbox polling and logging.
+- Confirm that a new ticket reply can be saved and its notification sent without an HTTP 500 response.
+- Verify the mobile layouts for admin, technician, and Phone Support views.
 
 ## What This Repository Contains
 
@@ -176,7 +194,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.112.zip.sha256
+sha256sum -c driftpunkt-install-1.0.115.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -190,7 +208,13 @@ sha256sum -c driftpunkt-install-1.0.112.zip.sha256
 php bin/console app:install:fresh --env=prod
 ```
 
-9. Sign in with the configured administrator account, change default credentials, review branding/language settings, and verify the public status page.
+9. Create the first super administrator. The command prompts for and confirms the password without echoing it:
+
+```bash
+php bin/console app:create-admin admin@example.com --first-name=First --last-name=Last --type=super_admin --env=prod
+```
+
+10. Sign in and open **Settings → Access → MFA policy**. Create or import the MFA encryption key, choose MFA availability, optionally choose required roles, and select the trusted-device period. No role is forced to use MFA automatically.
 
 ## Install on a new Debian server
 
@@ -203,10 +227,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.112.zip` and `driftpunkt-install-1.0.112.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.115.zip` and `driftpunkt-install-1.0.115.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.112.zip.sha256
+sha256sum -c driftpunkt-install-1.0.115.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -214,9 +238,9 @@ sha256sum -c driftpunkt-install-1.0.112.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.112.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.115.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.112/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.115/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -250,6 +274,7 @@ EXIT;
 
 ```bash
 sudo -u www-data php /var/www/driftpunkt/bin/console app:install:fresh --env=prod
+sudo -u www-data php /var/www/driftpunkt/bin/console app:create-admin admin@example.com --first-name=First --last-name=Last --type=super_admin --env=prod
 ```
 
 8. Confirm that Apache serves `/var/www/driftpunkt/htdocs`, then reload Apache and add HTTPS, for example with Certbot:
@@ -261,14 +286,23 @@ sudo apt-get install -y certbot python3-certbot-apache
 sudo certbot --apache -d driftpunkt.example.com
 ```
 
+9. After the database, first account, backups, and application access have been verified, enable the external background timers:
+
+```bash
+sudo systemctl enable --now driftpunkt-mail-poll.timer driftpunkt-attachment-archive.timer
+systemctl list-timers 'driftpunkt-*' --all --no-pager
+```
+
+Attachment ZIP archiving is configured under **Administration → Settings → Tickets → Ticket attachments**. A retention value of `0` archives local attachments as soon as a ticket is resolved or closed. Choose a higher value when recently closed tickets should keep separate files for a grace period. If the installation uses a custom Unix account, application path, or PHP binary, update `driftpunkt-attachment-archive.service` accordingly before enabling it.
+
 ## Install on a new NAS with Docker Compose
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.112.zip` and `driftpunkt-install-1.0.112.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.115.zip` and `driftpunkt-install-1.0.115.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.112.zip.sha256
+sha256sum -c driftpunkt-install-1.0.115.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -276,8 +310,8 @@ sha256sum -c driftpunkt-install-1.0.112.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.112.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.112/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.115.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.115/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -301,9 +335,10 @@ docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env up -d --bui
 
 ```bash
 docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env exec --user www-data app php bin/console app:install:fresh --env=prod
+docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env exec --user www-data app php bin/console app:create-admin admin@example.com --first-name=First --last-name=Last --type=super_admin --env=prod
 ```
 
-6. Open the URL from `DEFAULT_URI`, sign in, change default credentials, and confirm that the app and scheduler containers are healthy:
+6. Open the URL from `DEFAULT_URI`, sign in, configure the MFA policy without enabling mandatory MFA unless explicitly wanted, and confirm that the app and scheduler containers are healthy:
 
 ```bash
 docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env ps
@@ -314,6 +349,7 @@ docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env logs -f app
 
 1. Use the newest cumulative `driftpunkt-upgrade-*.zip` package first. It contains the full current codebase and is the normal path even when the installed site is several releases behind.
 2. Back up the database and application files before applying the upgrade.
+   Preserve `.env.local` and its `APP_SECRET` in an encrypted, restore-tested backup. The secret is required to unwrap the stored MFA encryption key. Include `var/ticket_attachments` and `var/ticket_attachment_archives` in file backups.
 3. Verify the checksum before using the package:
 
 ```bash
@@ -327,6 +363,7 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 7. For version 1.0.21 or later, also verify Admin -> Identity links to the dedicated company page and Admin -> Companies paginates company groups correctly.
 8. Older upgrade packages are kept as fallback and history, not as required intermediate steps.
 9. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
+10. Verify `systemctl --failed`, mail polling, and the attachment-archive service log after its first scheduled run.
 
 ### Interrupted 1.0.45 Migration
 
@@ -340,9 +377,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.115.zip`
 - `packages/driftpunkt-upgrade-1.0.112.zip`
 - `packages/driftpunkt-upgrade-1.0.111.zip`
-- `packages/driftpunkt-upgrade-1.0.110.zip`
 
 ## Notes
 
