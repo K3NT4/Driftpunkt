@@ -119,9 +119,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.115`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.115.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.115.zip`
+- Current exported release: `1.0.116`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.116.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.116.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 16.
@@ -130,53 +130,27 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.115
-
-### New
-
-- Super administrators can manage MFA policy per role under **Settings → Access → MFA policy**.
-- The MFA encryption key can be generated, imported, and rotated securely in the admin interface without `DRIFTPUNKT_MFA_SECRET_KEY` in `.env`.
-- Trusted MFA devices can be configured for 0, 1, 7, 14, or 30 days, with 14 days as the default for new devices.
-- Mandatory MFA can be enabled per role with an individual 14-day activation grace period.
-
-### Improved
-
-- MFA remains optional by default, and the upgrade does not enable mandatory MFA for any existing role or user.
-- Existing seven-day trusted-device cookies retain their original expiration time.
-- Installation no longer creates accounts automatically; the first super administrator is created securely with `app:create-admin`.
-- Scheduled jobs use exclusive shared locks across web requests, cron, systemd, and Docker, together with atomic state storage and safe process timeouts.
-- The internal scheduler fallback continues to run mail polling in production when external cron or systemd scheduling is unavailable.
-- Mobile page width, Phone Support, form fields, ARIA support, and limited PWA functionality have been improved.
-- Production errors use a responsive Driftpunkt-branded error page instead of Symfony's generic English error page.
+### Driftpunkt 1.0.116
 
 ### Fixed
 
-- Attachment previews verify server-detected MIME types and image content to prevent stored XSS.
-- Rate limiting uses Symfony's atomic RateLimiter with shared locking.
-- CSV exports neutralize cells that could otherwise be interpreted as formulas.
-- Scheduled maintenance without a start time, history separation, and strict inventory-date validation have been corrected.
-- Notification failures after saved ticket replies no longer cause HTTP 500 responses or duplicate-reply risk.
-- Monthly reports retrieve relevant tickets more efficiently without loading a company's complete ticket history.
-- Web-based upgrades use the local Composer launcher when available and otherwise invoke the server's global Composer binary correctly.
+- The signed-in customer knowledge base now uses the same top bar, sidebar navigation, theme, and responsive layout as the rest of the customer portal.
+- Ticket coordinator navigation counters no longer reset when opening Company data and its inventory lists.
+- Technician navigation counters no longer reset when opening the inventory overview or an individual inventory list.
+- Knowledge base and news navigation availability now remains consistent on staff inventory pages.
 
 ### Database and operations
 
-- Database migration required: yes. Run the Doctrine migrations included in the package.
+- Database migration required: no.
 - Cache refresh required: yes.
-- PHP/OPcache restart or reload required: yes.
-- Back up both the application and database, and verify restore procedures before applying the upgrade.
-- Confirm that `APP_SECRET` is long, random, and unique to the installation before creating or importing the MFA key.
-- Keep the existing external cron/systemd schedule for `app:mail:poll`; the internal fallback is an additional safeguard and does not replace recommended external scheduling.
+- PHP/OPcache restart or reload recommended: yes.
+- Back up the application and database before applying the upgrade.
 
 ### Post-upgrade verification
 
-- Confirm that mandatory MFA has not been enabled automatically for any role.
-- Sign in as super administrator and open **Settings → Access → MFA policy**.
-- Create or import the MFA encryption key and verify its status and fingerprint.
-- Verify optional MFA, the selected trusted-device period, and existing trusted-device behavior.
-- Run `php bin/console app:mail:poll --env=prod -vvv` and verify mailbox polling and logging.
-- Confirm that a new ticket reply can be saved and its notification sent without an HTTP 500 response.
-- Verify the mobile layouts for admin, technician, and Phone Support views.
+- Sign in as a customer and confirm that the knowledge base uses the normal customer portal top bar and sidebar.
+- Sign in as a ticket coordinator, open Company data, and confirm that all ticket counters retain their values.
+- Sign in as a technician, open Inventory lists and an individual list, and confirm that all ticket counters retain their values.
 
 ## What This Repository Contains
 
@@ -194,7 +168,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.115.zip.sha256
+sha256sum -c driftpunkt-install-1.0.116.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -227,10 +201,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.115.zip` and `driftpunkt-install-1.0.115.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.116.zip` and `driftpunkt-install-1.0.116.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.115.zip.sha256
+sha256sum -c driftpunkt-install-1.0.116.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -238,9 +212,9 @@ sha256sum -c driftpunkt-install-1.0.115.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.115.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.116.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.115/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.116/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -299,10 +273,10 @@ Attachment ZIP archiving is configured under **Administration → Settings → T
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.115.zip` and `driftpunkt-install-1.0.115.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.116.zip` and `driftpunkt-install-1.0.116.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.115.zip.sha256
+sha256sum -c driftpunkt-install-1.0.116.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -310,8 +284,8 @@ sha256sum -c driftpunkt-install-1.0.115.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.115.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.115/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.116.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.116/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -377,9 +351,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.116.zip`
 - `packages/driftpunkt-upgrade-1.0.115.zip`
 - `packages/driftpunkt-upgrade-1.0.112.zip`
-- `packages/driftpunkt-upgrade-1.0.111.zip`
 
 ## Notes
 
