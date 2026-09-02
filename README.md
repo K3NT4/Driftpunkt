@@ -75,6 +75,7 @@ Visible features depend on enabled settings, company access, and role permission
 ### Technician
 
 - Work from a technician overview built around assigned tickets, team tickets, queue health, recent activity, and notifications, with SLA cards and controls shown only when SLA is enabled and actively used.
+- Open separate personal queues for tickets owned as the primary technician and tickets assigned as a supporting technician, each with a direct sidebar link and count.
 - Create tickets, take over tickets, assign work, update status, priority, impact, request type, routing, optional SLA fields, checklist progress, and internal work notes.
 - Reply to customers, add internal comments, use ticket attachments when enabled, and follow links from technician notification emails back to the related ticket.
 - See all tickets or only permitted tickets depending on the technician access setting.
@@ -119,9 +120,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.116`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.116.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.116.zip`
+- Current exported release: `1.0.119`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.119.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.119.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 16.
@@ -130,14 +131,14 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.116
+### Driftpunkt 1.0.119
 
-### Fixed
+### Changed
 
-- The signed-in customer knowledge base now uses the same top bar, sidebar navigation, theme, and responsive layout as the rest of the customer portal.
-- Ticket coordinator navigation counters no longer reset when opening Company data and its inventory lists.
-- Technician navigation counters no longer reset when opening the inventory overview or an individual inventory list.
-- Knowledge base and news navigation availability now remains consistent on staff inventory pages.
+- The technician portal now has a separate "Supporting technician" queue with a direct sidebar link and its own ticket count.
+- "My tickets" now shows tickets where the signed-in technician is the primary assignee.
+- "Supporting technician" shows tickets where the signed-in technician has an additional assignment, including tickets owned by another technician.
+- The new queue is also available in the ticket overview filters and has dedicated headings and guidance in Swedish, English, and Norwegian.
 
 ### Database and operations
 
@@ -148,9 +149,10 @@ These notes are copied from the packaged release metadata for the current export
 
 ### Post-upgrade verification
 
-- Sign in as a customer and confirm that the knowledge base uses the normal customer portal top bar and sidebar.
-- Sign in as a ticket coordinator, open Company data, and confirm that all ticket counters retain their values.
-- Sign in as a technician, open Inventory lists and an individual list, and confirm that all ticket counters retain their values.
+- Assign a supporting technician to a ticket owned by another primary technician.
+- Sign in as the supporting technician and confirm that the sidebar shows "Supporting technician" with the correct count.
+- Open "Supporting technician" and confirm that the ticket appears there but not under "My tickets".
+- Confirm that tickets owned by the signed-in technician still appear under "My tickets".
 
 ## What This Repository Contains
 
@@ -168,7 +170,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.116.zip.sha256
+sha256sum -c driftpunkt-install-1.0.119.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -201,10 +203,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.116.zip` and `driftpunkt-install-1.0.116.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.119.zip` and `driftpunkt-install-1.0.119.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.116.zip.sha256
+sha256sum -c driftpunkt-install-1.0.119.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -212,9 +214,9 @@ sha256sum -c driftpunkt-install-1.0.116.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.116.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.119.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.116/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.119/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -273,10 +275,10 @@ Attachment ZIP archiving is configured under **Administration → Settings → T
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.116.zip` and `driftpunkt-install-1.0.116.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.119.zip` and `driftpunkt-install-1.0.119.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.116.zip.sha256
+sha256sum -c driftpunkt-install-1.0.119.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -284,8 +286,8 @@ sha256sum -c driftpunkt-install-1.0.116.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.116.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.116/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.119.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.119/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -351,9 +353,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.119.zip`
 - `packages/driftpunkt-upgrade-1.0.116.zip`
 - `packages/driftpunkt-upgrade-1.0.115.zip`
-- `packages/driftpunkt-upgrade-1.0.112.zip`
 
 ## Notes
 
