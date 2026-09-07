@@ -4,9 +4,19 @@
 
 Driftpunkt is a support and operations platform for handling tickets, customer communication, technician work queues, operational status updates, knowledge base content, reports, company administration, and maintenance workflows.
 
-This public repository contains packaged Driftpunkt releases only. It does not publish the private application source code, internal modules, environment files, customer data, or deployment secrets.
+This public repository distributes release archives, documentation, and selected screenshots. The archives include application code and dependencies needed to run Driftpunkt; private Git history, internal planning documents, live environment files, and runtime customer data are not exported.
 
 The screenshots may show the Swedish interface. Language and branding can be changed after installation through the running application and its environment-specific configuration.
+
+## Recent Improvements: 1.0.119–1.0.121
+
+- A separate "Supporting technician" queue shows additional assignments, while "My tickets" shows primary assignments.
+- Company inboxes can register new contacts from explicitly allowed sender domains and create private tickets. Automatic registration is off by default.
+- Super administrators can preserve the previous mail workflow for a parent company and every descendant, overriding inbox automation throughout that branch.
+- Automatically created contacts use email support without portal access. Administrators enable portal access separately.
+- Transactional registration, shared locking, retries, and audit logs improve reliability during concurrent mail processing and database failures.
+- Company-specific parser rules and sample identities have been replaced with company-neutral behavior and examples.
+- Version 1.0.121 replaces direct deletion of the active production cache with Symfony cache clearing and warmup, and synchronizes the Composer lock hash without changing dependency versions.
 
 ## Screenshots
 
@@ -120,9 +130,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.119`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.119.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.119.zip`
+- Current exported release: `1.0.121`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.121.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.121.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 16.
@@ -131,28 +141,31 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.119
+### Driftpunkt 1.0.121
 
-### Changed
+### Fixed
 
-- The technician portal now has a separate "Supporting technician" queue with a direct sidebar link and its own ticket count.
-- "My tickets" now shows tickets where the signed-in technician is the primary assignee.
-- "Supporting technician" shows tickets where the signed-in technician has an additional assignment, including tickets owned by another technician.
-- The new queue is also available in the ticket overview filters and has dedicated headings and guidance in Swedish, English, and Norwegian.
+- Required and manual post-update cache tasks now run Symfony `cache:clear --env=prod --no-debug --no-interaction`, including cache warmup.
+- Removed direct `rm -rf` deletion of the active production cache, which could fail with `Directory not empty` when concurrent processes created cache files during removal.
+- Actual cache failures still stop the update and remain visible in the apply log.
+- Synchronized the Composer lock content hash with the release version without changing dependency versions.
 
 ### Database and operations
 
-- Database migration required: no.
+- Database migration required: yes when upgrading from versions before 1.0.120. Version 1.0.121 adds no new migration; a completed 1.0.120 migration is not repeated.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
-- Back up the application and database before applying the upgrade.
+- Back up application code and the database before upgrading.
+- If 1.0.120 was copied and migrated but stopped at `Refresh prod-cache`, run `php bin/console cache:clear --env=prod --no-debug --no-interaction` inside the application PHP container as the application user. Confirm that the command succeeds and the website works.
+- An update process started with older code can still use the old cache step during its first apply. Once the new code is loaded, manual post-update tasks also use the corrected command.
+- Manual cache recovery does not rewrite the status of a historical failed apply log. Verify the current application state and latest run separately.
 
-### Post-upgrade verification
+### Post-update verification
 
-- Assign a supporting technician to a ticket owned by another primary technician.
-- Sign in as the supporting technician and confirm that the sidebar shows "Supporting technician" with the correct count.
-- Open "Supporting technician" and confirm that the ticket appears there but not under "My tickets".
-- Confirm that tickets owned by the signed-in technician still appear under "My tickets".
+- Confirm that the admin area shows version `1.0.121` and the cache task exits with code 0.
+- Confirm that Composer no longer reports an out-of-date lock file.
+- If needed, run the manual cache task and confirm that its log shows `cache:clear`.
+- Verify login, ticket views, and incoming mail after the update.
 
 ## What This Repository Contains
 
@@ -170,7 +183,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.119.zip.sha256
+sha256sum -c driftpunkt-install-1.0.121.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -203,10 +216,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.119.zip` and `driftpunkt-install-1.0.119.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.121.zip` and `driftpunkt-install-1.0.121.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.119.zip.sha256
+sha256sum -c driftpunkt-install-1.0.121.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -214,9 +227,9 @@ sha256sum -c driftpunkt-install-1.0.119.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.119.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.121.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.119/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.121/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -275,10 +288,10 @@ Attachment ZIP archiving is configured under **Administration → Settings → T
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.119.zip` and `driftpunkt-install-1.0.119.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.121.zip` and `driftpunkt-install-1.0.121.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.119.zip.sha256
+sha256sum -c driftpunkt-install-1.0.121.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -286,8 +299,8 @@ sha256sum -c driftpunkt-install-1.0.119.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.119.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.119/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.121.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.121/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -321,6 +334,37 @@ docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env ps
 docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env logs -f app scheduler
 ```
 
+## Automatic Customer Registration and Company Groups
+
+As super administrator, edit an inbox, link an active company, allow unknown senders, enable automatic customer registration, and enter exact sender domains such as `company.example`. Enter subdomains separately; do not use `@` or wildcards.
+
+A new sender on an allowed domain becomes a customer contact of the inbox company and receives a private ticket. Existing contacts and sender aliases are reused. Company conflicts and unknown senders outside the domain list require review. Existing contacts are never moved between companies automatically.
+
+To retain the previous workflow for a company group:
+
+1. Sign in as super administrator and open Administration → Companies.
+2. Open the parent company, enable **Behåll tidigare mejlhantering** (keep previous mail handling), and save the mail settings.
+3. The exception applies to the parent and all descendants at every level, even when their inbox automation is enabled.
+
+A child cannot override an inherited exception. The company and inbox views show its source. Removing an exception restores saved inbox settings unless another ancestor still has an exception. Existing contacts, tickets, and review drafts remain unchanged.
+
+Automatically registered contacts receive no portal invitation. Login, login links, existing portal sessions, and password reset are blocked until an administrator enables **Portalåtkomst** (portal access) in the user form. Domain matching is a company-routing rule, not identity verification.
+
+Enable this first on a test inbox. For multiple application servers, configure a shared `LOCK_DSN`; with default file locking, web and scheduler must share `var/lock`. The archives include `docs/automatic-mail-customer-registration.md` with setup, migration, and troubleshooting instructions.
+
+## Recovering from the 1.0.120 Cache Error
+
+If migrations succeeded but the apply log reports `Refresh prod-cache` and `Directory not empty`, run this inside the PHP container as the application user. It clears and warms the production cache:
+
+```bash
+cd /var/www/html
+php bin/console cache:clear --env=prod --no-debug --no-interaction
+```
+
+On a regular server, use the actual application directory. Expect an `[OK]` result, then check login, ticket views, and mail processing. Manual recovery does not rewrite a historical failed apply log.
+
+Version 1.0.121 uses this command in required and manual post-update tasks. An apply process started with older code may still run the old cache step once; if that happens, repeat the recovery command. There is no new migration beyond 1.0.120, and a completed migration is not repeated.
+
 ## Upgrade an existing installation
 
 1. Use the newest cumulative `driftpunkt-upgrade-*.zip` package first. It contains the full current codebase and is the normal path even when the installed site is several releases behind.
@@ -353,9 +397,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.121.zip`
+- `packages/driftpunkt-upgrade-1.0.120.zip`
 - `packages/driftpunkt-upgrade-1.0.119.zip`
-- `packages/driftpunkt-upgrade-1.0.116.zip`
-- `packages/driftpunkt-upgrade-1.0.115.zip`
 
 ## Notes
 
