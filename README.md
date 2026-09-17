@@ -130,9 +130,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.121`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.121.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.121.zip`
+- Current exported release: `1.0.122`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.122.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.122.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 16.
@@ -141,31 +141,27 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.121
+### Driftpunkt 1.0.122
 
-### Fixed
+### New
 
-- Required and manual post-update cache tasks now run Symfony `cache:clear --env=prod --no-debug --no-interaction`, including cache warmup.
-- Removed direct `rm -rf` deletion of the active production cache, which could fail with `Directory not empty` when concurrent processes created cache files during removal.
-- Actual cache failures still stop the update and remain visible in the apply log.
-- Synchronized the Composer lock content hash with the release version without changing dependency versions.
+- Company groups can now have one primary technician and multiple secondary responsible technicians.
+- The responsible team is inherited by subsidiary companies, prioritized in coordinator assignment views, and shown to each responsible technician on the dashboard.
+- Internal reports can now be submitted only as bugs or improvement requests. Existing missing-customer reports remain available in history and export.
 
 ### Database and operations
 
-- Database migration required: yes when upgrading from versions before 1.0.120. Version 1.0.121 adds no new migration; a completed 1.0.120 migration is not repeated.
+- Database migration required: yes, `DoctrineMigrations\Version20260917110000`.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
 - Back up application code and the database before upgrading.
-- If 1.0.120 was copied and migrated but stopped at `Refresh prod-cache`, run `php bin/console cache:clear --env=prod --no-debug --no-interaction` inside the application PHP container as the application user. Confirm that the command succeeds and the website works.
-- An update process started with older code can still use the old cache step during its first apply. Once the new code is loaded, manual post-update tasks also use the corrected command.
-- Manual cache recovery does not rewrite the status of a historical failed apply log. Verify the current application state and latest run separately.
 
 ### Post-update verification
 
-- Confirm that the admin area shows version `1.0.121` and the cache task exits with code 0.
-- Confirm that Composer no longer reports an out-of-date lock file.
-- If needed, run the manual cache task and confirm that its log shows `cache:clear`.
-- Verify login, ticket views, and incoming mail after the update.
+- Confirm that the admin area shows version `1.0.122` and that the new migration has completed.
+- Assign a primary and a secondary responsible technician to a root company, then verify the inherited team on a subsidiary company.
+- Confirm that the primary technician is recommended first when assigning a ticket for that company.
+- Confirm that a responsible technician sees the company group on the technician dashboard.
 
 ## What This Repository Contains
 
@@ -183,7 +179,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.121.zip.sha256
+sha256sum -c driftpunkt-install-1.0.122.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -216,10 +212,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.121.zip` and `driftpunkt-install-1.0.121.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.122.zip` and `driftpunkt-install-1.0.122.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.121.zip.sha256
+sha256sum -c driftpunkt-install-1.0.122.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -227,9 +223,9 @@ sha256sum -c driftpunkt-install-1.0.121.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.121.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.122.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.121/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.122/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -288,10 +284,10 @@ Attachment ZIP archiving is configured under **Administration → Settings → T
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.121.zip` and `driftpunkt-install-1.0.121.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.122.zip` and `driftpunkt-install-1.0.122.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.121.zip.sha256
+sha256sum -c driftpunkt-install-1.0.122.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -299,8 +295,8 @@ sha256sum -c driftpunkt-install-1.0.121.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.121.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.121/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.122.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.122/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -397,9 +393,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.122.zip`
 - `packages/driftpunkt-upgrade-1.0.121.zip`
 - `packages/driftpunkt-upgrade-1.0.120.zip`
-- `packages/driftpunkt-upgrade-1.0.119.zip`
 
 ## Notes
 
