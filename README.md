@@ -130,9 +130,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.123`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.123.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.123.zip`
+- Current exported release: `1.0.124`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.124.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.124.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 16.
@@ -141,26 +141,29 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.123
+### Driftpunkt 1.0.124
 
 ### Changed
 
-- “Mina kundansvar” is now disabled by default for all technicians.
-- Technicians can enable the customer responsibility overview from their personal portal settings.
-- The preference is stored per technician account and does not require a database migration.
+- Technicians and ticket coordinators can store a sanitized personal email signature that is added only to customer emails, not to the ticket comment history.
+- Superadmins can globally enable or disable personal email signatures under ticket settings. Existing saved signatures are preserved while the feature is disabled.
+- Customer replies can send a separate, logged copy to the replying user's account email address.
+- Company names use a shared, clearer badge in relevant technician and coordinator views.
 
 ### Database and operations
 
-- Database migration required: no.
+- Database migration required: yes (`Version20260922120000`).
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
 - Back up application code and the database before upgrading.
 
 ### Post-update verification
 
-- Confirm that the admin area shows version `1.0.123`.
-- Confirm that “Mina kundansvar” is hidden by default on a technician dashboard.
-- Enable the option under technician settings and confirm that assigned customer groups are shown.
+- Confirm that the admin area shows version `1.0.124`.
+- Run the database migrations and confirm that users have the new email-signature fields.
+- As superadmin, disable personal email signatures and confirm that technicians cannot edit or send them; then enable the feature again.
+- Save a technician signature, send a customer reply with a personal copy, and confirm that the customer email and copy contain the signature while the ticket history does not.
+- Confirm that company badges are visible in technician and coordinator ticket views.
 
 ## What This Repository Contains
 
@@ -178,7 +181,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.123.zip.sha256
+sha256sum -c driftpunkt-install-1.0.124.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -211,10 +214,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.123.zip` and `driftpunkt-install-1.0.123.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.124.zip` and `driftpunkt-install-1.0.124.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.123.zip.sha256
+sha256sum -c driftpunkt-install-1.0.124.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -222,9 +225,9 @@ sha256sum -c driftpunkt-install-1.0.123.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.123.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.124.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.123/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.124/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -283,10 +286,10 @@ Attachment ZIP archiving is configured under **Administration → Settings → T
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.123.zip` and `driftpunkt-install-1.0.123.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.124.zip` and `driftpunkt-install-1.0.124.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.123.zip.sha256
+sha256sum -c driftpunkt-install-1.0.124.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -294,8 +297,8 @@ sha256sum -c driftpunkt-install-1.0.123.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.123.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.123/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.124.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.124/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -392,9 +395,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.124.zip`
 - `packages/driftpunkt-upgrade-1.0.123.zip`
 - `packages/driftpunkt-upgrade-1.0.122.zip`
-- `packages/driftpunkt-upgrade-1.0.121.zip`
 
 ## Notes
 
