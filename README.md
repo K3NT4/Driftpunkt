@@ -8,15 +8,15 @@ This public repository distributes release archives, documentation, and selected
 
 The screenshots may show the Swedish interface. Language and branding can be changed after installation through the running application and its environment-specific configuration.
 
-## Recent Improvements: 1.0.119–1.0.121
+## Recent Improvements
 
-- A separate "Supporting technician" queue shows additional assignments, while "My tickets" shows primary assignments.
-- Company inboxes can register new contacts from explicitly allowed sender domains and create private tickets. Automatic registration is off by default.
-- Super administrators can preserve the previous mail workflow for a parent company and every descendant, overriding inbox automation throughout that branch.
-- Automatically created contacts use email support without portal access. Administrators enable portal access separately.
-- Transactional registration, shared locking, retries, and audit logs improve reliability during concurrent mail processing and database failures.
-- Company-specific parser rules and sample identities have been replaced with company-neutral behavior and examples.
-- Version 1.0.121 replaces direct deletion of the active production cache with Symfony cache clearing and warmup, and synchronizes the Composer lock hash without changing dependency versions.
+- Company badges show the company name and icon without a redundant label.
+- New review drafts from unknown mail senders notify the configured triage recipients and link to the matching draft in the coordinator queue. Delivery failures are logged.
+- Company email domains route unknown senders arriving at a parent inbox to the correct subsidiary. Automatic registration remains off by default; when enabled, it creates contacts on the matched company.
+- Customer access to internal comment attachments is blocked, and email replies follow the same access rules as the portal.
+- Login and MFA have account-based attempt limits, while public forms have additional IP-based limits.
+- Password reset and translation output escaping, attachment extensions, and database backup and restore error handling have been improved.
+- Technicians and coordinators can add personal signatures to customer emails and send a separate copy to their own account address.
 
 ## Screenshots
 
@@ -130,9 +130,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.124`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.124.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.124.zip`
+- Current exported release: `1.0.125`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.125.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.125.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 16.
@@ -141,29 +141,48 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.124
+### Driftpunkt 1.0.125
 
-### Changed
+### Fixed
 
-- Technicians and ticket coordinators can store a sanitized personal email signature that is added only to customer emails, not to the ticket comment history.
-- Superadmins can globally enable or disable personal email signatures under ticket settings. Existing saved signatures are preserved while the feature is disabled.
-- Customer replies can send a separate, logged copy to the replying user's account email address.
-- Company names use a shared, clearer badge in relevant technician and coordinator views.
+- Company badges show the company icon and name without the redundant company label in technician and coordinator views.
+- New review drafts from unknown mail senders notify the recipients configured in the existing triage settings. Notifications include the sender, inbox, review reason, and a link to the matching draft in the Unknown tickets queue.
+- Delivery failures are logged without losing the draft or stopping notifications to other recipients. Personal email preferences are respected, and processing the same completed message again does not send another notification.
+
+### New
+
+- Companies can have their own email domains under Administration → Companies. A parent-company inbox uses these domains to route unknown senders to the correct subsidiary. Automatic registration creates new contacts on that subsidiary; otherwise, the review draft belongs to the subsidiary.
+- Automatic registration on a parent-company inbox accepts existing customer contacts belonging to its subsidiaries without unnecessarily sending them for review.
+
+### Security
+
+- Customers cannot download or preview attachments belonging to internal comments. Attachments in customer-visible comments remain available to the customer.
+- The password-reset page and admin translation view escape email addresses and labels before displaying them.
+- Login has an additional account-based limit independent of IP address: 20 failed attempts per 15 minutes. MFA codes have an account-based limit of 15 attempts per 15 minutes.
+- Password reset, self-registration, and the public ticket form have an additional IP-based limit that cannot be bypassed by changing the submitted email address.
+- Inboxes that do not allow unknown senders also reject replies, forwarded messages, and messages containing ticket references from completely unknown senders, instead of creating drafts and review notifications.
+- Email replies follow the same access rules as the portal. Technicians can reply only to tickets they may read, and customers with access to all tickets for their company can reply to those tickets.
+- Uploaded attachments use the validated file extension instead of an extension guessed from their contents.
+- MariaDB backup and restore processes drain error output while running to avoid hanging when tools produce large amounts of error output.
 
 ### Database and operations
 
-- Database migration required: yes (`Version20260922120000`).
+- Database migration required from 1.0.124: yes. `Version20261001120000` adds `companies.email_domains`. Run the normal migration step with `php bin/console doctrine:migrations:migrate --env=prod`.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
-- Back up application code and the database before upgrading.
+- Back up application files and the database before upgrading.
+- Existing drafts are not notified retroactively. Failed notifications are not retried automatically.
+- Notification event `unknown_sender_review_created` records delivery, delivery failures, missing recipients, and disabled personal notifications.
 
 ### Post-update verification
 
-- Confirm that the admin area shows version `1.0.124`.
-- Run the database migrations and confirm that users have the new email-signature fields.
-- As superadmin, disable personal email signatures and confirm that technicians cannot edit or send them; then enable the feature again.
-- Save a technician signature, send a customer reply with a personal copy, and confirm that the customer email and copy contain the signature while the ticket history does not.
-- Confirm that company badges are visible in technician and coordinator ticket views.
+- Confirm that the admin area shows version `1.0.125`, migration `Version20261001120000` has run, and the update job has completed.
+- Confirm that company badges show the icon and company name without the redundant label.
+- Check triage recipients and their personal email preferences. Active ticket coordinators are used when neither a recipient nor a shared address is configured.
+- Send a test email from an unknown sender to an inbox where that sender requires review. Confirm that an internal draft is created and the review notification arrives through the installation's outgoing mail server.
+- Sign in with a ticket coordinator account through the notification link and confirm that the correct draft appears in the Unknown tickets queue.
+- Sign in as a customer and verify that attachments in customer-visible comments can be downloaded.
+- Configure email domains on subsidiaries and send a test message from an unregistered address on a subsidiary domain to the parent-company inbox. Confirm that the draft or ticket belongs to the subsidiary.
 
 ## What This Repository Contains
 
@@ -181,7 +200,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.124.zip.sha256
+sha256sum -c driftpunkt-install-1.0.125.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -214,10 +233,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.124.zip` and `driftpunkt-install-1.0.124.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.125.zip` and `driftpunkt-install-1.0.125.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.124.zip.sha256
+sha256sum -c driftpunkt-install-1.0.125.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -225,9 +244,9 @@ sha256sum -c driftpunkt-install-1.0.124.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.124.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.125.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.124/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.125/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -286,10 +305,10 @@ Attachment ZIP archiving is configured under **Administration → Settings → T
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.124.zip` and `driftpunkt-install-1.0.124.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.125.zip` and `driftpunkt-install-1.0.125.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.124.zip.sha256
+sha256sum -c driftpunkt-install-1.0.125.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -297,8 +316,8 @@ sha256sum -c driftpunkt-install-1.0.124.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.124.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.124/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.125.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.125/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -334,9 +353,11 @@ docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env logs -f app
 
 ## Automatic Customer Registration and Company Groups
 
-As super administrator, edit an inbox, link an active company, allow unknown senders, enable automatic customer registration, and enter exact sender domains such as `company.example`. Enter subdomains separately; do not use `@` or wildcards.
+As super administrator, edit an inbox, link an active company, allow unknown senders, and enable automatic customer registration. Configure exact sender domains on the inbox or email domains on the company and its subsidiaries under Administration → Companies, for example `company.example`. Enter subdomains separately; do not use `@` or wildcards.
 
-A new sender on an allowed domain becomes a customer contact of the inbox company and receives a private ticket. Existing contacts and sender aliases are reused. Company conflicts and unknown senders outside the domain list require review. Existing contacts are never moved between companies automatically.
+A sender domain matching an active company in the inbox company branch creates the new contact on that company and a private ticket. Company domains take precedence over the inbox domain list. If only the inbox domain list matches, the inbox company is used. Existing contacts and aliases in the same branch are reused without moving contacts between companies.
+
+Company domains can also route review drafts to the correct subsidiary when automatic registration is disabled. Drafts requiring review notify the configured triage recipients and link to the Unknown tickets queue. If an inbox rejects unknown senders, their messages are rejected even when they contain a reply or ticket reference.
 
 To retain the previous workflow for a company group:
 
@@ -383,6 +404,14 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 9. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
 10. Verify `systemctl --failed`, mail polling, and the attachment-archive service log after its first scheduled run.
 
+### Upgrading from 1.0.124 to 1.0.125
+
+- Use the latest `driftpunkt-upgrade-1.0.125.zip` and its matching checksum.
+- Migration `Version20261001120000` is required. It adds `companies.email_domains`; let the update flow run migrations and refresh the production cache, then reload PHP/OPcache.
+- Verify the displayed version, a completed update job, company-domain routing, and customer access to customer-visible attachments.
+- Send a test message from an unknown sender to an inbox requiring review. Confirm that the triage notification arrives through the production mail server and opens the correct draft after coordinator login.
+- Existing drafts are not notified retroactively, and failed notifications are not retried automatically. Check `unknown_sender_review_created` in the notification log when delivery is missing.
+
 ### Interrupted 1.0.45 Migration
 
 Version `1.0.46` and later fix the 1.0.45 customer report migration error `Call to undefined method Doctrine\DBAL\Schema\Table::changeColumn()`. If an upgrade stopped on that error, apply the latest `driftpunkt-upgrade-<version>.zip` and rerun the migration step after the fixed files are in place:
@@ -395,9 +424,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.125.zip`
 - `packages/driftpunkt-upgrade-1.0.124.zip`
 - `packages/driftpunkt-upgrade-1.0.123.zip`
-- `packages/driftpunkt-upgrade-1.0.122.zip`
 
 ## Notes
 
