@@ -10,6 +10,13 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 ## Recent Improvements
 
+- Ticket coordinators can close active and resolved tickets, including unassigned tickets, with a required resolution. Administrative closing sets status Closed, records the closing time, and sends no customer email.
+- Saved resolutions remain visible in a separate read-only panel after closing. Repeating a close request preserves an already closed ticket's resolution and closing time.
+- Ticket coordinators can change priority without changing status, resolution, assignments, or the SLA policy.
+- Closing and priority changes require coordinator permissions and CSRF protection, record the acting user and before-and-after values in ticket history, and preserve read-only merged source tickets.
+- Forwarded messages and forwarded delivery failures keep their forwarded content in the ticket, while the customer's own signature is still removed.
+- Technicians can read the complete original email below the ticket description and download it as an `.eml` file.
+- Auto-replies and bounces no longer create tickets, machine-sent alerts never receive confirmations, and confirmations are rate-limited per sender to prevent mail loops.
 - Company badges show the company name and icon without a redundant label.
 - New review drafts from unknown mail senders notify the configured triage recipients and link to the matching draft in the coordinator queue. Delivery failures are logged.
 - Company email domains route unknown senders arriving at a parent inbox to the correct subsidiary. Automatic registration remains off by default; when enabled, it creates contacts on the matched company.
@@ -35,8 +42,6 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 | Ticket coordinator | Admin dashboard |
 | --- | --- |
 | ![Driftpunkt ticket coordinator](assets/screenshots/coordinator-portal.png) | ![Driftpunkt admin dashboard](assets/screenshots/admin-dashboard.png) |
-
-![Driftpunkt super admin dashboard](assets/screenshots/super-admin-dashboard.png)
 
 ## What Driftpunkt Includes
 
@@ -97,8 +102,10 @@ Visible features depend on enabled settings, company access, and role permission
 
 - Use a coordinator overview for unassigned work, stale tickets, waiting customer cases, workload, and triage signals, with SLA signals shown only when SLA is in use.
 - Distribute tickets to technicians or teams, follow company and queue health, add comments, and keep cases moving without needing full admin access.
+- Change ticket priority without changing status, resolution, assignments, or the SLA policy.
+- Close active and resolved tickets with a required resolution, including unassigned tickets. Administrative closing sends no customer email; the saved resolution remains visible, and merged source tickets stay read-only.
 - Open clearer coordinator and customer reports by company and period for inflow, backlog, status, priority, impact, request type, escalation, risk, ticket aging, and SLA only when applicable.
-- Follow an expanded coordinator guide for assignment, tickets in progress, closed tickets, comment visibility, reopening, and reporting, and submit internal reports from the same portal.
+- Follow an expanded coordinator guide for assignment, priority changes, tickets in progress, closing, comment visibility, reopening, and reporting, and submit internal reports from the same portal.
 - View company data plus computer and printer inventory when data exists and access is available.
 - Save a personal default language so the coordinator portal opens in the preferred language on the next login.
 
@@ -130,59 +137,49 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.125`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.125.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.125.zip`
+- Current exported release: `1.0.127`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.127.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.127.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
-- Public README assets exported here: 16.
+- Public README assets exported here: 15.
 
 ## Latest Release Notes
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.125
+### Driftpunkt 1.0.127
 
-### Fixed
+### Fixed and improved
 
-- Company badges show the company icon and name without the redundant company label in technician and coordinator views.
-- New review drafts from unknown mail senders notify the recipients configured in the existing triage settings. Notifications include the sender, inbox, review reason, and a link to the matching draft in the Unknown tickets queue.
-- Delivery failures are logged without losing the draft or stopping notifications to other recipients. Personal email preferences are respected, and processing the same completed message again does not send another notification.
+- Ticket coordinators can close active and resolved tickets from the ticket page, including tickets without an assigned technician. A non-empty resolution is required. Closing sets the status to **Closed**, records the closing time, and sends no customer email, following the existing administrative closing behavior.
+- The saved resolution appears in a separate read-only panel, including after the ticket is closed. Repeating a close request for an already closed ticket preserves its resolution and closing time.
+- Ticket coordinators can change ticket priority without changing status, resolution, assignments, or the SLA policy.
+- The coordinator guide explains closing and priority changes in Swedish, English, and Norwegian. Reopening still requires an internal reason and sets the status to **Open**.
 
-### New
+### Access and history
 
-- Companies can have their own email domains under Administration → Companies. A parent-company inbox uses these domains to route unknown senders to the correct subsidiary. Automatic registration creates new contacts on that subsidiary; otherwise, the review draft belongs to the subsidiary.
-- Automatic registration on a parent-company inbox accepts existing customer contacts belonging to its subsidiaries without unnecessarily sending them for review.
-
-### Security
-
-- Customers cannot download or preview attachments belonging to internal comments. Attachments in customer-visible comments remain available to the customer.
-- The password-reset page and admin translation view escape email addresses and labels before displaying them.
-- Login has an additional account-based limit independent of IP address: 20 failed attempts per 15 minutes. MFA codes have an account-based limit of 15 attempts per 15 minutes.
-- Password reset, self-registration, and the public ticket form have an additional IP-based limit that cannot be bypassed by changing the submitted email address.
-- Inboxes that do not allow unknown senders also reject replies, forwarded messages, and messages containing ticket references from completely unknown senders, instead of creating drafts and review notifications.
-- Email replies follow the same access rules as the portal. Technicians can reply only to tickets they may read, and customers with access to all tickets for their company can reply to those tickets.
-- Uploaded attachments use the validated file extension instead of an extension guessed from their contents.
-- MariaDB backup and restore processes drain error output while running to avoid hanging when tools produce large amounts of error output.
+- Both actions require the ticket coordinator role and a valid CSRF token. Coordinators do not receive broader technician permissions.
+- Closing and priority changes record the acting user and before-and-after values in the ticket history. Repeating an unchanged action does not add another history entry.
+- Merged source tickets remain read-only. Closing and priority changes are available on the main ticket.
 
 ### Database and operations
 
-- Database migration required from 1.0.124: yes. `Version20261001120000` adds `companies.email_domains`. Run the normal migration step with `php bin/console doctrine:migrations:migrate --env=prod`.
+- Database migration required from 1.0.126: no. This release adds no new migration. Upgrades from older versions must still apply the existing migrations through the normal update flow.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
 - Back up application files and the database before upgrading.
-- Existing drafts are not notified retroactively. Failed notifications are not retried automatically.
-- Notification event `unknown_sender_review_created` records delivery, delivery failures, missing recipients, and disabled personal notifications.
+- Use the normal update flow to apply the package and complete post-update tasks. Existing ticket assignments and SLA policies are preserved.
 
 ### Post-update verification
 
-- Confirm that the admin area shows version `1.0.125`, migration `Version20261001120000` has run, and the update job has completed.
-- Confirm that company badges show the icon and company name without the redundant label.
-- Check triage recipients and their personal email preferences. Active ticket coordinators are used when neither a recipient nor a shared address is configured.
-- Send a test email from an unknown sender to an inbox where that sender requires review. Confirm that an internal draft is created and the review notification arrives through the installation's outgoing mail server.
-- Sign in with a ticket coordinator account through the notification link and confirm that the correct draft appears in the Unknown tickets queue.
-- Sign in as a customer and verify that attachments in customer-visible comments can be downloaded.
-- Configure email domains on subsidiaries and send a test message from an unregistered address on a subsidiary domain to the parent-company inbox. Confirm that the draft or ticket belongs to the subsidiary.
+- Confirm that the admin area shows version `1.0.127` and the update job has completed.
+- Sign in as a ticket coordinator, change the priority of a test ticket, and confirm that its status, resolution, and assignments are unchanged. Check the acting user and before-and-after values in the ticket history.
+- Close an active test ticket with a resolution, including a ticket without an assigned technician. Confirm the **Closed** status, closing time, saved resolution in the read-only panel, and placement under **Closed tickets**. Confirm that closing sends no customer email.
+- Confirm that an empty resolution prevents closing without changing the ticket. Repeated closing of an already closed ticket must preserve its resolution and closing time without adding another history entry.
+- Open a resolved test ticket and confirm that it can be closed with its existing resolution.
+- Open a merged source ticket and confirm that the closing and priority forms are absent. Confirm that the main ticket remains writable.
+- Confirm that reopening still requires an internal reason and sets the ticket status to **Open**.
 
 ## What This Repository Contains
 
@@ -200,7 +197,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.125.zip.sha256
+sha256sum -c driftpunkt-install-1.0.127.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -233,10 +230,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.125.zip` and `driftpunkt-install-1.0.125.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.127.zip` and `driftpunkt-install-1.0.127.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.125.zip.sha256
+sha256sum -c driftpunkt-install-1.0.127.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -244,9 +241,9 @@ sha256sum -c driftpunkt-install-1.0.125.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.125.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.127.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.125/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.127/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -305,10 +302,10 @@ Attachment ZIP archiving is configured under **Administration → Settings → T
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.125.zip` and `driftpunkt-install-1.0.125.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.127.zip` and `driftpunkt-install-1.0.127.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.125.zip.sha256
+sha256sum -c driftpunkt-install-1.0.127.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -316,8 +313,8 @@ sha256sum -c driftpunkt-install-1.0.125.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.125.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.125/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.127.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.127/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -404,6 +401,21 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 9. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
 10. Verify `systemctl --failed`, mail polling, and the attachment-archive service log after its first scheduled run.
 
+### Upgrading from 1.0.126 to 1.0.127
+
+- Use the latest `driftpunkt-upgrade-1.0.127.zip` and its matching checksum.
+- No new database migration is required from 1.0.126. Let the normal update flow complete its post-update steps, refresh the production cache, then reload PHP/OPcache.
+- Sign in as a ticket coordinator, change a ticket priority, and confirm that status and assignments remain unchanged.
+- Close an active or resolved ticket with a resolution. Confirm status Closed, the saved resolution, the closing time, and the audit entry. Administrative closing sends no customer email.
+- Confirm that merged source tickets remain read-only and that reopening a closed ticket still requires an internal reason.
+
+### Upgrading from 1.0.125 to 1.0.126
+
+- Use the latest `driftpunkt-upgrade-1.0.126.zip` and its matching checksum.
+- Migration `Version20261008120000` is required. It adds `original_body`, `raw_message_path` and `automatic_kind` to `incoming_mails`; let the update flow run migrations and refresh the production cache, then reload PHP/OPcache.
+- Raw messages are stored under `var/incoming_mail_attachments/<id>/original.eml`. Include that directory in file backups.
+- Verify the displayed version, a forwarded message keeping its forwarded content, the original email view and `.eml` download, and that an out-of-office reply is logged as ignored without creating a ticket.
+
 ### Upgrading from 1.0.124 to 1.0.125
 
 - Use the latest `driftpunkt-upgrade-1.0.125.zip` and its matching checksum.
@@ -424,9 +436,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.127.zip`
+- `packages/driftpunkt-upgrade-1.0.126.zip`
 - `packages/driftpunkt-upgrade-1.0.125.zip`
-- `packages/driftpunkt-upgrade-1.0.124.zip`
-- `packages/driftpunkt-upgrade-1.0.123.zip`
 
 ## Notes
 
