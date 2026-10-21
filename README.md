@@ -10,6 +10,8 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 ## Recent Improvements
 
+- Release 1.0.128 updates 56 existing Composer packages, including core Symfony components to 8.1.9, while keeping Symfony in the 8.1 series. No packages were added or removed from the lockfile.
+- PHP must be updated separately to 8.4.27 or later within 8.4, or 8.5.12 or later within 8.5, before applying the new application archive. The Debian installer and Docker build check the required patch level for each PHP series.
 - Ticket coordinators can close active and resolved tickets, including unassigned tickets, with a required resolution. Administrative closing sets status Closed, records the closing time, and sends no customer email.
 - Saved resolutions remain visible in a separate read-only panel after closing. Repeating a close request preserves an already closed ticket's resolution and closing time.
 - Ticket coordinators can change priority without changing status, resolution, assignments, or the SLA policy.
@@ -137,9 +139,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.127`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.127.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.127.zip`
+- Current exported release: `1.0.128`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.128.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.128.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 15.
@@ -148,38 +150,78 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.127
+### Driftpunkt 1.0.128
 
-### Fixed and improved
+Security and maintenance release dated October 21, 2026. Update and verify the PHP engine before applying the application package.
 
-- Ticket coordinators can close active and resolved tickets from the ticket page, including tickets without an assigned technician. A non-empty resolution is required. Closing sets the status to **Closed**, records the closing time, and sends no customer email, following the existing administrative closing behavior.
-- The saved resolution appears in a separate read-only panel, including after the ticket is closed. Repeating a close request for an already closed ticket preserves its resolution and closing time.
-- Ticket coordinators can change ticket priority without changing status, resolution, assignments, or the SLA policy.
-- The coordinator guide explains closing and priority changes in Swedish, English, and Norwegian. Reopening still requires an internal reason and sets the status to **Open**.
+### Fixed and Improved
 
-### Access and history
+- 56 existing Composer packages receive patch updates, including core Symfony components to 8.1.9, security fixes in HttpFoundation and YAML, Doctrine, and PHPUnit in the development environment. No packages are added or removed. Symfony components remain on the 8.1 release line.
+- PHP requirements are now **8.4.27 or later within the 8.4 release line**, or **8.5.12 or later within the 8.5 release line**. PHP 8.5.11 does not meet the requirement. These versions include fixes for CVE-2026-109618 and CVE-2026-109619; see the [official PHP security advisory](https://www.php.net/archive/2026.php#2026-10-21-5).
+- Debian setup and Docker builds check the minimum version for each supported PHP release line. Docker defaults to `php:8.4.27-apache` and supports an explicit base-image override subject to the same checks.
+- An existing icon regression test now checks HTML entities inside CSS rather than ordinary text nodes, avoiding a false failure caused by valid PHP 8.4 DOM serialization. Production HTML translation code is unchanged.
 
-- Both actions require the ticket coordinator role and a valid CSRF token. Coordinators do not receive broader technician permissions.
-- Closing and priority changes record the acting user and before-and-after values in the ticket history. Repeating an unchanged action does not add another history entry.
-- Merged source tickets remain read-only. Closing and priority changes are available on the main ticket.
+### Before upgrading Debian or Ubuntu
+
+1. Identify the operating system, installed PHP packages, actual FPM pool or Apache/mod_php module, and CLI binary. Verify the web runtime through a protected HTTP request; `php -v` only checks CLI. Do not publish a `phpinfo()` page.
+2. Make a restorable backup of MariaDB, application code, private environment files, and external secrets. Preserve the existing `APP_SECRET`: encrypted MFA and email credentials depend on it. Include `var/`, particularly `var/share`, ticket attachments and archives, `var/incoming_mail_attachments`, and uploaded branding in `htdocs/assets/branding`. Include any external storage paths.
+3. Schedule downtime and enable maintenance mode. **Application maintenance mode does not protect against the PHP engine vulnerabilities**, which can be triggered before application code runs. Restrict access at the server or proxy, or stop the affected web service, while an unverified PHP runtime is being replaced. Pause affected long-running workers.
+4. Inspect package candidates and simulate the upgrade before updating the installed PHP release line through its trusted package source. Ensure the required PHP patch level and `ctype`, `curl`, `iconv`, `intl`, `mbstring`, `openssl`, `pdo`, `pdo_mysql`, `xml`, and `zip`, plus `opcache` where used. Follow the PHP update and verification section in `docs/installation_and_deployment.md` inside the unpacked release archive. If suitable fixed packages are unavailable, resolve the PHP installation before applying this release.
+5. Restart the FPM service used by the virtual host, or Apache when using mod_php, and replace long-running PHP workers. Check `PHP_CLI_BINARY` and PHP paths in cron/systemd. CLI, web, update workers, and scheduled jobs must all use fixed runtimes.
+6. Verify the CLI and actual web runtime **before applying the upgrade ZIP**. Production must use `APP_ENV=prod` and `APP_DEBUG=0`: the package excludes development bundles. Successful Composer autoloading alone does not enforce the separate PHP 8.5 minimum. Keep external access restricted until application checks are complete.
+
+These initial commands inspect the server without changing its configuration:
+
+```bash
+cat /etc/os-release
+command -v php
+php -v
+php --ini
+php -m
+```
+
+### Apply the application upgrade
+
+- Use `driftpunkt-upgrade-1.0.128.zip` for an existing installation. The install package is intended for a new installation.
+- Verify the matching SHA-256 file before use:
+
+```bash
+sha256sum -c driftpunkt-upgrade-1.0.128.zip.sha256
+```
+
+- After PHP verification succeeds, upload the package through the super-admin update page, review preflight checks, and use the normal update worker and post-update steps. Production dependencies are included in `vendor/`; PHPUnit and other development dependencies are excluded.
+- Do not run `composer update` on the server or recreate `.env.local` or `APP_SECRET`. Let the normal update flow check pending migrations and clear and warm production cache as the application user. Upgrades from older releases must still apply earlier migrations.
+- Confirm that the update run reaches `completed` without failed migration, cache, or post-update steps. Restart affected PHP/OPcache processes and long-running workers after the code update.
+
+### Docker and NAS
+
+- Application packages do not replace PHP inside existing containers. Build from the 1.0.128 codebase with `build --pull app`, and recreate **both `app` and `scheduler`** only after the build succeeds. Verify PHP in both services, Composer platform requirements, and the web PHP version/SAPI through an HTTP request.
+- Follow the Docker/NAS instructions in `docs/installation_and_deployment.md` inside the unpacked release archive. If the upstream multi-platform index is incomplete, the guide includes an explicit AMD64-only option using the official architecture-specific image and the same PHP checks. Do not fall back to an older vulnerable image when a pull or build fails. Other architectures require an available fixed image for their platform.
+- Preserve database/runtime volumes and the existing environment file. Run the normal migration, cache, and post-update steps. Container recreation causes a short service interruption.
 
 ### Database and operations
 
-- Database migration required from 1.0.126: no. This release adds no new migration. Upgrades from older versions must still apply the existing migrations through the normal update flow.
-- Cache refresh required: yes.
-- PHP/OPcache restart or reload recommended: yes.
-- Back up application files and the database before upgrading.
-- Use the normal update flow to apply the package and complete post-update tasks. Existing ticket assignments and SLA policies are preserved.
+- Database migration required from 1.0.127: no. Existing migrations from older releases must still be handled by the normal update flow.
+- Cache refresh required: yes. Clear and warm production cache after applying the upgrade.
+- PHP restart/reload required: yes. Replace web processes, OPcache, and long-running workers after engine and code updates; clearing application cache does not replace PHP.
+- Preserve configuration, uploads, and secrets. Automatic code backup does not replace database and runtime-data backups.
 
 ### Post-update verification
 
-- Confirm that the admin area shows version `1.0.127` and the update job has completed.
-- Sign in as a ticket coordinator, change the priority of a test ticket, and confirm that its status, resolution, and assignments are unchanged. Check the acting user and before-and-after values in the ticket history.
-- Close an active test ticket with a resolution, including a ticket without an assigned technician. Confirm the **Closed** status, closing time, saved resolution in the read-only panel, and placement under **Closed tickets**. Confirm that closing sends no customer email.
-- Confirm that an empty resolution prevents closing without changing the ticket. Repeated closing of an already closed ticket must preserve its resolution and closing time without adding another history entry.
-- Open a resolved test ticket and confirm that it can be closed with its existing resolution.
-- Open a merged source ticket and confirm that the closing and priority forms are absent. Confirm that the main ticket remains writable.
-- Confirm that reopening still requires an internal reason and sets the ticket status to **Open**.
+- Confirm that the admin area shows `1.0.128`, the update run is `completed`, and every mandatory post-update step has succeeded.
+- Run `composer check-platform-reqs --no-dev` in the actual application environment. Separately verify web PHP and the CLI binary used by cron/systemd or `scheduler`.
+- Check the homepage, status page, Swedish/English/Norwegian text, and icons. Test login and MFA where enabled, then verify ticket comments and attachments.
+- Test mail polling, outgoing email, and scheduled jobs in a controlled flow. Review update logs, `var/log/`, and relevant FPM, Apache, systemd, or container logs.
+- Restore external access and disable maintenance mode only after verification succeeds.
+
+### Recovery
+
+- Keep web access restricted and restore previous application code from a verified backup if needed. Coordinate database restoration with code and runtime data if an older-release upgrade changed schema or data; do not overwrite subsequent user data without a recovery plan.
+- **Keep the fixed PHP runtime when rolling back the application.** Do not restore a vulnerable PHP image. Preserve the original `APP_SECRET` and private environment files, and verify compatibility, cache, and application behavior before restoring access.
+
+### Release verification
+
+- The full application suite passed on PHP 8.4.27 with 859 tests and 8,966 assertions. Composer audit reported no known advisories for the locked dependencies. An isolated HTTP check confirmed PHP 8.4.27 with `apache2handler`. Production runtime and deployment checks must be performed separately.
 
 ## What This Repository Contains
 
@@ -187,6 +229,30 @@ These notes are copied from the packaged release metadata for the current export
 - `packages/*.sha256`: checksum files for package verification.
 - `assets/`: logo and screenshots used by this README.
 - `PUBLIC_EXPORT_MANIFEST.md`: export summary with package versions and checksums.
+
+## Current Runtime Requirements
+
+- PHP `~8.4.27 || ~8.5.12`: 8.4.27 or later within 8.4, or 8.5.12 or later within 8.5. PHP 8.5.11 does not meet these requirements.
+- PHP extensions: `ctype`, `curl`, `iconv`, `intl`, `mbstring`, `openssl`, `pdo`, `pdo_mysql`, `xml`, and `zip`; `opcache` is recommended.
+- MariaDB 10.11 or later, Composer 2 for deployment and platform checks, and a web server with its document root set to `htdocs/`.
+- Production must use `APP_ENV=prod` and `APP_DEBUG=0`. The archives contain production `vendor/` dependencies without development bundles or PHPUnit.
+
+The PHP patch levels above fix CVE-2026-109618 and CVE-2026-109619; see the [official PHP security advisory](https://www.php.net/archive/2026.php#2026-10-21-5). Composer and application ZIP updates do not replace the PHP engine. Maintenance mode does not protect against PHP engine vulnerabilities that can be triggered before application code runs. Stop or isolate public web access while patching an unverified PHP runtime.
+
+Check the actual server and its installed PHP packages before changing them. The packaged `docs/installation_and_deployment.md` explains package inventory, candidate versions, simulated updates, and PHP verification. Update and verify the PHP engine before applying an application or vendor update.
+
+Run these checks in the application environment, using the PHP CLI binary selected for that installation:
+
+```bash
+php -v
+php --ini
+php -m
+composer check-platform-reqs --no-dev
+```
+
+Compare the reported version against the required PHP series even before applying the new ZIP: the existing installation may have weaker Composer requirements, and a successful autoload alone does not enforce the separate 8.5 minimum. Verify the actual web PHP version and SAPI through a protected request as well; CLI and PHP-FPM or Apache/mod_php may use different versions. Do not publish a `phpinfo()` page.
+
+Restart the PHP-FPM service used by the site, or restart Apache for mod_php, after updating the engine. Restart long-running PHP workers too, and check `PHP_CLI_BINARY` plus the PHP paths used by cron and systemd. Clear and warm the production cache and complete the restart requirements recorded in the release metadata after applying new application code.
 
 ## Fresh installation
 
@@ -197,13 +263,13 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.127.zip.sha256
+sha256sum -c driftpunkt-install-1.0.128.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
 4. Unpack the zip file into that directory.
 5. Point the web server document root to the unpacked application directory's `htdocs/` folder. On shared hosting where the fixed public directory is already named `/htdocs`, unpack the whole package there and keep the package root `.htaccess` enabled.
-6. Configure the environment file for your deployment. Start from the example files included inside the package and set real secrets, database credentials, mail settings, and domain-specific values.
+6. Configure the environment file for your deployment. Start from the example files included inside the package and set `APP_ENV=prod`, `APP_DEBUG=0`, real secrets, database credentials, mail settings, and domain-specific values.
 7. Start the database and web runtime for your deployment model.
 8. Run the installer from the unpacked application directory:
 
@@ -230,10 +296,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.127.zip` and `driftpunkt-install-1.0.127.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.128.zip` and `driftpunkt-install-1.0.128.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.127.zip.sha256
+sha256sum -c driftpunkt-install-1.0.128.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -241,9 +307,9 @@ sha256sum -c driftpunkt-install-1.0.127.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.127.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.128.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.127/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.128/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -253,7 +319,7 @@ cd /var/www/driftpunkt
 DOMAIN=driftpunkt.example.com sudo -E bash deploy/debian/setup.sh
 ```
 
-5. Edit `/var/www/driftpunkt/.env.local` and set real values for `APP_SECRET`, `DEFAULT_URI`, `DATABASE_URL`, `MAILER_DSN`, and `MAILER_FROM`:
+5. Edit `/var/www/driftpunkt/.env.local`, keep `APP_ENV=prod` and `APP_DEBUG=0`, and set real values for `APP_SECRET`, `DEFAULT_URI`, `DATABASE_URL`, `MAILER_DSN`, and `MAILER_FROM`:
 
 ```bash
 sudo nano /var/www/driftpunkt/.env.local
@@ -302,10 +368,10 @@ Attachment ZIP archiving is configured under **Administration → Settings → T
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.127.zip` and `driftpunkt-install-1.0.127.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.128.zip` and `driftpunkt-install-1.0.128.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.127.zip.sha256
+sha256sum -c driftpunkt-install-1.0.128.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -313,8 +379,8 @@ sha256sum -c driftpunkt-install-1.0.127.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.127.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.127/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.128.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.128/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -325,14 +391,17 @@ cp deploy/nas/.env.example deploy/nas/.env
 nano deploy/nas/.env
 ```
 
-Set real values for `APP_SECRET`, `DEFAULT_URI`, `MARIADB_PASSWORD`, `MARIADB_ROOT_PASSWORD`, `DATABASE_URL`, `MAILER_DSN`, and `MAILER_FROM`. After signing in, configure the internal-report recipient and reply mailbox in the super-admin cockpit.
+Keep `APP_ENV=prod` and `APP_DEBUG=0`, and set real values for `APP_SECRET`, `DEFAULT_URI`, `MARIADB_PASSWORD`, `MARIADB_ROOT_PASSWORD`, `DATABASE_URL`, `MAILER_DSN`, and `MAILER_FROM`. After signing in, configure the internal-report recipient and reply mailbox in the super-admin cockpit.
 
 4. Create persistent data folders and start the stack:
 
 ```bash
 mkdir -p deploy/nas/data/var deploy/nas/data/mariadb
-docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env up -d --build
+docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env build --pull app &&
+  docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env up -d --force-recreate app scheduler
 ```
+
+Stop if the build fails. If the official multiarchitecture base image manifest is unavailable, follow the explicit AMD64-only `PHP_BASE_IMAGE` option in `docs/installation_and_deployment.md` inside the package, after checking the Docker server architecture. Do not substitute an older PHP tag or an old cached application image.
 
 5. Initialize Driftpunkt inside the app container:
 
@@ -385,7 +454,7 @@ Version 1.0.121 uses this command in required and manual post-update tasks. An a
 
 1. Use the newest cumulative `driftpunkt-upgrade-*.zip` package first. It contains the full current codebase and is the normal path even when the installed site is several releases behind.
 2. Back up the database and application files before applying the upgrade.
-   Preserve `.env.local` and its `APP_SECRET` in an encrypted, restore-tested backup. The secret is required to unwrap the stored MFA encryption key. Include `var/ticket_attachments` and `var/ticket_attachment_archives` in file backups.
+   Preserve `.env.local` and its `APP_SECRET` in an encrypted, restore-tested backup. The secret is required to unwrap the stored MFA encryption key. Include `var/share`, `var/ticket_attachments`, `var/ticket_attachment_archives`, `var/incoming_mail_attachments`, and uploaded branding in `htdocs/assets/branding`, plus external storage paths if configured.
 3. Verify the checksum before using the package:
 
 ```bash
@@ -393,13 +462,35 @@ cd packages
 sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 ```
 
-4. Apply the package through the Driftpunkt admin update flow when available, or unpack it according to your deployment procedure.
+4. Update and verify the PHP engine for both web and background jobs before applying the ZIP. Keep `APP_ENV=prod` and `APP_DEBUG=0`, then apply the package through the Driftpunkt admin update flow when available, or unpack it according to your deployment procedure. Preserve the existing environment and `APP_SECRET`; do not run `composer update` on the server.
 5. Confirm that the web server document root points to `htdocs/`, or that the package root `.htaccess` is active when the whole package lives in a fixed `/htdocs` directory.
 6. Run database migrations, cache refresh, service reloads, and any other post-update steps listed in the package metadata and release notes.
 7. For version 1.0.21 or later, also verify Admin -> Identity links to the dedicated company page and Admin -> Companies paginates company groups correctly.
 8. Older upgrade packages are kept as fallback and history, not as required intermediate steps.
 9. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
 10. Verify `systemctl --failed`, mail polling, and the attachment-archive service log after its first scheduled run.
+
+### Upgrading from 1.0.127 to 1.0.128
+
+- Back up the database, application, private environment, runtime files, and uploaded branding before the maintenance window. Keep the existing `APP_SECRET`.
+- Update and verify PHP before applying `driftpunkt-upgrade-1.0.128.zip`: PHP 8.4 requires at least 8.4.27 and PHP 8.5 requires at least 8.5.12. Verify web PHP separately from CLI, restart FPM or Apache/mod_php and long-running workers, and check cron/systemd plus `PHP_CLI_BINARY`.
+- Verify the matching SHA-256 file and use the normal admin update flow. The ZIP includes production vendor dependencies; keep `APP_ENV=prod` and `APP_DEBUG=0`, preserve the existing environment, and do not run `composer update`.
+- No new database migration is required from 1.0.127. Let the normal update flow complete all post-update steps and refresh the production cache, then restart PHP/OPcache and long-running workers. Upgrades from older versions must still apply their existing migrations.
+- Confirm version 1.0.128 and a completed update job, then verify login/MFA, tickets, attachments, translated pages and icons, mail processing, and scheduled jobs. Review application and web-server logs before ending maintenance mode and restoring public access.
+- If application rollback is needed, retain the patched PHP engine. Do not restore a vulnerable PHP image or replace the installation secret.
+
+For Docker/NAS, rebuild from the 1.0.128 release source and recreate both services; applying an application ZIP does not update the container runtime. This causes a short interruption:
+
+```bash
+docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env build --pull app &&
+  docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env up -d --force-recreate app scheduler
+docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env exec -T app php -v
+docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env exec -T scheduler php -v
+docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env exec -T app composer check-platform-reqs --no-dev
+docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env ps
+```
+
+Abort if the build or PHP checks fail. Preserve database/runtime volumes and the environment file. Follow the packaged `docs/installation_and_deployment.md` for actual web-PHP verification and the explicit AMD64-only base-image option if the multiarchitecture manifest is unavailable; use a patched image for the actual server architecture.
 
 ### Upgrading from 1.0.126 to 1.0.127
 
@@ -436,9 +527,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.128.zip`
 - `packages/driftpunkt-upgrade-1.0.127.zip`
 - `packages/driftpunkt-upgrade-1.0.126.zip`
-- `packages/driftpunkt-upgrade-1.0.125.zip`
 
 ## Notes
 
