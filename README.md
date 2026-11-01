@@ -10,6 +10,7 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 ## Recent Improvements
 
+- Release 1.0.132 lets customers choose language at the top of the customer portal, remembers the choice on the account, and translates the customer pages into English and Norwegian.
 - Release 1.0.131 adds an optional contact phone number on tickets, clearer priority marking for technicians and ticket coordinators, more formatting options in the comment editor, and protection against spreadsheet formulas in portal CSV exports. It also updates `symfony/mime` to 8.1.10 for CVE-2026-45070 and includes a database migration.
 - Release 1.0.130 improves the customer portal company ticket view with per-company summaries, subsidiary totals, a searchable company filter, remembered filters, and CSV export. Replies from known customers that cannot be linked to a ticket now create regular tickets, ticket coordinators are notified for every pending mail review, and line breaks in comments are preserved.
 - Release 1.0.129 lets customers, technicians, and ticket coordinators attach several files at once with a clearer file picker, always allows ZIP attachments up to 1 MB, and shows the original email to ticket coordinators.
@@ -142,9 +143,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.131`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.131.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.131.zip`
+- Current exported release: `1.0.132`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.132.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.132.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 15.
@@ -153,32 +154,31 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.131
+### Driftpunkt 1.0.132
 
 ### Fixed and improved
 
-- Tickets can now store an optional contact phone number. Customers can enter it on a new ticket and change it on their own ticket, the number is prefilled from their latest ticket, and the public ticket form saves it in the same field instead of in the ticket description. Ticket coordinators can enter it on phone tickets.
-- Technicians and ticket coordinators see the number as a clickable phone link and can change it on the ticket. Colleagues who can see a shared company ticket do not see the number. It is cleared when the requester's identity is deleted, and a merged ticket takes over the number from the source ticket if it has none and the requester is the same.
-- Critical, high, and low priority tickets are marked clearly in the technician and coordinator views. Normal priority tickets, resolved or closed tickets, and customer views are not marked.
-- The comment editor's toolbar has grouped buttons with written labels and adds underline, strikethrough, yellow highlight, and divider. Code buttons are only shown to technicians. The new formatting is kept when a comment is saved and in customer emails.
-- Values in the portal's CSV exports that start with `=`, `+`, `-`, or `@` are prefixed with an apostrophe so spreadsheet programs do not run customer text as formulas.
-- `symfony/mime` is updated to 8.1.10, which fixes the email header injection vulnerability CVE-2026-45070.
+- Customers can choose language at the top of every customer portal page. The active language is marked clearly, the customer stays on the same page when switching, and the choice is saved on the account and used again at the next sign-in. The same preference also sets the language of the customer's email notifications.
+- The customer portal is now translated into English and Norwegian, including the ticket form and ticket view, security page, statuses, activity history, inventory lists, comment editor, file picker, and error and confirmation messages.
+- A new automated test renders the customer pages in all standard languages and fails if Swedish text remains.
+- Non-ASCII characters in embedded CSS and JavaScript are no longer rewritten as HTML entities on English and Norwegian pages. On systems with older libxml, such as the Docker image, this could show text like `&#9662;` instead of the menu arrow and could affect Swedish characters in scripts.
+- Language names in the language selectors are always shown in their own language.
+- Translation patterns that use `%count%` now only match numbers, so customer text such as a ticket subject is not partly translated by such a pattern.
 
 ### Database and operations
 
-- Database migration required from 1.0.130: yes. `Version20261030120000` adds the nullable column `tickets.contact_phone`. Existing tickets keep working, and phone numbers already stored in the description of public tickets are not moved.
+- Database migration required from 1.0.131: no.
 - Cache refresh required: yes.
 - PHP/OPcache restart or reload recommended: yes.
 - Back up application files and the database before upgrading. The PHP requirements from 1.0.128 are unchanged.
 
 ### Post-update verification
 
-- Confirm that the admin area shows version `1.0.131` and that the update job, including the migration, has completed.
-- Create a customer ticket with a phone number, and confirm that the number is a clickable link for the technician and the coordinator and is prefilled on the customer's next ticket.
-- Open a shared company ticket as a colleague and confirm that the requester's number is not shown.
-- Confirm that a critical ticket is marked in the technician and coordinator lists, and that the marking disappears when the ticket is closed.
-- Write a comment with underline, strikethrough, highlight, and a divider, and confirm the result on the ticket and in the customer email.
-- Export a CSV list containing a ticket subject that starts with `=`, and confirm that the value starts with an apostrophe.
+- Confirm that the admin area shows version `1.0.132` and that the update job has completed.
+- Sign in as a customer, choose English in the top bar, and confirm that the choice is marked and that the page stays open in English.
+- Open the ticket list, a ticket, the new ticket form, and the security page, and confirm that they are shown in English. Repeat with Norwegian.
+- Sign out and back in, and confirm that the chosen language is still used.
+- Confirm that the language selector is hidden if only one language is selectable in the admin settings.
 
 ## What This Repository Contains
 
@@ -220,7 +220,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.131.zip.sha256
+sha256sum -c driftpunkt-install-1.0.132.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -253,10 +253,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.131.zip` and `driftpunkt-install-1.0.131.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.132.zip` and `driftpunkt-install-1.0.132.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.131.zip.sha256
+sha256sum -c driftpunkt-install-1.0.132.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -264,9 +264,9 @@ sha256sum -c driftpunkt-install-1.0.131.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.131.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.132.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.131/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.132/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -325,10 +325,10 @@ Attachment ZIP archiving is configured under **Administration → Settings → T
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.131.zip` and `driftpunkt-install-1.0.131.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.132.zip` and `driftpunkt-install-1.0.132.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.131.zip.sha256
+sha256sum -c driftpunkt-install-1.0.132.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -336,8 +336,8 @@ sha256sum -c driftpunkt-install-1.0.131.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.131.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.131/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.132.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.132/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -427,6 +427,12 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 9. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
 10. Verify `systemctl --failed`, mail polling, and the attachment-archive service log after its first scheduled run.
 
+### Upgrading from 1.0.131 to 1.0.132
+
+- Back up the database, application, private environment, runtime files, and uploaded branding before the maintenance window. Keep the existing `APP_SECRET`.
+- Verify the matching SHA-256 file and use the normal admin update flow with `driftpunkt-upgrade-1.0.132.zip`. The PHP requirements from 1.0.128 are unchanged. No database migration is required.
+- Confirm version 1.0.132 and a completed update job, then sign in as a customer, choose another language in the top bar, and confirm that the customer pages use it and that the choice remains after signing in again.
+
 ### Upgrading from 1.0.130 to 1.0.131
 
 - Back up the database, application, private environment, runtime files, and uploaded branding before the maintenance window. Keep the existing `APP_SECRET`.
@@ -457,7 +463,7 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 - Confirm version 1.0.128 and a completed update job, then verify login/MFA, tickets, attachments, translated pages and icons, mail processing, and scheduled jobs. Review application and web-server logs before ending maintenance mode and restoring public access.
 - If application rollback is needed, retain the patched PHP engine. Do not restore a vulnerable PHP image or replace the installation secret.
 
-For Docker/NAS, rebuild from the 1.0.131 release source and recreate both services; applying an application ZIP does not update the container runtime. This causes a short interruption:
+For Docker/NAS, rebuild from the 1.0.132 release source and recreate both services; applying an application ZIP does not update the container runtime. This causes a short interruption:
 
 ```bash
 docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env build --pull app &&
@@ -505,9 +511,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.132.zip`
 - `packages/driftpunkt-upgrade-1.0.131.zip`
 - `packages/driftpunkt-upgrade-1.0.130.zip`
-- `packages/driftpunkt-upgrade-1.0.128.zip`
 
 ## Notes
 
