@@ -10,6 +10,14 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 
 ## Recent Improvements
 
+- Release 1.0.133 adds customer inventory management, coordinator ownership, EML/MSG reading, PDF and inline image previews, winmail.dat extraction, attachment recovery forwarding, linked tickets from attached emails, clearer ticket intake and review screens, duplicate suggestions, and explicit group-wide read access to private subsidiary tickets. It also updates ten affected Symfony components to 8.1.11 for security fixes published on November 4, 2026. Three database migrations are required:
+  - Customer search from the portal overview also covers accessible company and subsidiary tickets. Selected customer users can manage the company computer list; customer removal archives the computer and keeps its history.
+  - A super admin can give a selected customer user on a parent company read access to all customer-visible tickets in the whole subsidiary tree, including private and closed tickets. Internal tickets, internal notes, and other company groups stay hidden, and the assignment does not grant any write access.
+  - Ticket coordinators can own tickets and take over when writing customer-visible comments; internal notes never change the assignment.
+  - Technicians and coordinators can read EML and Outlook MSG attachments including nested emails, preview PDFs, see pasted inline images without loading external tracking images, and download regular files extracted from `winmail.dat`.
+  - Attachment errors show file name and reason and forward the original email to the coordinator or selected triage recipients, with status, retry, and loop protection. An attached email can become a separate linked ticket, internal by default and without customer email.
+  - The internal ticket view shows an intake panel with sender, mailbox, and the saved reason a reply was linked, collected attachment warnings, up to three duplicate suggestions within existing read access (never merged automatically), compact file rows, and the planned email recipients for customer replies.
+  - Mail review shows a summary before approval and rejects a customer combined with a different company on the server. Cache warmup during Docker builds and updates gets a separate 512 MB memory budget.
 - Release 1.0.132 lets customers choose language at the top of the customer portal, remembers the choice on the account, and translates the customer pages into English and Norwegian.
 - Release 1.0.131 adds an optional contact phone number on tickets, clearer priority marking for technicians and ticket coordinators, more formatting options in the comment editor, and protection against spreadsheet formulas in portal CSV exports. It also updates `symfony/mime` to 8.1.10 for CVE-2026-45070 and includes a database migration.
 - Release 1.0.130 improves the customer portal company ticket view with per-company summaries, subsidiary totals, a searchable company filter, remembered filters, and CSV export. Replies from known customers that cannot be linked to a ticket now create regular tickets, ticket coordinators are notified for every pending mail review, and line breaks in comments are preserved.
@@ -82,6 +90,8 @@ Visible features depend on enabled settings, company access, and role permission
 - Read customer-visible knowledge base content and operational status information.
 - Leave feedback on resolved or closed tickets when customer feedback is enabled.
 - Open company resources such as reports, computer lists, and printer lists when the company has the feature enabled and the specific user has been granted access.
+- Manage the company computer list when explicitly granted by an admin: add, edit, comment on, and archive computers while keeping their change history.
+- Read all customer-visible tickets in the company and its whole subsidiary tree, including private and closed tickets, when a super admin has granted group-wide read access. This access is read-only.
 - Use customer reports only when explicitly allowlisted by an admin for that company user.
 - Switch portal language between Swedish, English, and Norwegian and choose a personal system, light, dark, or high-contrast portal theme.
 
@@ -99,6 +109,8 @@ Visible features depend on enabled settings, company access, and role permission
 - Open separate personal queues for tickets owned as the primary technician and tickets assigned as a supporting technician, each with a direct sidebar link and count.
 - Create tickets, take over tickets, assign work, update status, priority, impact, request type, routing, optional SLA fields, checklist progress, and internal work notes.
 - Reply to customers, add internal comments, use ticket attachments when enabled, and follow links from technician notification emails back to the related ticket.
+- See an intake panel with sender, receiving mailbox, mail linking reason, and attachment warnings, get duplicate suggestions limited to tickets they can already read, and see the planned email recipients before replying.
+- Read EML and Outlook MSG attachments including nested emails, preview PDFs, view pasted inline images, download files extracted from `winmail.dat`, and create a separate linked ticket from an attached email.
 - See all tickets or only permitted tickets depending on the technician access setting.
 - Use knowledge base and news contribution workflows when enabled.
 - Report bugs, improvements or feature requests, and missing customers to super administrators from the technician menu.
@@ -108,6 +120,8 @@ Visible features depend on enabled settings, company access, and role permission
 
 - Use a coordinator overview for unassigned work, stale tickets, waiting customer cases, workload, and triage signals, with SLA signals shown only when SLA is in use.
 - Distribute tickets to technicians or teams, follow company and queue health, add comments, and keep cases moving without needing full admin access.
+- Be responsible for tickets and choose to take over when writing customer-visible comments; internal notes keep the current assignee.
+- Use the same intake panel, email reader, attachment recovery, and duplicate suggestions as technicians, and review a summary before approving incoming mail reviews.
 - Change ticket priority without changing status, resolution, assignments, or the SLA policy.
 - Close active and resolved tickets with a required resolution, including unassigned tickets. Administrative closing sends no customer email; the saved resolution remains visible, and merged source tickets stay read-only.
 - Open clearer coordinator and customer reports by company and period for inflow, backlog, status, priority, impact, request type, escalation, risk, ticket aging, and SLA only when applicable.
@@ -119,6 +133,7 @@ Visible features depend on enabled settings, company access, and role permission
 
 - Manage regular operational administration: tickets, companies, users that are not privileged beyond their permission level, teams, categories, routing rules, intake templates, SLA policies, and support settings.
 - Configure customer portal features, company hierarchy visibility, ticket attachments, feedback, monthly company reports, MFA policy, remote support tools, public ticket intake, and customer self-registration.
+- Choose which customer users may read or manage each company computer list, and configure triage recipients for forwarded original emails when attachments fail.
 - Manage public content such as homepage settings, contact information, news, status messaging, knowledge base settings, translation languages, selectable language settings, UI translation overrides, privacy policy, terms, and cookie policy.
 - Manage mail servers, support inboxes, outgoing mail profiles, incoming mail review, correction drafts, and mailbox-based ticket creation.
 - Use admin reports for ticket inflow, backlog, SLA health, risk, companies, and internal workload.
@@ -129,6 +144,7 @@ Visible features depend on enabled settings, company access, and role permission
 - Has full system and operational access, including all admin and technician capabilities.
 - Create or assign privileged profiles such as super admin, admin, and ticket coordinator.
 - Create multiple company customer accounts in one operation, with automatic secure temporary passwords and forced password changes at first sign-in.
+- Grant selected customer users on a parent company audit-logged, read-only access to all customer-visible tickets in the whole subsidiary tree.
 - Review internal reports from technicians and ticket coordinators, update their status, and leave reporter-visible feedback.
 - Reset or disable MFA for locked-out users without exposing their MFA secret or enrollment QR code; recovery actions are audit logged.
 - Manage destructive or infrastructure-sensitive actions such as database backup/download/restore/optimize, migration execution, code update staging/application, post-update tasks, job retry/purge, log export/cleanup, test ticket purge, branding, support branding, and addon package lifecycle.
@@ -143,9 +159,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.132`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.132.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.132.zip`
+- Current exported release: `1.0.133`.
+- Fresh installation package: `packages/driftpunkt-install-1.0.133.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.133.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 15.
@@ -154,31 +170,66 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.132
+### Driftpunkt 1.0.133
 
-### Fixed and improved
+### New and improved
 
-- Customers can choose language at the top of every customer portal page. The active language is marked clearly, the customer stays on the same page when switching, and the choice is saved on the account and used again at the next sign-in. The same preference also sets the language of the customer's email notifications.
-- The customer portal is now translated into English and Norwegian, including the ticket form and ticket view, security page, statuses, activity history, inventory lists, comment editor, file picker, and error and confirmation messages.
-- A new automated test renders the customer pages in all standard languages and fails if Swedish text remains.
-- Non-ASCII characters in embedded CSS and JavaScript are no longer rewritten as HTML entities on English and Norwegian pages. On systems with older libxml, such as the Docker image, this could show text like `&#9662;` instead of the menu arrow and could affect Swedish characters in scripts.
-- Language names in the language selectors are always shown in their own language.
-- Translation patterns that use `%count%` now only match numbers, so customer text such as a ticket subject is not partly translated by such a pattern.
+### Customer portal and permissions
+
+- Searching from the customer portal overview now also covers the accessible tickets of the company and its subsidiaries when the company ticket view is enabled.
+- Admins and super admins can let selected customer users manage the company computer list. Those users can add, edit, and comment on computers in their own company. Removing a computer as a customer archives it: the row and its change history are kept, but the computer is hidden from regular lists and exports. New management permissions are off until explicitly assigned. Activation, CSV import, and permanent deletion of whole lists remain super admin tasks.
+- Super admins can give a selected customer user on a parent company separate read access to all customer-visible tickets in the whole subsidiary tree, including private and closed tickets, several levels down. New subsidiaries in the same branch are covered automatically. Internal tickets, internal notes, internal attachments, and other company groups are never included. The assignment grants read access only: it does not extend the right to comment, give feedback, reopen, or create tickets on subsidiaries, and email replies follow the same write rules as the portal. Changes are audit logged with the company, the administrator, and the assigned user IDs before and after.
+
+### Ticket coordinators
+
+- Ticket coordinators can be responsible for tickets and can choose to take over when they write customer-visible comments. Internal notes never change the assignment. Follow-up notifications link to the coordinator view.
+- Before approving an incoming mail review, admins and coordinators see a summary that follows the form choices. A selected customer combined with a different selected company is rejected on the server, without activation or customer email.
+
+### Email and attachments
+
+- Technicians and coordinators can read EML and Outlook MSG attachments, open nested emails, and download their attachments.
+- PDF files can be previewed, and pasted inline (CID) images are shown in the conversation without loading external tracking images.
+- Regular files inside `winmail.dat` are extracted on import and can also be downloaded from a separate viewer. The original container is kept, and file type and size rules also apply to extracted files. Damaged containers or embedded objects that cannot be extracted as regular files are reported for manual handling.
+- Attachment errors show the file name and reason. The original email is forwarded to the configured coordinator address or to explicitly selected internal triage recipients, with visible delivery status, retry, and mail loop protection.
+- An attached email can become a separate linked ticket after the customer, company, and content have been checked. The new ticket is internal by default, the original email is saved as an attachment, the tickets are linked, no customer email is sent, and a double click does not create two tickets.
+
+### Internal ticket view
+
+- Technicians and coordinators see the same intake panel on the ticket page: sender, receiving mailbox, current company, the saved reason why a reply was linked to the ticket (ticket number in the subject, ticket number in the body, or an unambiguous subject within the company), and up to 25 received emails. The panel is never shown to customers.
+- Attachment warnings are collected near the top of the ticket.
+- Possible duplicates are suggested among the company's active tickets, limited to tickets the technician can already read. Up to three suggestions are shown, based on normalized subjects. No AI service or external transfer of ticket data is used, and tickets are never merged automatically.
+- The conversation comes before the reply box, with distinct markings for internal notes and customer-visible comments. Attachments are shown as compact file rows with lazy-loaded thumbnails for images. Work tools are in the sidebar on wide screens, with a suggested next step.
+- The reply box shows what the selected comment type means and lists the planned email recipients for customer replies. The notification log remains the record of actual deliveries.
+
+### Security and operations
+
+- Ten affected Symfony components are updated to 8.1.11 for security fixes published on November 4, 2026: Config, Filesystem, FrameworkBundle, HttpClient, HttpFoundation, HttpKernel, Routing, SecurityHttp, Validator, and YAML. `composer audit` reports no remaining known vulnerabilities in the locked production dependencies. See for example [Symfony's fix for the HEAD access control check](https://symfony.com/cve-2026-118514) and [the Routing fix that requires a cleared cache](https://symfony.com/cve-2026-118516).
+- Cache warmup during the Docker build and after updates gets a separate 512 MB memory budget. The web server's PHP memory limit is unchanged.
+- New production dependencies for the email reader are included in the packages and locked in `composer.lock`.
 
 ### Database and operations
 
-- Database migration required from 1.0.131: no.
+- Database migration required from 1.0.132: yes. Apply `Version20261105120000`, `Version20261105130000`, and `Version20261105140000` through the normal update flow.
 - Cache refresh required: yes.
-- PHP/OPcache restart or reload recommended: yes.
-- Back up application files and the database before upgrading. The PHP requirements from 1.0.128 are unchanged.
+- PHP/OPcache and long-running worker restart or reload recommended: yes.
+- Back up the database, application files, private environment configuration, runtime files, and uploaded branding before upgrading. Keep the existing `APP_SECRET` and use maintenance mode.
+- Production dependencies are included in the packages. Do not run `composer update` when upgrading. For source installations, use `composer install --no-dev --optimize-autoloader` with the included lock file.
+- The PHP requirement is unchanged: 8.4.27+ within 8.4 or 8.5.12+ within 8.5, on 64-bit PHP. Check the CLI, the web server's PHP, and background jobs separately. Docker/NAS installations need to rebuild the image and recreate both the app and scheduler containers.
+- No new permission is assigned automatically. Group-wide read access is assigned by a super admin on the parent company; computer list management is assigned separately.
+- Real Outlook emails, customer mailboxes, SMTP delivery, and the server's mail size limits need to be verified in the target environment.
 
 ### Post-update verification
 
-- Confirm that the admin area shows version `1.0.132` and that the update job has completed.
-- Sign in as a customer, choose English in the top bar, and confirm that the choice is marked and that the page stays open in English.
-- Open the ticket list, a ticket, the new ticket form, and the security page, and confirm that they are shown in English. Repeat with Norwegian.
-- Sign out and back in, and confirm that the chosen language is still used.
-- Confirm that the language selector is hidden if only one language is selectable in the admin settings.
+- Confirm that the admin area shows version `1.0.133`, that the update job has completed, and that no database migrations are pending.
+- Verify customer, coordinator, and technician sign-in, and searching across company and subsidiary tickets.
+- Assign computer list management to a test account and check create, edit, and archive with preserved history. Confirm that an account without the assignment is denied.
+- Check coordinator assignment on customer replies and that internal notes keep the existing assignee.
+- Try EML, MSG, a nested email, PDF, a CID image, and `winmail.dat`. Confirm that unauthorized accounts cannot open the attachments.
+- Trigger an attachment error and check the warning, the forwarded original email to the right triage recipient, retry, and the notification log.
+- Create a separate ticket from an attached email in test data. Check the company, customer, internal default visibility, and the link to the original ticket.
+- Check the intake panel, duplicate suggestions, comment types, and planned recipients. No duplicate should be merged automatically.
+- Assign group-wide read access to a test account on a parent company. Check private tickets on child and grandchild companies, confirm that internal tickets and other company groups are denied, and verify that removing the assignment removes the read access.
+- Check logs and scheduled jobs, and leave maintenance mode when the checks have passed.
 
 ## What This Repository Contains
 
@@ -220,7 +271,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.132.zip.sha256
+sha256sum -c driftpunkt-install-1.0.133.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -253,10 +304,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.132.zip` and `driftpunkt-install-1.0.132.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-1.0.133.zip` and `driftpunkt-install-1.0.133.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.132.zip.sha256
+sha256sum -c driftpunkt-install-1.0.133.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -264,9 +315,9 @@ sha256sum -c driftpunkt-install-1.0.132.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.132.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-1.0.133.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.132/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.133/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -325,10 +376,10 @@ Attachment ZIP archiving is configured under **Administration → Settings → T
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.132.zip` and `driftpunkt-install-1.0.132.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-1.0.133.zip` and `driftpunkt-install-1.0.133.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.132.zip.sha256
+sha256sum -c driftpunkt-install-1.0.133.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -336,8 +387,8 @@ sha256sum -c driftpunkt-install-1.0.132.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.132.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.132/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-1.0.133.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.133/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -427,6 +478,13 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 9. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
 10. Verify `systemctl --failed`, mail polling, and the attachment-archive service log after its first scheduled run.
 
+### Upgrading from 1.0.132 to 1.0.133
+
+- Back up the database, application files, private environment, runtime files, and uploaded branding. Keep the existing `APP_SECRET` and use a maintenance window.
+- Verify SHA-256 and apply `driftpunkt-upgrade-1.0.133.zip` through the normal update flow. Production dependencies are included. Do not run `composer update`.
+- Apply `Version20261105120000`, `Version20261105130000`, and `Version20261105140000`, refresh the production cache, and reload PHP/OPcache and workers. The supported PHP versions remain 8.4.27+ within 8.4 or 8.5.12+ within 8.5, on a 64-bit runtime.
+- Confirm version 1.0.133, a completed update job, all pending migrations applied, working customer and staff sign-in, subsidiary access boundaries, inventory permissions, attachment previews, and incoming and outgoing email. Verify real Outlook mail and SMTP in the target environment.
+
 ### Upgrading from 1.0.131 to 1.0.132
 
 - Back up the database, application, private environment, runtime files, and uploaded branding before the maintenance window. Keep the existing `APP_SECRET`.
@@ -463,7 +521,7 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 - Confirm version 1.0.128 and a completed update job, then verify login/MFA, tickets, attachments, translated pages and icons, mail processing, and scheduled jobs. Review application and web-server logs before ending maintenance mode and restoring public access.
 - If application rollback is needed, retain the patched PHP engine. Do not restore a vulnerable PHP image or replace the installation secret.
 
-For Docker/NAS, rebuild from the 1.0.132 release source and recreate both services; applying an application ZIP does not update the container runtime. This causes a short interruption:
+For Docker/NAS, rebuild from the 1.0.133 release source and recreate both services; applying an application ZIP does not update the container runtime. This causes a short interruption:
 
 ```bash
 docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env build --pull app &&
@@ -511,9 +569,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-1.0.133.zip`
 - `packages/driftpunkt-upgrade-1.0.132.zip`
 - `packages/driftpunkt-upgrade-1.0.131.zip`
-- `packages/driftpunkt-upgrade-1.0.130.zip`
 
 ## Notes
 
