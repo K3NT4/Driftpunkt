@@ -1,7 +1,9 @@
 # Driftpunkt Free Use License
 **Version 1.0 – November 2026**
 
-Copyright © 2026 [Copyright Holder]. All rights reserved.
+Copyright © 2026 Kenta Mattsson. All rights reserved.
+
+Contact: kenta[a]lumirinav.se
 
 ## 1. License Grant
 
