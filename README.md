@@ -8,6 +8,9 @@ This public repository distributes release archives, documentation, and selected
 
 The screenshots may show the Swedish interface. Language and branding can be changed after installation through the running application and its environment-specific configuration.
 
+## License: 
+Driftpunkt is proprietary software. Official releases are free to use under the terms of the Driftpunkt Proprietary Software License. Source code is not distributed under an open-source license.
+
 ## Recent Improvements
 
 - Release 1.0.133 adds customer inventory management, coordinator ownership, EML/MSG reading, PDF and inline image previews, winmail.dat extraction, attachment recovery forwarding, linked tickets from attached emails, clearer ticket intake and review screens, duplicate suggestions, and explicit group-wide read access to private subsidiary tickets. It also updates ten affected Symfony components to 8.1.11 for security fixes published on November 4, 2026. Three database migrations are required:
