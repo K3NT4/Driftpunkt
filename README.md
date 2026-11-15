@@ -1,6 +1,9 @@
 # Driftpunkt Release Packages
 
-![Driftpunkt](assets/branding/logo-wide.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/branding/logo-wide-v2-dark.svg">
+  <img src="assets/branding/logo-wide-v2.svg" alt="Driftpunkt" width="520">
+</picture>
 
 Driftpunkt is a support and operations platform for handling tickets, customer communication, technician work queues, operational status updates, knowledge base content, reports, company administration, and maintenance workflows.
 
@@ -11,9 +14,9 @@ The gallery shows Driftpunkt 2.0 with synthetic demonstration accounts and ticke
 
 **Stable release: 2.0.0** · [Download releases](https://github.com/K3NT4/Driftpunkt/releases/latest) · [Install](INSTALL.md) · [Upgrade](docs/upgrade_to_2_0_0.md)
 
-Before upgrading to 2.0, follow the [live-server upgrade checklist (Swedish)](docs/upgrade_to_2_0_0.md), including backups, Docker prerequisites and enabling the personal classic/modern layout choice for technicians and ticket coordinators.
+Before upgrading to 2.0, follow the [live-server upgrade checklist (English)](docs/upgrade_to_2_0_0.md), including backups, Docker prerequisites and enabling the personal classic/modern layout choice for technicians and ticket coordinators.
 
-For a new installation, start with [INSTALL.md (Swedish)](INSTALL.md): Debian 13 and NAS instructions with explicit fresh-database protection and hidden administrator password input.
+For a new installation, start with [INSTALL.md (English)](INSTALL.md): Debian 13 and NAS instructions with explicit fresh-database protection and hidden administrator password input.
 
 ## Recent Improvements
 
@@ -198,7 +201,7 @@ Visible features depend on enabled settings, company access, and role permission
 - Newest cumulative upgrade package: `packages/driftpunkt-upgrade-2.0.0.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
-- Public README assets exported here: 17.
+- Public README assets exported here: 20.
 
 ## Latest Release Notes
 
@@ -237,7 +240,7 @@ Stable release, 2026-11-15.
 ### Verification
 
 - Automated baseline plus explicit affected/new-file reruns: **1,238 tests and 28,859 assertions**, with no failures or skips in the combined results. This was not a second full-suite run.
-- Additional release-focused checks: **45 tests / 1,236 assertions**, including upgrade preservation of synthetic mail settings and encrypted tokens, package building and public export. These targeted checks overlap the baseline and are not added to it as distinct tests.
+- Additional release-focused checks: **45 tests / 1,239 assertions**, including upgrade preservation of synthetic mail settings and encrypted tokens, package building and public export. These targeted checks overlap the baseline and are not added to it as distinct tests.
 - Real isolated Debian test installation, synthetic role accounts/tickets, private-customer creation, company boundaries, internal-note secrecy, search, saved themes and CSRF rejection were verified.
 - Chromium checks covered 20 authenticated views at 1440, 900 and 390 px, editor interactions and login-field/autofill contrast. Synthetic demonstrations contain no real customer data.
 - Cache replacement and fresh-process confirmation were additionally verified against a separate MariaDB instance with external networking disabled.

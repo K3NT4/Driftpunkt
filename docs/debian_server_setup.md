@@ -1,31 +1,26 @@
-# Debian-server: krav och installation
+# Debian server: requirements and installation
 
-Den här guiden är den kortaste vägen till en vanlig Debian-installation utan Docker. Den utgår från att appen ligger i `/var/www/driftpunkt`, körs av `www-data` och exponeras via Apache. Om Apache kör vhosten med `mpm-itk` eller `AssignUserID` ska du använda den faktiska vhost-användaren i kommandon och rättigheter i stället för `www-data`.
+This guide covers a conventional Debian installation without Docker. It assumes `/var/www/driftpunkt`, the `www-data` service user and Apache. If Apache uses `mpm-itk` or `AssignUserID`, use the actual virtual-host user instead of `www-data` in commands and ownership settings.
 
-För en nyinstallation: läs först den korta [startguiden](../INSTALL.md). Debian 13 stöds med distributionspaketen och aktuella säkerhetsuppdateringar. `setup.sh --help` beskriver alternativen och `--check` gör endast en lokal förkontroll.
+For a new installation, start with [INSTALL.md](../INSTALL.md). Debian 13 is supported with distribution packages and current security updates. `setup.sh --help` lists options; `--check` only performs local preflight checks.
 
-## Krav
+## Requirements
 
-Minimikrav:
+- Debian with shell access and `sudo`.
+- PHP 8.4.27 or later within 8.4, or PHP 8.5.12 or later within 8.5.
+- Composer 2, Apache 2 with `mod_rewrite`, and MariaDB 10.11 or later.
+- A writable `var/` directory for cache, logs, attachments and shared files.
+- `PHP_CLI_BINARY=/usr/bin/php`, or the actual server PHP CLI binary.
+- Apache DocumentRoot set to `/var/www/driftpunkt/htdocs`.
+- systemd timers or cron for background jobs, plus an update worker if web-based updates are used.
 
-- Debian-server med shell-access och `sudo`
-- PHP 8.4.27 eller senare inom 8.4-serien, alternativt PHP 8.5.12 eller senare inom 8.5-serien
-- Composer 2
-- Apache 2 med `mod_rewrite`
-- MariaDB 10.11 eller senare
-- Skrivbar `var/`-mapp för cache, loggar, bilagor och delade filer
-- `PHP_CLI_BINARY=/usr/bin/php` i miljöfilen, eller motsvarande PHP CLI-binär på servern
-- Apache DocumentRoot mot `/var/www/driftpunkt/htdocs`
-- systemd timers eller cron för bakgrundsjobb
-- systemd timer för köade koduppdateringar om adminytans uppdateringsflöde används
+For web-based code updates:
 
-Krav för webbaserade uppdateringar från adminytan:
+- The actual PHP/web-server user must be able to write managed application files: `bin/`, `config/`, `htdocs/`, `migrations/`, `public/`, `src/`, `templates/`, `composer.json`, `composer.lock` and `symfony.lock`.
+- Check the virtual host or a protected PHP diagnostic first. On `mpm-itk`/`AssignUserID`, this may be a site-specific user. Use that same user for Composer, migrations and cache warmup.
+- If code is deliberately owned by `root`, deploy through SSH/scripts instead and leave only runtime directories writable by the web user.
 
-- PHP/webbserver-användaren, normalt `www-data`, måste kunna skriva till applikationskoden som uppdateringspaketet hanterar: `bin/`, `config/`, `htdocs/`, `migrations/`, `public/`, `src/`, `templates/`, `composer.json`, `composer.lock` och `symfony.lock`
-- På Apache med `mpm-itk` eller `AssignUserID` är användaren ofta vhost-användaren, inte `www-data`. Kontrollera vhosten eller en PHP-diagnos och använd samma användare för ägarskap, `composer install`, migrations och cache-warmup.
-- Om servern ska vara hårdare låst med kodfiler ägda av `root` ska adminytans uppdateringsflöde inte användas för kodbyte. Uppdatera då i stället via SSH/deploy-script och låt bara `var/` vara skrivbar för `www-data`.
-
-För en installation där adminytan ska kunna applicera uppdateringspaket:
+For an installation allowing web-based updates:
 
 ```bash
 WEB_USER=www-data
@@ -33,7 +28,7 @@ sudo chown -R "$WEB_USER:$WEB_USER" /var/www/driftpunkt
 sudo chmod -R u+rwX /var/www/driftpunkt
 ```
 
-För en mer låst server:
+For a more restricted installation:
 
 ```bash
 sudo chown -R root:www-data /var/www/driftpunkt
@@ -43,62 +38,48 @@ sudo find /var/www/driftpunkt -type f -exec chmod 644 {} \;
 sudo chmod 600 /var/www/driftpunkt/.env.local
 ```
 
-I den låsta modellen ska koduppdateringar göras via SSH/deploy-script, inte via adminytans kodapplicering.
+In the restricted model, replace application code using SSH/deployment scripts, not the admin code-update action.
 
-PHP-motorn måste innehålla rättningarna för CVE-2026-109618 och CVE-2026-109619. Composer och appens uppgraderingspaket uppdaterar inte motorn. Uppdatera och verifiera PHP innan nya app-/vendor-paket appliceras. Följ [PHP-uppdatering och verifiering](installation_and_deployment.md#säkerhetsuppdatera-php-motorn) för paketkontroll, omstart av FPM eller Apache/mod_php samt separat verifiering av webbserverns PHP och CLI.
+PHP must include the fixes for CVE-2026-109618 and CVE-2026-109619. Composer and application archives do not replace the PHP engine. Patch and verify PHP before applying new application/vendor files. See [PHP updates and verification](installation_and_deployment.md#update-the-php-engine) for package checks, FPM/Apache restarts and separate web/CLI verification.
 
-Rekommenderade PHP-tillägg:
+Required/recommended PHP extensions:
 
-- `gd` med JPEG, PNG och FreeType
-- `fileinfo`
-- `ctype`
-- `curl`
-- `iconv`
-- `intl`
-- `mbstring`
-- `pdo`
-- `pdo_mysql`
-- `xml`
-- `zip`
-- `opcache`
+- `gd` with JPEG, PNG and FreeType.
+- `fileinfo`, `ctype`, `curl`, `iconv`, `intl`, `mbstring`, `pdo`, `pdo_mysql`, `xml`, `zip`.
+- `opcache` is recommended.
 
-Databasval:
+MariaDB is the database for Debian, Docker/NAS and live deployments. SQLite is permitted only with `APP_ENV=test`.
 
-- MariaDB är standard för drift, Docker/NAS och Debian.
-- SQLite används bara när `APP_ENV=test`; live-, Docker- och Debian-miljöer ska köra MariaDB.
+<a id="snabb-installation"></a>
+## Quick installation
 
-## Snabb installation
-
-1. Packa upp **installationspaketet** under `/var/www/driftpunkt` och gå in i katalogen som innehåller `composer.json`. Behåll dolda filer. Du behöver inte Git eller åtkomst till ett privat repo för att installera ett releasepaket.
+1. Unpack the **installation archive** under `/var/www/driftpunkt` and enter the directory containing `composer.json`. Keep hidden files. Git and private-repository access are not needed to install a release package.
 
    ```bash
    cd /var/www/driftpunkt
    test -f composer.json && test -f deploy/debian/setup.sh
    ```
 
-2. Kör Debian-hjälpscriptet:
+2. Run the Debian helper, substituting your own domain:
 
    ```bash
-   sudo env DOMAIN=support.dindoman.se bash deploy/debian/setup.sh
+   sudo env DOMAIN=support.example.com bash deploy/debian/setup.sh
    ```
 
-   Scriptet installerar Apache, PHP-paket, MariaDB, Composer, Apache-vhost, logrotate samt systemd-timers för mailpolling och bilagearkivering. Timers installeras men startas först efter att databasen och kontot har skapats. Scriptet skapar också `.env.local` om den saknas, med en slumpad `APP_SECRET` och rätt adress. Det stannar före app-/webbkonfiguration när databaslösenordet fortfarande är en platshållare. Konfigurera databas och miljö, och kör sedan samma kommando igen. Befintliga hemligheter ändras aldrig automatiskt. För ett IP-baserat test kan `DOMAIN=DIN-SERVER-IP PUBLIC_URL=http://DIN-SERVER-IP` anges; verklig kunddrift behöver HTTPS.
+   It installs Apache, PHP packages, MariaDB, Composer, the virtual host, logrotate and timer files for mail polling and attachment archiving. Timers are not started yet. A missing `.env.local` is created with a random `APP_SECRET` and the configured address. A placeholder database password stops setup before app/web configuration. Configure the database/environment, then repeat the command. Existing secrets are never rotated automatically. For an isolated IP test, use `DOMAIN=YOUR-SERVER-IP PUBLIC_URL=http://YOUR-SERVER-IP`; real customer deployments need HTTPS.
 
-3. Redigera produktionsmiljön:
+3. Edit the production environment:
 
    ```bash
    sudo nano /var/www/driftpunkt/.env.local
    ```
 
-   Byt minst:
+   - Preserve the generated `APP_SECRET` and back it up securely.
+   - Set `DEFAULT_URI` and `DATABASE_URL` for MariaDB, with `mariadb` in `serverVersion`.
+   - Set `PHP_CLI_BINARY` if CLI PHP is not `/usr/bin/php`.
+   - Configure `MAILER_DSN` and `MAILER_FROM` when enabling real email.
 
-   - bevara den redan slumpade `APP_SECRET`; säkerhetskopiera den skyddat
-   - `DEFAULT_URI`
-   - `DATABASE_URL` med MariaDB och `serverVersion` som innehåller `mariadb`
-   - `PHP_CLI_BINARY` om PHP CLI inte finns på `/usr/bin/php`
-   - `MAILER_DSN` och `MAILER_FROM` när mail ska skickas
-
-4. Skapa MariaDB-databas:
+4. Create the MariaDB database. Replace the example password with a unique secret matching `.env.local`:
 
    ```bash
    sudo mariadb
@@ -106,85 +87,80 @@ Databasval:
 
    ```sql
    CREATE DATABASE driftpunkt CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   CREATE USER 'driftpunkt'@'localhost' IDENTIFIED BY 'byt-databaslösenord';
+   CREATE USER 'driftpunkt'@'localhost' IDENTIFIED BY 'CHANGE-DATABASE-PASSWORD';
    GRANT ALL PRIVILEGES ON driftpunkt.* TO 'driftpunkt'@'localhost';
    FLUSH PRIVILEGES;
    EXIT;
    ```
 
-5. Kör samma setup-kommando igen efter databas-/miljökonfigurationen. Skriptet använder den medföljande Composer-filen när den finns och installerar produktionsberoenden från låsfilen. Manuell motsvarighet:
+5. Repeat setup after configuration. It uses bundled Composer when available and installs production dependencies from the lock file. Manual equivalent:
 
    ```bash
    cd /var/www/driftpunkt
    sudo -u www-data php composer install --no-dev --no-interaction --optimize-autoloader
    ```
 
-6. Initiera en helt ny databas:
+6. Initialize a completely new database:
 
    ```bash
    sudo -u www-data php bin/console app:install:fresh --env=prod
    ```
 
-   Kommandot skapar schema och basdata men aldrig användarkonton. Skapa första superadmin separat med dold lösenordsinmatning:
+   It creates schema and base data, never user accounts. Create the first super administrator separately; its password is entered without echoing:
 
    ```bash
    sudo -u www-data php bin/console app:create-admin admin@example.com \
-     --first-name=Förnamn \
-     --last-name=Efternamn \
+     --first-name=FirstName \
+     --last-name=LastName \
      --type=super_admin \
      --env=prod
    ```
 
-   Logga därefter in och öppna **Inställningar → Åtkomst → MFA-policy**. Skapa eller importera MFA-krypteringsnyckeln, välj roller där MFA ska vara tillgängligt, välj frivilligt eventuella obligatoriska roller och välj period för betrodd enhet. Standard är 14 dagar. Ingen roll får obligatorisk MFA automatiskt.
+   Sign in and open **Settings → Access → MFA policy** (Swedish UI: **Inställningar → Åtkomst → MFA-policy**). Create/import the MFA encryption key, choose available roles and optional mandatory roles, and configure trusted-device duration (14 days by default). No role is automatically forced to use MFA.
 
-7. Sätt rättigheter:
+7. Set permissions. Apply only to the application tree, not external database volumes:
 
    ```bash
    sudo chown -R www-data:www-data /var/www/driftpunkt/var /var/www/driftpunkt/htdocs/assets
    sudo find /var/www/driftpunkt -type d -exec chmod 755 {} \;
    sudo find /var/www/driftpunkt -type f -exec chmod 644 {} \;
-sudo chmod 600 /var/www/driftpunkt/.env.local
+   sudo chmod 600 /var/www/driftpunkt/.env.local
    ```
 
-8. Ladda om Apache:
+8. Validate and reload Apache:
 
    ```bash
    sudo apache2ctl configtest
    sudo systemctl reload apache2
    ```
 
-   Aktivera därefter schemalagda jobb när miljö, databas och första konto är verifierade:
+   After verifying environment, database and first account, enable scheduled jobs:
 
    ```bash
    sudo systemctl enable --now driftpunkt-mail-poll.timer driftpunkt-attachment-archive.timer
    ```
 
-9. Lägg på HTTPS, till exempel med Certbot:
+9. Enable HTTPS, for example with Certbot:
 
    ```bash
    sudo apt-get install certbot python3-certbot-apache
    sudo certbot --apache -d driftpunkt.example.com
    ```
 
-10. Aktivera update-worker om adminytans uppdateringsflöde ska användas. Se avsnittet `Automatiska uppdateringar med systemd timer` nedan.
+10. Enable the update worker if web-based updates will be used; see the section below.
 
-## Viktiga produktionsfiler
+## Important production paths
 
-- Appkatalog: `/var/www/driftpunkt`
-- Miljö: `/var/www/driftpunkt/.env.local`
-- Apache-vhost: `/etc/apache2/sites-available/driftpunkt.conf`
-- Webbrot: `/var/www/driftpunkt/htdocs`
-- Bakåtkompatibel äldre webbrot: `/var/www/driftpunkt/public`
-- Cache/loggar/uploads: `/var/www/driftpunkt/var`
-- Loggrotation: `/etc/logrotate.d/driftpunkt`
-- Köade koduppdateringar: `/var/www/driftpunkt/var/code_update_runs`
-- Mailpolling timer: `driftpunkt-mail-poll.timer`
-- Bilagearkivering timer: `driftpunkt-attachment-archive.timer`
-- Update-worker timer: `driftpunkt-update-worker.timer`
+- Application: `/var/www/driftpunkt`; environment: `.env.local` within that directory.
+- Apache virtual host: `/etc/apache2/sites-available/driftpunkt.conf`.
+- Active webroot: `htdocs/`; legacy compatible webroot: `public/`.
+- Cache/logs/uploads: `var/`; code-update queue: `var/code_update_runs`.
+- Log rotation: `/etc/logrotate.d/driftpunkt`.
+- Timers: `driftpunkt-mail-poll.timer`, `driftpunkt-attachment-archive.timer`, `driftpunkt-update-worker.timer`.
 
-## Bakgrundsjobb
+## Background jobs
 
-Systemd-timers installeras av hjälpscriptet. Kontrollera dem med:
+The helper installs systemd timers. Inspect them with:
 
 ```bash
 systemctl list-timers 'driftpunkt-*'
@@ -192,9 +168,9 @@ systemctl status driftpunkt-mail-poll.timer
 systemctl status driftpunkt-attachment-archive.timer
 ```
 
-Hjälpscriptet installerar de färdiga timerfilerna som finns i `deploy/debian/`. SLA-kontroll, månadsrapporter och update-worker ska antingen hanteras av appens interna fallback eller sättas upp som egna cron/systemd-jobb efter samma mönster.
+Ready-made timer files live in `deploy/debian/`. Configure SLA checks, monthly reports and update processing as appropriate; production should use explicit scheduling rather than relying only on request-triggered fallback.
 
-Köra jobben manuellt:
+Run jobs manually:
 
 ```bash
 sudo -u www-data php /var/www/driftpunkt/bin/console app:mail:poll --env=prod
@@ -203,11 +179,11 @@ sudo -u www-data php /var/www/driftpunkt/bin/console app:archive-ticket-attachme
 sudo -u www-data php /var/www/driftpunkt/bin/console app:check-ticket-sla --env=prod
 ```
 
-## Automatiska uppdateringar med systemd timer
+## Queued updates with a systemd timer
 
-Adminytans uppdateringsflöde kan skapa en köad update-run i `var/code_update_runs`. För att den inte ska bli liggande som `queued` ska Debian-servern ha en separat worker som körs av systemd.
+The admin UI stores queued update runs in `var/code_update_runs`. Configure a separate systemd worker so they do not remain `queued`.
 
-Flödet är:
+Workflow:
 
 ```text
 Adminyta köar uppdatering
@@ -221,13 +197,13 @@ workern kör app:code-update:apply-run
 status blir completed eller failed
 ```
 
-### 1. Skapa worker-script
+### 1. Create the worker script
 
 ```bash
 sudo nano /usr/local/bin/driftpunkt-run-pending-updates
 ```
 
-Innehåll:
+Contents:
 
 ```bash
 #!/bin/bash
@@ -260,25 +236,25 @@ else
 fi
 ```
 
-Gör scriptet körbart:
+Make it executable:
 
 ```bash
 sudo chmod +x /usr/local/bin/driftpunkt-run-pending-updates
 ```
 
-Testa manuellt:
+Test manually:
 
 ```bash
 sudo /usr/local/bin/driftpunkt-run-pending-updates
 ```
 
-### 2. Skapa systemd-service
+### 2. Create the systemd service
 
 ```bash
 sudo nano /etc/systemd/system/driftpunkt-update-worker.service
 ```
 
-Innehåll:
+Contents:
 
 ```ini
 [Unit]
@@ -294,13 +270,13 @@ User=root
 Nice=5
 ```
 
-### 3. Skapa systemd-timer
+### 3. Create the systemd timer
 
 ```bash
 sudo nano /etc/systemd/system/driftpunkt-update-worker.timer
 ```
 
-Innehåll:
+Contents:
 
 ```ini
 [Unit]
@@ -315,7 +291,7 @@ Unit=driftpunkt-update-worker.service
 WantedBy=timers.target
 ```
 
-### 4. Aktivera och kontrollera
+### 4. Enable and verify
 
 ```bash
 sudo systemctl daemon-reload
@@ -323,28 +299,28 @@ sudo systemctl enable --now driftpunkt-update-worker.timer
 systemctl status driftpunkt-update-worker.timer
 ```
 
-Visa loggar:
+Read logs:
 
 ```bash
 journalctl -u driftpunkt-update-worker.service -n 100 --no-pager
 ```
 
-Kör workern direkt vid felsökning:
+Start the worker directly when troubleshooting:
 
 ```bash
 sudo systemctl start driftpunkt-update-worker.service
 journalctl -u driftpunkt-update-worker.service -n 50 --no-pager
 ```
 
-Om ingen uppdatering väntar ska loggen visa:
+When there is no queued update, expect the following message:
 
 ```text
 Ingen köad Driftpunkt-uppdatering hittades.
 ```
 
-## Uppgradering
+## Upgrade
 
-Rekommenderad ordning när ett paketerat uppgraderingsflöde inte används:
+Recommended order when not using the packaged web-update workflow:
 
 ```bash
 cd /var/www/driftpunkt
@@ -355,28 +331,28 @@ sudo -u www-data php -d memory_limit=512M bin/console cache:clear --env=prod
 sudo -u www-data php bin/console app:maintenance off --env=prod
 ```
 
-Ta alltid backup på databas och `var/` innan uppgradering.
+Always back up the database, private environment/keys and runtime files before upgrading. Preserve `APP_SECRET` and separate mail/MFA keys. Never run `app:install:fresh` against existing data.
 
-Uppgraderingspaket som byggs av Driftpunkt är kumulativa inom Driftpunkt 1.x och innehåller `vendor/`, så Debian-servern ska kunna uppdateras med senaste paketet utan att hämta Composer-paket från internet under själva driftfönstret. Adminflödet jämför paketet mot installerad kod, skriver bara nya eller ändrade filer och bevarar runtime-data som `.env*`, `var/` och uppladdad branding.
+Current cumulative upgrade archives include `vendor/` and declare their minimum supported version in release metadata. Normally use the latest compatible archive rather than applying every intermediate version. The updater compares installed files, replaces only new/changed files and protects `.env*`, `var/` and uploaded branding.
 
-Om adminytans uppdateringsflöde används ska `driftpunkt-update-worker.timer` vara aktiv innan uppdateringen köas. Annars kan körningen bli liggande som `queued` tills den körs manuellt. Kontrollera också att Apache-vhosten pekar på `/var/www/driftpunkt/htdocs` innan första htdocs-baserade releasepaketet appliceras.
+If using web-based updates, enable `driftpunkt-update-worker.timer` before queuing. Verify that Apache points to `/var/www/driftpunkt/htdocs` before applying an htdocs-based release.
 
-Manuell körning av en köad update-run:
+Run a queued update manually:
 
 ```bash
 cd /var/www/driftpunkt
 sudo -u www-data php bin/console app:code-update:apply-run RUN_ID --env=prod
 ```
 
-Kontrollera status:
+Inspect status:
 
 ```bash
 cat /var/www/driftpunkt/var/code_update_runs/RUN_ID.json
 ```
 
-## Rekommenderad release-struktur för mer kontrollerad produktion
+## Optional release-directory deployment
 
-För kundmiljöer där rollback är viktigt bör Driftpunkt på sikt driftsättas med release-mappar och symlink:
+For deployments requiring controlled rollback, consider versioned directories and a symlink:
 
 ```text
 /var/www/driftpunkt/
@@ -390,11 +366,11 @@ För kundmiljöer där rollback är viktigt bör Driftpunkt på sikt driftsätta
     └── public/uploads/
 ```
 
-Ett sådant flöde gör det enklare att byta tillbaka till föregående version om en release behöver rullas tillbaka.
+This simplifies changing code versions, but a code-only rollback does not undo database migrations. Restore compatible code and data together.
 
-## Felsökning
+## Troubleshooting
 
-Kontrollera PHP och tillägg:
+Check PHP/extensions:
 
 ```bash
 php -v
@@ -402,7 +378,7 @@ php -m
 composer check-platform-reqs
 ```
 
-Kontrollera loggar:
+Read logs:
 
 ```bash
 sudo journalctl -u apache2 -n 100 --no-pager
@@ -413,19 +389,19 @@ sudo journalctl -u driftpunkt-mail-poll.service -n 100 --no-pager
 sudo journalctl -u driftpunkt-update-worker.service -n 100 --no-pager
 ```
 
-Kontrollera timers:
+Inspect timers:
 
 ```bash
 systemctl list-timers 'driftpunkt-*'
 systemctl status driftpunkt-update-worker.timer
 ```
 
-Vanliga fel:
+Common problems:
 
-- `Composer detected issues in your platform`: PHP-version eller PHP-tillägg saknas.
-- HTTP 500 efter deploy: kontrollera `var/log/prod.log`, `.env.local` och databasanslutningen.
-- 404 på alla routes: Apache-vhost pekar inte på `htdocs/` eller `mod_rewrite`/`FallbackResource` saknas.
-- Inga mail skickas: `MAILER_DSN` är fortfarande `null://null` eller SMTP-uppgifter saknas.
-- Rapporter sparas men skickas inte centralt: kontrollera superadmins rapportinställningar, att svarsadressen exakt matchar en aktiv IMAP-inkorg och att mailpolling körs.
-- Uppdatering ligger kvar som `queued`: kontrollera `driftpunkt-update-worker.timer`, kör `sudo systemctl start driftpunkt-update-worker.service` och läs `journalctl -u driftpunkt-update-worker.service`.
-- `Permission denied` vid uppdatering: kontrollera ägarskap på kodfiler och `var/`, särskilt om adminytans uppdateringsflöde används.
+- `Composer detected issues in your platform`: unsupported PHP or a missing extension.
+- HTTP 500 after deployment: inspect `var/log/prod.log`, `.env.local` and database connectivity.
+- All routes return 404: wrong webroot or missing `mod_rewrite`/`FallbackResource`.
+- No outgoing email: `MAILER_DSN` may still be `null://null`, or SMTP is not configured.
+- Internal reports are saved but not delivered centrally: verify the superadmin report settings, an exact match to an active IMAP reply inbox and running mail polling.
+- Update remains `queued`: inspect `driftpunkt-update-worker.timer`, start `driftpunkt-update-worker.service` and read its journal.
+- `Permission denied`: check code/runtime ownership, particularly when using web-based updates.

@@ -1,24 +1,21 @@
-# Installation och driftsättning
+# Installation and deployment
 
-Ny installation från paket: börja med [INSTALL.md](../INSTALL.md) för korta steg till Debian 13 eller NAS. Använd inte nyinstallationskommandot på befintliga data.
+For a new release-package installation, start with [INSTALL.md](../INSTALL.md). Never initialize a fresh database over existing data.
 
-## Lokala förutsättningar
+## Prerequisites
 
-- PHP 8.4.27 eller senare inom 8.4-serien, alternativt PHP 8.5.12 eller senare inom 8.5-serien
-- Composer 2
-- MariaDB 10.11 eller senare
-- PHP-tilläggen `ctype`, `curl`, `fileinfo`, `gd` (JPEG/PNG/FreeType), `iconv`, `intl`, `mbstring`, `pdo`, `pdo_mysql`, `xml` och `zip`
-- `DATABASE_URL` mot MariaDB utanför `APP_ENV=test`; vid `mysql://` ska `serverVersion` innehålla `mariadb`
-- `PHP_CLI_BINARY=/usr/bin/php` eller motsvarande PHP CLI-binär när bakgrundsjobb startas från Apache/mod_php
-- skrivbar `var/`-katalog för cache, loggar, uppladdningar och delade driftfiler
-- webbserverns dokumentrot ska peka på `htdocs/`
-- valfritt: Symfony CLI
+- PHP 8.4.27 or later within 8.4, or PHP 8.5.12 or later within 8.5; Composer 2; MariaDB 10.11 or later.
+- Extensions: `ctype`, `curl`, `fileinfo`, `gd` with JPEG/PNG/FreeType, `iconv`, `intl`, `mbstring`, `pdo`, `pdo_mysql`, `xml`, `zip`.
+- A MariaDB `DATABASE_URL` outside `APP_ENV=test`; with `mysql://`, `serverVersion` must contain `mariadb`.
+- `PHP_CLI_BINARY` set to the actual CLI binary, commonly `/usr/bin/php`, for jobs started from Apache/mod_php.
+- Writable `var/` for cache, logs, uploads and shared operational files.
+- Web document root set to `htdocs/`; Symfony CLI is optional for development.
 
-## Webbrot och `/htdocs`
+## Webroot and htdocs
 
-Driftpunkt använder `htdocs/` som aktiv dokumentrot. En server eller NAS som redan exponerar en mapp som heter `/htdocs` ska därför kunna köra sajten utan att lägga `/public` i URL eller webbserverkonfiguration.
+The active document root is `htdocs/`. A server/NAS already exposing a directory named `/htdocs` does not need `/public` in its URL.
 
-Rekommenderad struktur:
+Recommended structure:
 
 ```text
 /var/www/driftpunkt/
@@ -34,9 +31,9 @@ Rekommenderad struktur:
 └── vendor/
 ```
 
-Apache/NAS bör peka `DocumentRoot` mot applikationens `htdocs/` när du kan välja webbrot själv. `public/` kan finnas kvar som bakåtkompatibel rot under en övergång, men nya installationer och releasepaket ska verifieras mot `htdocs/`.
+Where configurable, point Apache/NAS DocumentRoot to the application's `htdocs/`. The legacy `public/` root remains compatible during transition, but verify new deployments against `htdocs/`.
 
-På webbhotell där den publika katalogen redan heter `/htdocs` och inte kan ändras kan hela installationspaketet packas upp direkt i den yttre `/htdocs`-mappen:
+On hosting with a fixed external `/htdocs` directory, the whole installation package can be unpacked directly there:
 
 ```text
 /htdocs/
@@ -52,84 +49,81 @@ På webbhotell där den publika katalogen redan heter `/htdocs` och inte kan än
 └── vendor/
 ```
 
-I det läget använder root-`.htaccess` paketets root-`index.php`, blockerar direkta anrop till känsliga mappar som `config/`, `src/`, `vendor/` och `var/`, och serverar `/assets/...` från den interna `htdocs/assets/`. Det kräver att Apache har `mod_rewrite` och tillåter `.htaccess`.
+Root `.htaccess` then uses root `index.php`, blocks sensitive directories such as `config/`, `src/`, `vendor/` and `var/`, and serves `/assets/...` from internal `htdocs/assets/`. Apache must enable `mod_rewrite` and permit `.htaccess`.
 
-## Lokal installation
+## Local installation
 
-1. Installera beroenden:
+1. Install dependencies:
 
    ```bash
    composer install
    ```
 
-2. Kontrollera miljö.
+2. Configure the environment.
 
-   Standardvärdena i `.env` fungerar mot MariaDB i rootens `compose.yaml`. Skapa `.env.local` om du behöver ändra `APP_SECRET`, `DEFAULT_URI`, `DATABASE_URL`, `MAILER_DSN` eller andra lokala värden. Google Workspace OAuth är valfritt och kan konfigureras av superadmin under **E-post & inkorgar**. Inga extra Google-miljövariabler krävs om funktionen inte används eller konfigureras i admin.
-   Lämna `DRIFTPUNKT_ENABLE_DEMO_DATA=0` i produktion om demoärenden inte ska skapas automatiskt i en tom databas. Sätt `DRIFTPUNKT_API_TOKEN` till ett långt slumpat värde endast om read-only API:t `/api/v1/tickets` ska aktiveras.
-   För central felrapportering ställer superadmin in mottagare och svarsinkorg i den operativa cockpit-vyn. Svarsadressen måste motsvara en aktiv supportinkorg med fungerande IMAP, och `app:mail:poll` måste köras regelbundet för att e-postsvar ska visas i rapporttråden.
+   Repository `.env` defaults target MariaDB in root `compose.yaml`; override installation-specific values in `.env.local`. Set a unique `APP_SECRET`, `DEFAULT_URI`, `DATABASE_URL` and mail settings. Google Workspace OAuth is optional and can be configured by superadmin under **Email & inboxes**; unused Google integration needs no additional variables.
+   Leave `DRIFTPUNKT_ENABLE_DEMO_DATA=0` in production. Only set a strong random `DRIFTPUNKT_API_TOKEN` if enabling the read-only `/api/v1/tickets` API.
+   For central internal-report delivery, configure recipient and reply inbox in the superadmin cockpit. The reply address must exactly match an active IMAP support inbox; mail polling must run to display email replies in report threads.
 
-   Exempel på lokal MariaDB-URL:
+   Local database example:
 
    ```dotenv
    DATABASE_URL="mysql://driftpunkt:driftpunkt@127.0.0.1:33060/driftpunkt?serverVersion=mariadb-11.8.6&charset=utf8mb4"
    ```
 
-3. Initiera databasen.
-
-   För en helt ny MariaDB-installation:
+3. Initialize only a completely new database:
 
    ```bash
    php bin/console app:install:fresh --env=prod
    ```
 
-   Installationen skapar inga användarkonton. Skapa första superadmin separat; lösenordet anges dolt:
+   It creates schema/base data, initializes migration metadata and marks existing migrations as the new installation's baseline. It never creates accounts. Create the first super administrator separately with hidden password input:
 
    ```bash
    php bin/console app:create-admin admin@example.com \
-     --first-name=Förnamn \
-     --last-name=Efternamn \
+     --first-name=FirstName \
+     --last-name=LastName \
      --type=super_admin \
      --env=prod
    ```
 
-   Kommandot skapar schema direkt från entiteterna, initierar migrationsmetadata och markerar befintliga migrationer som baseline för den nya installationen.
-   Installationskommandot skapar inga konton. Efter den första inloggningen öppnar superadmin **Inställningar → Åtkomst → MFA-policy**, skapar eller importerar MFA-krypteringsnyckeln, väljer vilka roller som får använda MFA, väljer frivilligt vilka roller som måste använda MFA och väljer period för betrodd enhet. Standardperioden är 14 dagar. Ingen roll får obligatorisk MFA automatiskt vid installation eller uppgradering.
+   Open **Settings → Access → MFA policy** after sign-in. Create/import the encryption key, choose eligible roles, optionally require MFA for selected roles, and choose trusted-device duration (14 days by default). Installation/upgrading does not automatically require MFA for any role.
 
-   Om du i stället arbetar mot en befintlig databas där migrationshistorik redan ska följas:
+   For an existing database with migration history, use migrations instead:
 
    ```bash
    php bin/console doctrine:migrations:migrate -n
    ```
 
-4. Testkonton får endast skapas i utvecklings- eller testmiljö:
+4. Test accounts may be created only in development/test:
 
    ```bash
    php bin/console app:create-test-accounts
    ```
 
-   eller:
+   Or create an explicit administrator:
 
    ```bash
-   php bin/console app:create-admin dinmail@example.com --first-name=Förnamn --last-name=Efternamn --type=super_admin
+   php bin/console app:create-admin your-email@example.com --first-name=FirstName --last-name=LastName --type=super_admin
    ```
 
-5. Starta webbserver:
+5. Start a development server:
 
    ```bash
    symfony server:start
    ```
 
-   Om Symfony CLI saknas:
+   Without Symfony CLI:
 
    ```bash
    php -S 127.0.0.1:8000 -t htdocs
    ```
 
-## Docker och lokala hjälptjänster
+## Docker and local helper services
 
-Repo innehåller `compose.yaml` och `compose.override.yaml` med MariaDB och mailtestning för lokal Docker-baserad utveckling.
+Root `compose.yaml` and `compose.override.yaml` provide MariaDB and mail testing for local Docker development.
 
-Vanliga Docker-kommandon från projektets rotmapp:
+Typical commands from the project root:
 
 ```bash
 docker compose --env-file .env -f compose.yaml up -d
@@ -137,21 +131,22 @@ docker compose --env-file .env -f compose.yaml ps
 docker compose --env-file .env -f compose.yaml logs --tail=150 app
 ```
 
-Om tjänstenamnen avviker mellan miljöer, kontrollera dem med:
+If service names differ, inspect them first:
 
 ```bash
 docker compose --env-file .env -f compose.yaml config --services
 ```
 
-## Säkerhetsuppdatera PHP-motorn
+<a id="säkerhetsuppdatera-php-motorn"></a>
+## Update the PHP engine
 
-PHP 8.4.27 och 8.5.12 rättar CVE-2026-109618 och CVE-2026-109619, som kan möjliggöra kodkörning utan inloggning innan applikationskoden körs. Se [PHP:s säkerhetsmeddelande den 21 oktober 2026](https://www.php.net/archive/2026.php#2026-10-21-5). Driftpunkt stöder patchade versioner inom 8.4- och 8.5-serierna; PHP 8.5.11 uppfyller exempelvis inte kravet trots att versionsnumret är högre än 8.4.27.
+PHP 8.4.27 and 8.5.12 address CVE-2026-109618 and CVE-2026-109619, which may allow execution before application code runs. See the [official PHP security notice](https://www.php.net/archive/2026.php#2026-10-21-5). Supported patch levels are checked per series: PHP 8.5.11 does not meet the requirement simply because it is newer than 8.4.27.
 
-`composer update`, `composer install` och Driftpunkts uppgraderingspaket uppdaterar PHP-bibliotek, men ersätter inte PHP-motorn. Uppdatera och verifiera motorn för webbservern och bakgrundsjobben **innan nya app-/vendor-paket appliceras**, så att nästa uppstart klarar de höjda plattformskraven. Vid Dockerbygge installeras beroendena i den redan uppdaterade basimagen. Ta backup och planera ett kort driftavbrott när PHP-processer eller containrar startas om.
+Composer/application updates replace PHP libraries, not the PHP engine. Patch and verify web and background runtimes **before applying new application/vendor files**. Docker dependencies are installed in the updated base image. Back up and plan downtime for process/container restarts.
 
 ### Debian/Ubuntu
 
-Inventera installerade PHP-paket och uppdateringskandidater i Bash. Följande väljer enbart redan installerade paket för PHP 8.4 och 8.5, inklusive eventuellt Apache-modulstöd:
+Inventory installed PHP packages and candidates in Bash. This selects only installed 8.4/8.5 packages, including an Apache module if present:
 
 ```bash
 mapfile -t driftpunkt_php_packages < <(
@@ -167,9 +162,9 @@ if ((${#driftpunkt_php_packages[@]})); then
 fi
 ```
 
-Kontrollera att kandidatversionerna innehåller rättningarna innan du fortsätter. Om inga paket hittas eller rättad version saknas måste PHP uppdateras via den paketering eller leverantör som faktiskt används. En dokumenterad distributionsbackport kan rätta en äldre version, men Driftpunkts versionskontroll kräver ovanstående patchnivåer.
+Verify corrected candidates before proceeding. If none exist, update through the packaging/provider actually used. A distribution backport may address vulnerabilities, but Driftpunkt's version check still requires the documented patch levels.
 
-Nästa kommando uppdaterar de installerade PHP-paketen och kan starta om tjänster. Kör det i samma Bash-session efter att den simulerade uppgraderingen har granskats:
+The next command upgrades installed PHP packages and may restart services. Use the same Bash session after reviewing the simulation:
 
 ```bash
 if ((${#driftpunkt_php_packages[@]})); then
@@ -177,11 +172,11 @@ if ((${#driftpunkt_php_packages[@]})); then
 fi
 ```
 
-Starta sedan om den PHP-tjänst som webbplatsen använder: exempelvis `sudo systemctl restart php8.4-fpm` för FPM 8.4, `php8.5-fpm` för FPM 8.5 eller `sudo systemctl restart apache2` för Apache/mod_php. Starta även om eventuella långlivade PHP-workers. CachyOS/Arch använder i stället en samordnad systemuppgradering via `sudo pacman -Syu`; en sådan ska planeras separat eftersom fler paket än PHP kan påverkas.
+Restart the site's actual PHP service: for example `php8.4-fpm`, `php8.5-fpm` or Apache for mod_php. Restart long-running workers too. CachyOS/Arch instead needs a coordinated `sudo pacman -Syu`, planned separately because it may update more than PHP.
 
 ### Docker/NAS
 
-Projektets `Dockerfile` använder PHP 8.4.27. En befintlig container eller lokalt cachad PHP-image kan fortfarande innehålla en äldre motor. Kör från projektroten med NAS-konfigurationen:
+The Dockerfile uses PHP 8.4.27. Existing containers/cached images may still use an older engine. From the project root with NAS configuration:
 
 ```bash
 docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env build --pull app &&
@@ -192,9 +187,9 @@ docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env exec -T app
 docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env ps
 ```
 
-Bygget hämtar basimagen; återskapandet startar om webb och schemaläggare med den nya imagen. Båda versionskontrollerna ska visa PHP 8.4.27 och tjänsterna ska vara igång, med `app` som `healthy`. Anpassa Compose-fil och miljöfil om driftsättningen använder andra sökvägar.
+Building fetches the base image; recreation restarts both services with the new image. Both version checks must show the expected PHP version and services should be running, with app healthy. Adapt paths to the actual deployment.
 
-Om hämtningen misslyckas, avbryt driftsättningen; använd ingen äldre PHP-tagg eller gammal lokal appimage. Den 21 oktober 2026 saknade den vanliga taggens multiarkitekturindex ännu plattformsmanifest. På en Docker-server med AMD64 kan den officiella arkitekturspecifika imagen användas tillfälligt, med samma säkerhetsnivå:
+If pulling fails, stop; do not fall back to an older PHP tag or stale application image. On 2026-10-21, the regular upstream multiarchitecture index lacked platform manifests. The official architecture-specific image provided the following temporary **AMD64-only** alternative:
 
 ```bash
 if [ "$(docker version --format '{{.Server.Arch}}')" = amd64 ]; then
@@ -207,58 +202,46 @@ else
 fi
 ```
 
-Kör samma versions-, plattforms- och webbkontroller efteråt. För ARM krävs en rättad image publicerad för den arkitekturen; projektets standardval behåller stöd för flera arkitekturer när upstreamindexet är komplett.
+Repeat version, platform and web checks afterward. ARM needs a corrected image for its architecture. The normal project choice remains multiarchitecture when the upstream index is complete.
 
-### Verifiera CLI och faktisk webb-runtime
+### Verify CLI and actual web PHP
 
 ```bash
 php -r 'printf("PHP %s (%s)\n", PHP_VERSION, PHP_SAPI);'
 composer check-platform-reqs --no-dev
 ```
 
-CLI ska visa en tillåten patchnivå och Composer ska rapportera godkända plattformskrav. Kör plattformskontrollen även när `vendor/` levereras färdigbyggd: Composers autoloadkontroll av lägsta PHP-version ersätter inte kontrollen av respektive versionsserie och kan släppa igenom PHP 8.5.11. Kontrollera även `PHP_CLI_BINARY` och de binärsökvägar som cron/systemd använder.
+CLI must satisfy the supported series/patch requirement and Composer must pass platform checks. Check even when `vendor/` is bundled: Composer's minimum-version autoload check does not fully enforce the separate 8.5 minimum. Verify `PHP_CLI_BINARY` and paths used by cron/systemd.
 
-`php -v` verifierar bara CLI: webbplatsens FPM-pool eller Apache-modul kan använda en annan version. Bekräfta därför version och SAPI från en riktig webbförfrågan via webbhotellets skyddade diagnos eller en tillfällig kontroll begränsad till localhost som endast visar `PHP_VERSION` och `PHP_SAPI`. Ta bort kontrollen efteråt; publicera ingen `phpinfo()`-sida. För Docker görs kontrollen efter att `app` har återskapats. Avsluta med att verifiera startsida, inloggning, ärenden och schemalagda jobb innan underhållsläget stängs av.
+`php -v` checks CLI only. The site's FPM pool or Apache module may differ. Verify PHP version/SAPI through a protected hosting diagnostic or a temporary localhost-restricted request exposing only `PHP_VERSION` and `PHP_SAPI`. Remove it afterward; never publish `phpinfo()`. For Docker, check after recreating app. Verify homepage, login, tickets and jobs before disabling maintenance.
 
-## Produktionsdrift
+## Production deployment
 
-En fungerande driftsättning bör innehålla:
+A complete deployment should have:
 
-- webbserver som pekar på `htdocs/`
-- alternativt fast webbhotellrot `/htdocs` där paketets root-`.htaccess` är aktiv
-- skrivbar `var/`
-- `PHP_CLI_BINARY` satt till serverns PHP CLI-binär, normalt `/usr/bin/php`, så adminytans bakgrundsjobb inte är beroende av webb-SAPI:ns `PHP_BINARY`
-- skrivbar `htdocs/assets/branding` om logotyp, flikikon och branding ska kunna ändras från adminytan; uppladdade `custom-site-*`-filer är runtime-data och ska bevaras vid koduppdateringar
-- MariaDB-databas med korrekt `serverVersion` i `DATABASE_URL`
-- standard-superadmin och minst ett vanligt admin-konto
-- process för schemalagda jobb
-- worker för köade koduppdateringar om adminytans uppdateringsflöde används
-- loggrotation eller motsvarande retention för `var/log/*.log`
+- DocumentRoot `htdocs/`, or the fixed external `/htdocs` arrangement with root `.htaccess`.
+- Correct writable runtime directories and `PHP_CLI_BINARY`.
+- Writable `htdocs/assets/branding` if administrators upload branding. Preserve uploaded `custom-site-*` files during code updates.
+- MariaDB with correct `serverVersion` in `DATABASE_URL`.
+- An explicitly created super administrator and suitable ordinary admin accounts.
+- Scheduling for mail polling, SLA, attachment archiving and monthly reports when used.
+- A queued-update worker if web updates are enabled, plus log rotation/retention.
 
-Schemalagda jobb bör minst omfatta mailpolling, SLA-kontroll, bilagearkivering och månadsrapporter om rapportmail används. Månadsrapporten kan exempelvis köras efter månadsskifte:
+Monthly reports can run after a month boundary:
 
 ```bash
 php bin/console app:reports:send-monthly --env=prod
 ```
 
-Om adminytans uppdateringsflöde ska användas för att applicera kodpaket måste den faktiska PHP/webbserver-användaren, normalt `www-data`, också kunna skriva till koddelarna som byts vid uppdatering: `bin/`, `config/`, `htdocs/`, `migrations/`, `public/`, `src/`, `templates/`, `composer.json`, `composer.lock` och `symfony.lock`.
+Web updates require write permission to the managed code files listed in the Debian guide. Check the actual service user, particularly on `mpm-itk`/`AssignUserID`, and run Composer/migrations/cache tasks as that user. A root-owned-code deployment should use SSH/scripts for updates instead of granting web code-write access.
 
-På Apache-servrar med `mpm-itk` eller `AssignUserID` kan webbplatsen köras som vhost-användaren i stället för `www-data`. Kontrollera därför Apache-vhosten eller en PHP-diagnos innan rättigheter sätts, och kör manuella eftersteg som `composer install`, migrations och cache-warmup med samma användare.
+For Debian, see `docs/debian_server_setup.md`, `deploy/debian/app.env.example`, `deploy/debian/apache-driftpunkt.conf` and `deploy/debian/setup.sh`.
 
-På en mer låst produktion kan kodfilerna i stället ägas av `root` och bara `var/` vara skrivbar för `www-data`, men då ska koduppdateringar göras via SSH/deploy-script i stället för via adminytan.
+## Processing queued updates
 
-För en konkret Debian-installation, använd:
+Admin code updates create JSON runs under `var/code_update_runs`. Configure an external worker so runs do not remain `queued`.
 
-- `docs/debian_server_setup.md`
-- `deploy/debian/app.env.example`
-- `deploy/debian/apache-driftpunkt.conf`
-- `deploy/debian/setup.sh`
-
-## Automatisk hantering av köade uppdateringar
-
-Driftpunkt kan lägga koduppdateringar i kö från adminytan. En köad uppdatering sparas som JSON i `var/code_update_runs`. För att uppdateringen inte ska bli liggande som `queued` behöver produktionen ha en schemalagd worker.
-
-Rekommenderad modell:
+Recommended model:
 
 ```text
 Adminyta köar uppdatering
@@ -272,17 +255,17 @@ worker kör app:code-update:apply-run
 status blir completed eller failed
 ```
 
-Webbprocessen ska helst inte vara enda mekanismen för att starta själva uppdateringen. Det är säkrare att låta cron, systemd timer eller Docker-scheduler plocka upp jobbet.
+The web request should not be the only reliable update launcher. Use an appropriate cron/systemd worker. The stock image-based NAS deployment uses image replacement instead of web code replacement.
 
-### Docker/NAS: cron-worker
+### Docker/NAS: cron worker for compatible custom stacks
 
-Skapa scriptet i projektets rotmapp:
+Create the script in the project root:
 
 ```bash
 nano /share/Docker/driftpunkt/run-pending-updates.sh
 ```
 
-Innehåll:
+Contents:
 
 ```sh
 #!/bin/sh
@@ -313,48 +296,48 @@ else
 fi
 ```
 
-Gör scriptet körbart:
+Make it executable:
 
 ```bash
 chmod +x /share/Docker/driftpunkt/run-pending-updates.sh
 ```
 
-Testa scriptet:
+Test it:
 
 ```bash
 /share/Docker/driftpunkt/run-pending-updates.sh
 ```
 
-Om ingen uppdatering väntar ska svaret vara:
+With no queued update, expect:
 
 ```text
 Ingen köad Driftpunkt-uppdatering hittades.
 ```
 
-Lägg in scriptet i root-cron:
+Edit root's crontab:
 
 ```bash
 sudo crontab -e
 ```
 
-Lägg till:
+Add:
 
 ```cron
 * * * * * /share/Docker/driftpunkt/run-pending-updates.sh >> /share/Docker/driftpunkt/var/background_jobs/auto_update_cron.log 2>&1
 ```
 
-Kontrollera:
+Verify:
 
 ```bash
 sudo crontab -l
 tail -n 50 /share/Docker/driftpunkt/var/background_jobs/auto_update_cron.log
 ```
 
-Om NAS:en inte stödjer vanlig `crontab -e`, skapa motsvarande schemalagd uppgift i NAS:ens webbgränssnitt och kör samma script var 1–5 minut.
+If normal crontab editing is unavailable, configure an equivalent NAS scheduled task every 1–5 minutes.
 
-### Debian utan Docker: systemd timer
+### Debian without Docker: systemd timer
 
-På en vanlig Debian-server utan Docker rekommenderas `systemd timer`. Se `docs/debian_server_setup.md` för komplett exempel. Grundprincipen är:
+Use the complete example in the [Debian guide](debian_server_setup.md). Basic steps:
 
 ```bash
 sudo systemctl enable --now driftpunkt-update-worker.timer
@@ -362,49 +345,44 @@ systemctl status driftpunkt-update-worker.timer
 journalctl -u driftpunkt-update-worker.service -n 100 --no-pager
 ```
 
-## Rekommenderad efter-installation
+## Post-installation checklist
 
-Verifiera följande efter installation:
+- [ ] Web UI and homepage are reachable through the correct webroot.
+- [ ] Sensitive directories (`config/`, `src/`, `vendor/`, `var/`) cannot be requested directly, particularly on fixed `/htdocs` hosting.
+- [ ] Sign-in, database connectivity and explicit administrator accounts work.
+- [ ] Runtime directories are writable by the correct user.
+- [ ] Required mail servers/inboxes are configured and actual mail flow is verified before enabling it.
+- [ ] Polling, SLA and attachment jobs are enabled where needed.
+- [ ] Update processing is configured for the selected deployment model.
+- [ ] Backup/restoration and HTTPS are verified in the intended environment.
+- [ ] Public status works as intended.
 
-- [ ] webbgränssnittet går att nå
-- [ ] webbservern pekar på `htdocs/` och `/` visar Driftpunkts startsida
-- [ ] om hela paketet ligger direkt i yttre `/htdocs`: kontrollera att `/config/`, `/src/`, `/vendor/` och `/var/` ger 403 eller inte är åtkomliga
-- [ ] inloggning fungerar
-- [ ] databasanslutning fungerar
-- [ ] standard-superadmin och vanligt admin-konto finns
-- [ ] `var/` är skrivbar för rätt användare
-- [ ] mailservrar och supportinkorgar är konfigurerade vid behov
-- [ ] polling, SLA-jobb och bilagearkivering är aktiverade
-- [ ] automatisk worker för köade uppdateringar är aktiverad om adminytans uppdateringsflöde används
-- [ ] backup och restore har testats
-- [ ] driftstatussidan är verifierad
+## Upgrade
 
-## Uppgradering
-
-Bygg eller leverera uppgraderingspaket:
+Build or distribute upgrade archives:
 
 ```bash
 php bin/console app:release:build-packages --type=upgrade
 ```
 
-Uppgraderingspaket är kumulativa inom Driftpunkt 1.x och innehåller `vendor/` för att NAS- och Debian-installationer inte ska behöva hämta PHP-paket från internet mitt i en uppdatering. Välj normalt senaste `driftpunkt-upgrade-<version>.zip` även om installationen ligger flera versioner efter. Adminflödet jämför paketet mot installerad kod, skriver bara nya eller ändrade filer, tar bort gamla hanterade filer och bevarar runtime-data som `.env*`, `var/` och uppladdad branding.
+Current upgrade archives are cumulative and include production `vendor/`. Check their minimum supported version and normally use the latest compatible archive. The updater compares code, replaces changed/new files, removes obsolete managed files and protects `.env*`, `var/` and uploaded branding.
 
-Releasepaketen tar bara med installations- och uppdateringsnära dokumentation från `docs/`: huvudguiden, Debian-guiden, NAS-guiden, mail-/jobbdrift, bilagearkivering, säkerhetskrav, kända driftbegränsningar och addon-releaseguiden. Produktplaner, interna specar, skärmbilder och designunderlag ska inte följa med i installations- eller uppgraderingszipparna.
+Packages include selected installation/operations documentation, not internal plans, design sources or screenshots. Preserve existing mail accounts, environment files and encryption keys; do not initialize a new database during an upgrade.
 
-Cacheuppvärmningen i Dockerbygget och uppdaterarens CLI-steg använder en separat minnesbudget på 512 MB. Composer-eftersteg får `COMPOSER_MEMORY_LIMIT=512M` som standard om inget uttryckligt värde finns. Detta ändrar inte webbserverns PHP-minnesgräns.
+Docker/cache CLI warmup uses a separate 512 MB budget. Composer post-update steps default to `COMPOSER_MEMORY_LIMIT=512M` unless explicitly configured. This does not change web PHP memory limits.
 
-Rekommenderad ordning i drift:
+Recommended operational order:
 
-1. skapa backup
-2. aktivera underhållsläge
-3. uppdatera och verifiera PHP-motorn för webb och bakgrundsjobb enligt avsnittet ovan; underhållsläge skyddar inte mot PHP-motorns sårbarheter, så begränsa vid behov webbåtkomsten på server-/proxynivå
-4. stagea/applicera uppdateringspaket
-5. låt uppdateringsflödet kontrollera Composer-beroenden från låsfilen, tillämpa MariaDB-migrationer och rensa/värma cachen
-6. verifiera att update-worker markerar körningen som `completed`
-7. verifiera inloggning, tickets och mail
-8. avaktivera underhållsläge och återöppna extern åtkomst när kontrollerna är godkända
+1. Create coordinated backups.
+2. Enable maintenance and pause mail intake/business jobs.
+3. Patch and verify PHP for web and workers. Maintenance alone does not protect against engine vulnerabilities; isolate public access if needed.
+4. Stage/apply the compatible archive, or replace both images for image-based deployment.
+5. Complete locked Composer installation, MariaDB migrations and cache warmup.
+6. Verify the run is `completed` and health confirmation is pending.
+7. Verify sign-in, tickets, permissions and configured mail flow.
+8. Disable maintenance/resume external access only after checks pass.
 
-Manuell körning av en specifik update-run:
+Run a particular queued update:
 
 ```bash
 php bin/console app:code-update:apply-run RUN_ID --env=prod
@@ -416,8 +394,10 @@ Docker/NAS:
 docker compose --env-file .env -f compose.yaml exec -T --user www-data app php bin/console app:code-update:apply-run RUN_ID --env=prod
 ```
 
-Kontrollera status för en körning:
+Inspect a run:
 
 ```bash
 cat var/code_update_runs/RUN_ID.json
 ```
+
+See the [2.0 upgrade checklist](upgrade_to_2_0_0.md) for preserved mail settings, support-card requirements, layout choices and recovery from an older cache/container update failure.

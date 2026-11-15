@@ -1,29 +1,29 @@
-# NAS-installation med Docker Compose
+# NAS installation with Docker Compose
 
-Den här guiden gäller den medföljande **avbildningsbaserade** Compose-stacken, på en ny NAS eller i en separat tom projektkatalog. För enklaste nyinstallation: börja i [INSTALL.md](../INSTALL.md). Inga befintliga NAS-containrar ändras av att bara läsa guiden.
+This guide covers the supplied **image-based** Compose stack on a new NAS or in a separate empty project directory. Start with [INSTALL.md](../INSTALL.md). Reading this guide does not change existing containers.
 
-## Krav
+## Requirements
 
-- Docker/Container Manager och Docker Compose v2, SSH-terminal och rättighet att köra Docker.
-- Installationspaketet uppackat med dolda filer i en egen katalog. Kör kommandon från paketrot, inte katalogen ovanför.
-- Paketets PHP/GD-krav uppfylls vid imagebygget; `manage.sh check` verifierar PHP och PNG-filer. Aktiva webb-PHP och den faktiska installationens funktioner behöver också verifieras.
-- Använd den genererade MariaDB-konfigurationen för nyinstallation. Byt inte avbildningsserie för en befintlig databas utan en separat migrations-/backupplan.
+- Docker/Container Manager, Docker Compose v2, an SSH terminal and permission to run Docker.
+- The installation archive unpacked into its own directory, including hidden files. Run commands from the package root, not its parent.
+- The image build enforces PHP/GD requirements; `manage.sh check` checks runtime prerequisites and preview PNGs. Also verify the active web PHP runtime and application functions.
+- Use the generated MariaDB configuration for a new installation. Do not change an existing database image series without a separate migration/backup plan.
 
-## Kort nyinstallation
+## Short fresh-install procedure
 
-Byt adress och administratörens e-post. Vid extern HTTPS-proxy används den publika HTTPS-adressen i `init`. HTTP/IP är för avgränsade tester, inte verklig kunddrift.
+Replace the address and administrator email. Behind an HTTPS reverse proxy, pass the public HTTPS address to `init`. HTTP/IP is only for isolated tests.
 
 ```bash
-bash deploy/nas/manage.sh init http://DIN-NAS-IP:8080
+bash deploy/nas/manage.sh init http://YOUR-NAS-IP:8080
 bash deploy/nas/manage.sh install
-bash deploy/nas/manage.sh admin din-adress@example.com
+bash deploy/nas/manage.sh admin your-email@example.com
 ```
 
-`init` genererar slumpad `APP_SECRET` och två databaslösenord i en privat miljöfil (600). Samma applikationslösenord skrivs i `DATABASE_URL`; inget behöver kopieras mellan olika inställningar. En befintlig miljöfil skrivs inte över. Granska `DEFAULT_URI`, `DRIFTPUNKT_PUBLIC_BASE_URL`, `APP_PORT` och `MAILER_FROM`. SMTP är avstängt (`null://null`) tills du konfigurerar det.
+`init` generates a random `APP_SECRET` and two database passwords in a private environment file (600). The application password is also written into `DATABASE_URL`. Existing environment files are never overwritten. Review `DEFAULT_URI`, `DRIFTPUNKT_PUBLIC_BASE_URL`, `APP_PORT` and `MAILER_FROM`. SMTP remains disabled (`null://null`) until configured.
 
-`install` startar bara databas och app före initiering. Databasen måste vara tom. Vid en avbruten **nyinstallation** används uttryckligen `install --resume`; det kommandot raderar inte befintliga tabeller utan stoppas av applikationens skydd. Använd inte detta vid uppgradering av ett befintligt system.
+`install` starts only database and app before initialization. The database must be empty. Explicitly use `install --resume` for an interrupted **new installation**; it does not erase tables and remains protected by the application's existing-table checks. Never use it to upgrade an existing system.
 
-`admin` frågar efter lösenord dolt. Öppna adressen, kontrollera kontot och ställ in MFA under **Inställningar → Åtkomst → MFA-policy**. Konfigurera riktiga mottagare och inkorgar innan utskick tillåts. Därefter:
+`admin` prompts for a hidden password. Open the site, verify the account and configure **Settings → Access → MFA policy**. Configure real recipients/inboxes before enabling email. Then run:
 
 ```bash
 bash deploy/nas/manage.sh check
@@ -31,166 +31,162 @@ bash deploy/nas/manage.sh start
 bash deploy/nas/manage.sh status
 ```
 
-Jobben aktiveras först med `start`. På NAS där Docker kräver root används `sudo bash ...`. Skriptet konfigurerar inte automatiskt brandvägg, TLS eller omvänd proxy.
+Business jobs start only with `start`. Use `sudo bash ...` where Docker requires root. The helper does not configure firewall, TLS or reverse proxy settings automatically.
 
-### Lagring och befintliga installationer
+### Persistent storage and existing installations
 
-Databas, `var/` och uppladdad webbplatsbranding ligger beständigt i `deploy/nas/data/{mariadb,var,branding}`. De inbyggda standardlogotyperna läggs till utan att skriva över redan sparade filer.
+Database, runtime files and uploaded site branding persist under `deploy/nas/data/{mariadb,var,branding}`. Built-in default logos are seeded without overwriting existing files.
 
-**Innan en äldre stack får den nya branding-monteringen:** säkerhetskopiera och kopiera dess nuvarande `/var/www/html/htdocs/assets/branding` till `deploy/nas/data/branding`. En tom ny bind-montering döljer annars gamla filer inne i containern. Ändra inte en äldre stacks Compose-filer eller databasavbildning genom att blint kopiera denna guide; inventera dess verkliga volymer först.
+**Before adding the new branding mount to an older stack:** back up and copy its current `/var/www/html/htdocs/assets/branding` into `deploy/nas/data/branding`. An empty bind mount would hide the existing in-container files. Inventory actual volumes before changing old Compose files or database images.
 
-## Byggkontext och paketfiler
+## Build context and package files
 
-Både installations- och uppgraderingszippen innehåller `.dockerignore` bredvid `Dockerfile`. Behåll filen vid uppackning och kopiering, även om filhanteraren döljer punktfiler. Bygg från den uppackade paketrot där båda filerna finns, inte från katalogen ovanför.
+Both install and upgrade archives include `.dockerignore` beside `Dockerfile`. Keep it when unpacking/copying, even if a file manager hides dotfiles. Build from the unpacked package root containing both files.
 
-`.dockerignore` håller följande utanför byggkontexten och imagen:
+`.dockerignore` excludes:
 
-- `db/`, `var/`, `backup/`, `backups/` samt databasdumpar i projektroten (`*.sql`, `*.sql.gz`, `*.sql.zip`).
-- `deploy/nas/data/` och `deploy/nas/backups/`, inklusive MariaDB-data och återställda driftmappar.
-- `public/uploads/`, `htdocs/uploads/` och uppladdade `custom-site-*`-logotyper; de medföljande standardlogotyperna finns kvar.
-- Git-metadata, lokala miljööverstyrningar, `deploy/nas/.env`, loggar och byggartefakter enligt filens övriga regler.
+- `db/`, `var/`, `backup/`, `backups/`, and root database dumps (`*.sql`, `*.sql.gz`, `*.sql.zip`).
+- `deploy/nas/data/` and `deploy/nas/backups/`, including database and restored runtime data.
+- `public/uploads/`, `htdocs/uploads/` and uploaded `custom-site-*` logos; built-in logos remain included.
+- Git metadata, private environment overrides, `deploy/nas/.env`, logs and other listed build artifacts.
 
-Källkod, `vendor/`, Composer-filer, webbassets och `deploy/php`/`deploy/apache` ska finnas med. Uteslut inte hela `deploy/` eller `htdocs/assets/`. Lägg egen körtidsdata i de dokumenterade driftmapparna; egna lagringsplatser måste också läggas till i `.dockerignore`. Paketbyggaren hoppar dessutom över `deploy/nas/data/` och `deploy/nas/backups/` utan att läsa deras innehåll när zipparna skapas.
+Source, `vendor/`, Composer files, web assets and `deploy/php`/`deploy/apache` must remain included. Do not exclude all of `deploy/` or `htdocs/assets/`. Add custom runtime locations to `.dockerignore` too. Package creation also skips NAS data/backup directories without reading them.
 
-Dockerfilen tillåter Composer-pluginer uttryckligen med `COMPOSER_ALLOW_SUPERUSER=1` för själva `composer install`-steget, som körs som root vid imagebygget. Det gör att den tillåtna Symfony Flex-pluginen kan köra `symfony-cmd` och installera assets. Inställningen är inte en permanent miljövariabel i den färdiga containern. Composer använder den befintliga låsfilen och `--no-dev`, utan versionsuppdatering av beroenden.
+The Dockerfile explicitly allows Composer plugins with `COMPOSER_ALLOW_SUPERUSER=1` for the root-run install step only. This lets the allowlisted Symfony Flex plugin run `symfony-cmd` and asset installation. It is not a permanent environment variable in the final container. Composer uses the existing lock file and `--no-dev`, without upgrading dependency versions.
 
-Kontrollera punktfilen före bygget och spara byggloggen:
+Verify the dotfile and save the build log:
 
 ```bash
 test -f .dockerignore && test -f Dockerfile
 docker build --pull -t driftpunkt:test . 2>&1 | tee /tmp/driftpunkt-docker-build.log
 ```
 
-Kontrollera att Dockerbygget avslutas utan fel och att `transferring context` visar en rimlig kodstorlek, inte flera GB databas eller backup. Storleken beror bland annat på om `vendor/` finns och om BuildKit redan har cache. Bygget skapar en lokal testimage; det startar eller ersätter inga driftcontainrar. Om en pipeline används i ett skript bör den köras med Bash och `set -o pipefail` så att ett byggfel inte döljs av `tee`.
+The build must finish successfully, with a reasonable transferred code context rather than gigabytes of database/backups. Size varies with dependencies and BuildKit cache. This creates a local test image without replacing running containers. In scripted Bash pipelines, enable `set -o pipefail` so `tee` cannot hide a build failure.
 
-Om `.dockerignore` saknas i ett äldre paket: bygg inte förrän den aktuella filen har lagts tillbaka. Uppdaterade paket behöver genereras om för att innehålla rättningen. Redan byggda image-lager ändras inte av en ny ignore-fil; bygg om imagen från den korrigerade källan.
+If an older package lacks `.dockerignore`, restore the current file before building. Already built image layers are not changed by an updated ignore file; rebuild from corrected source.
 
-### Verifiering av paketrättningen, 2026-11-11
+### Historical package-fix verification, 2026-11-11
 
-- `app:release:build-packages`, Composer-kommandona `build:packages`/`build:install-package`/`build:upgrade-package` och `app:repo:export-public` använder samma `ReleasePackageBuilder`. Den publika exportören kopierar dess färdiga zippar; GitHub-arbetsflödet publicerar också redan byggda zippar. Övriga zip-skrivare hanterar kod-/databasbackuper och bilagearkiv, inte installations- eller uppgraderingspaket.
-- Både repo och uppackat installationspaket från `app:repo:export-public` byggdes med `docker build --pull -t driftpunkt:test .`, exitkod 0. Composer körde produktionsinstallation, cache-rensning och Flex-steget `assets:install` utan fel.
-- Nio kontrollfiler på totalt **576 MiB per byggrot** placerades i de uteslutna driftmapparna och som SQL-dump i roten. Dockerfiltrering och kontroll av de färdiga imagerna visade att inga kontrollfiler följde med. Standardlogotyp, beroenden och byggkonfiguration fanns kvar; `composer check-platform-reqs --no-dev` passerade i båda imagerna.
+- Release CLI/Composer commands and public export share `ReleasePackageBuilder`; public export and the GitHub workflow distribute its built archives. Other ZIP writers handle backups/attachments, not release packages.
+- Both repository source and an unpacked public install package built with `docker build --pull -t driftpunkt:test .`, exit 0. Production Composer installation, cache clear and Flex `assets:install` succeeded.
+- Nine probe files totalling **576 MiB per build root** were placed in excluded runtime directories and a root SQL dump. Filtered contexts and final images excluded all probes while retaining default logos, dependencies and build configuration. Platform checks passed in both images.
 
-| Byggkälla | Filinnehåll efter Dockers ignore-filter | Rapporterad överföring vid slutbygget |
+| Build source | File bytes after Docker ignore filtering | Reported final transfer |
 | --- | ---: | ---: |
-| Repo med utvecklingsberoenden, tester och interna dokument | 90 136 209 byte (90,14 MB) | 858,26 kB, med varm BuildKit-cache |
-| Uppackat installationspaket | 47 938 458 byte (47,94 MB) | 48,80 MB |
+| Repository with dev dependencies, tests and internal documents | 90,136,209 bytes (90.14 MB) | 858.26 kB, warm BuildKit cache |
+| Unpacked install archive | 47,938,458 bytes (47.94 MB) | 48.80 MB |
 
-Filinnehållet mättes genom en separat lokal BuildKit-export med `FROM scratch` och `COPY . /`, med samma `.dockerignore`. Summan av filernas storlek skiljer sig från överförda byte och arkivens storlek; BuildKit återanvänder dessutom redan överförda filer. Siffrorna gäller denna lokala kontroll, inte en generell storleksgräns.
+Filtered file sizes were measured using a separate local BuildKit `FROM scratch`/`COPY . /` export with the same ignore file. File totals, transferred bytes and archive sizes differ; BuildKit reuses files. These are historical local measurements, not universal size limits.
 
-Berörda tester kördes i en PHPUnit-process med:
+Affected tests ran in one PHPUnit process:
 
 ```bash
 php -d memory_limit=128M vendor/bin/phpunit tests/Service/ReleasePackageBuilderTest.php tests/Service/PublicRepoExporterTest.php tests/Service/CodeUpdateManagerTest.php
 ```
 
-Resultat: **16 tester, 503 assertions, godkända**, samt godkänd PHP-syntax och `git diff --check`. Testerna verifierar båda pakettypernas `.dockerignore`, viktiga exkluderingsmönster, nödvändiga byggfiler, manifest och bortfiltrerad NAS-data. Lokala bygg-, image- och testloggar finns under `var/docker-verification/`; de ingår inte i paketen eller Git. Appversion och låsta beroendeversioner är oförändrade. Ingen NAS-driftsättning har gjorts.
+Result: **16 tests / 503 assertions passed**, plus PHP syntax and diff checks. Tests covered `.dockerignore` in both archive types, exclusions, required build files, manifests and NAS data filtering. Local logs under `var/docker-verification/` are not shipped. Application/dependency versions were unchanged by that fix; no NAS deployment was performed in that historical check.
 
-## Första superadmin
+## First super administrator
 
-`app:install:fresh` skapar aldrig användarkonton. Skapa första superadmin separat och ange lösenordet dolt:
+`app:install:fresh` never creates user accounts. Create the first super administrator separately using the hidden password prompt:
 
 ```bash
-docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env exec --user www-data app php bin/console app:create-admin admin@example.com --first-name=Förnamn --last-name=Efternamn --type=super_admin --env=prod
+docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env exec --user www-data app php bin/console app:create-admin admin@example.com --first-name=FirstName --last-name=LastName --type=super_admin --env=prod
 ```
 
-Logga in och öppna därefter **Inställningar → Åtkomst → MFA-policy** för att skapa eller importera MFA-nyckeln och välja tillgänglighet, frivilliga rollkrav och period för betrodd enhet. Ingen roll får obligatoriskt MFA automatiskt.
+After sign-in, open **Settings → Access → MFA policy** to create/import the encryption key and choose availability, optional required roles and trusted-device duration. MFA is not automatically mandatory for any role.
 
-## Bakgrundsjobb
+## Background jobs
 
-Compose-filen startar en `scheduler`-container som kör:
+The `scheduler` service runs:
 
-- `app:mail:poll` varje minut
-- `app:internal-reports:retry-notifications` varje minut; endast förfallna misslyckade notifieringar behandlas
-- `app:check-ticket-sla` varje minut
-- `app:archive-ticket-attachments` runt 02:15
+- `app:mail:poll` each minute.
+- `app:internal-reports:retry-notifications` each minute, processing only due failures.
+- `app:check-ticket-sla` each minute.
+- `app:archive-ticket-attachments` around 02:15.
 
-Köade koduppdateringar från adminytan körs inte av scheduler-containern automatiskt. Använd NAS:ens schemalagda uppgifter eller cron enligt `docs/installation_and_deployment.md` om uppdateringar ska appliceras från adminytan.
+It does not automatically consume queued code updates. Custom deployments using web code updates need an appropriate NAS/cron worker; see [deployment operations](installation_and_deployment.md).
 
-Kontrollera loggar:
+Read logs:
 
 ```bash
 docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env logs -f app scheduler
 ```
 
-## Stabilitet
+## Stability
 
-Compose-filen gör följande för en lugnare NAS-drift:
+The Compose stack:
 
-- startar om containrar automatiskt med `restart: unless-stopped`
-- väntar på frisk databas innan appen startar fullt
-- kör en HTTP-healthcheck mot appen
-- rättar ägare på `var/` till `www-data` vid start
-- rättar ägare på `htdocs/assets` till `www-data` så brandinguppladdning fungerar
-- kör schemalagda Symfony-kommandon som `www-data`
+- Restarts containers with `restart: unless-stopped`.
+- Waits for database health before starting the application fully.
+- Uses an application HTTP healthcheck.
+- Sets `var/` and `htdocs/assets` ownership for `www-data` at startup.
+- Executes scheduled Symfony commands as `www-data`.
 
 ## Backup
 
-Ta backup på databas, `var/`, logotyper och privata miljöhemligheter. Arkiven innehåller hemligheter och ska förvaras skyddat, utanför publika kataloger.
+Back up database, runtime files, logos and private environment secrets. Archives contain secrets: protect them and keep them outside public directories.
 
-Databasdump:
+Database dump:
 
 ```bash
 docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env exec database mariadb-dump -u root -p driftpunkt > driftpunkt.sql
 ```
 
-Samlad backup till `deploy/nas/backups/`:
+Combined backup under `deploy/nas/backups/`:
 
 ```bash
 bash deploy/nas/backup.sh
 ```
 
-Backupscriptet skapar ett arkiv med:
+The archive contains:
 
-- MariaDB-dump med `--single-transaction`, rutiner, triggers och events
-- `deploy/nas/data/var` och eventuell `data/branding`
-- privat miljöfil och Compose-konfiguration under `configuration/`
-- `manifest.txt` med tidpunkt, compose-fil och git-commit när det finns
+- A MariaDB `--single-transaction` dump with routines, triggers and events.
+- Runtime files and available branding data.
+- Private environment and Compose configuration under `configuration/`.
+- `manifest.txt` with timestamp, Compose file and Git commit when available.
 
-Det lägger också ett enkelt lås så två backuper inte körs samtidigt, verifierar arkivet med `tar -tzf` och rensar backuper äldre än 14 dagar. Ändra retention vid behov:
+The helper prevents concurrent backups, checks the archive with `tar -tzf` and removes backups older than 14 days. Override retention if needed:
 
 ```bash
 BACKUP_RETENTION_DAYS=30 bash deploy/nas/backup.sh
 ```
 
-Restore från ett backup-arkiv:
+Restore from an archive:
 
 ```bash
 CONFIRM=restore bash deploy/nas/restore.sh deploy/nas/backups/driftpunkt-YYYYMMDD-HHMMSS.tar.gz
 ```
 
-Restore kräver rätt programversion och matchande `APP_SECRET`; hemligheten skrivs inte över automatiskt. Restore stoppar app och scheduler, läser in `database.sql`, återställer `data/var` och eventuell branding och startar sedan stacken igen. Den gamla `data/var` flyttas till en tidsstamplad `var.before-restore-*`-mapp.
+Restoration requires compatible application code and the matching `APP_SECRET`; it is not silently overwritten. Restore stops app/scheduler, imports `database.sql`, restores runtime/branding files and restarts the stack. Existing runtime data is moved to a timestamped `var.before-restore-*` directory. This is a data-changing operation: rehearse it in isolation first. Full restoration was not part of the 2.0.0 release acceptance.
 
-Viktiga mappar:
+Important directories: `deploy/nas/data/var`, `deploy/nas/data/branding` and `deploy/nas/data/mariadb`.
 
-- `deploy/nas/data/var` för appfiler, bilagor, cache och loggar
-- `deploy/nas/data/mariadb` för MariaDB-data
+## Upgrade
 
-## Uppdatering
+### Build stops with `symfony-cmd: not found`
 
-### Om Docker-bygget stannar med `symfony-cmd: not found`
+If Composer also reports plugins disabled for root, Flex could not run install scripts. Keep the Dockerfile's install-step `COMPOSER_ALLOW_SUPERUSER=1` and `allow-plugins` in `composer.json`. Do not bypass the problem with `--no-scripts` or ignored platform requirements.
 
-Om loggen samtidigt anger att Composer har inaktiverat plugins för root saknas Symfony Flex vid körningen av installationsskripten. Dockerfile anger därför `COMPOSER_ALLOW_SUPERUSER=1` för just installationskommandot i byggcontainern. Behåll `allow-plugins` i `composer.json`; kringgå inte felet med `--no-scripts` eller genom att ignorera PHP-kraven.
+Ignore rules exclude runtime data/backups from the image; they do not delete NAS files or change volume mounts. If context is still several GB, inspect other large project directories before building again.
 
-`.dockerignore` utesluter `deploy/nas/data/` och `deploy/nas/backups/` så att databasfiler, bilagor och backuper inte kopieras in i imagen. Det raderar inga NAS-filer och ändrar inte containrarnas volymmonteringar. Om byggkontexten fortfarande är flera GB, kontrollera vilka andra stora mappar som ligger i projektkatalogen innan du bygger igen.
+After obtaining the fix, rebuild and recreate both app and scheduler. A successful image build does not update an already running container's PHP runtime.
 
-Bygg om med kommandona nedan efter att rättningen hämtats. Ett lyckat bygge ändrar inte den redan körande containerns PHP-version; både `app` och `scheduler` måste därefter återskapas och verifieras.
-
-Ta backup före uppdatering:
+Back up first:
 
 ```bash
 bash deploy/nas/backup.sh
 ```
 
-### Välj rätt uppdateringsmetod
+### Choose the correct upgrade model
 
-Den medföljande Compose-stacken har **koden i avbildningen**. Webbens kodbyte uppdaterar inte schemaläggarens avbildning och ändringen kan försvinna när containern återskapas. Använd därför avbildningsbaserad uppgradering för denna stack: säkerhetskopiera, lägg den nya koden i rätt byggrot, bygg ny avbildning, uppdatera både app och schemaläggare, kör alla migrationer/cache-steg och verifiera innan verksamhetsjobben återupptas. Använd inte `manage.sh install` för detta.
+The supplied stack has **application code inside the image**. Web code replacement does not update the scheduler image and can disappear when a container is recreated. Back up, place new code in the correct build root, build a new image, update both services, run migrations/cache steps and verify before resuming business jobs. Never use `manage.sh install` for an upgrade.
 
-Äldre egna stackar som delar **hela programkoden** mellan containrarna kan använda det granskade superadminflödet med kodbackup, underhåll och obligatoriska eftersteg. Det är ett annat driftsätt och ska inte blandas med den medföljande stackens avbildningsuppgradering. Se [2.0-checklistan](upgrade_to_2_0_0.md).
+Older custom stacks sharing **the entire application directory** may use the controlled superadmin update workflow with backups, maintenance and required post-update steps. Do not mix this with image-based deployment. See the [2.0 upgrade checklist](upgrade_to_2_0_0.md).
 
-PHP-motorn måste vara minst 8.4.27 inom 8.4-serien eller 8.5.12 inom 8.5-serien för rättningarna av CVE-2026-109618 och CVE-2026-109619. Apppaketet och Composer uppdaterar inte PHP-motorn; uppdatera och verifiera den innan nya app-/vendor-paket appliceras. En gammal container eller cachad basimage ersätts först genom ombyggnad med `--pull` och återskapande av både `app` och `scheduler`. Det ger ett kort driftavbrott; ta backup och använd underhållsläge. Avbryt om basimagen inte kan hämtas. Se [PHP-uppdatering och verifiering](installation_and_deployment.md#säkerhetsuppdatera-php-motorn) för faktisk webb-PHP och den tillfälliga, uttryckligen AMD64-begränsade vägen när upstreamindexet saknar manifest.
+PHP must meet the documented 8.4.27/8.5.12 series minimums for the security fixes. App archives and Composer do not replace PHP. Rebuild with `--pull` and recreate both services; plan downtime and keep maintenance active. Stop if the base image cannot be fetched. See [PHP updates and verification](installation_and_deployment.md#update-the-php-engine), including actual web PHP and the temporary AMD64-only fallback where an upstream manifest is missing.
 
-Manuell uppdatering via shell:
+Manual shell upgrade:
 
 ```bash
 # Lägg först den nya versionens källfiler i denna byggrot; bevara .env och data.

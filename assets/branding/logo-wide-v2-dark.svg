@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="128" viewBox="0 0 540 128" role="img" aria-labelledby="title">
+  <title id="title">Driftpunkt</title>
+  <svg x="12" y="16" width="96" height="96" viewBox="0 0 64 64">
+  <path fill="#00877c" d="M27 8h5c15 0 26 10 26 24S47 56 32 56H11a3 3 0 0 1-3-3V27a6 6 0 0 1 12 0v17h12c8 0 14-5 14-12S40 20 32 20h-5a6 6 0 0 1 0-12Z"/>
+  <circle cx="14" cy="14" r="6" fill="#28bea5"/>
+  </svg>
+  <text x="126" y="86" fill="#f1f4ff" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="62" font-weight="700" letter-spacing="-1.8">Driftpunkt</text>
+</svg>

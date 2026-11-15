@@ -1,28 +1,28 @@
-# Supportkort – installation och användning
+# Support cards – installation and operation
 
-Supportkort ger ett företag en QR-kod och beständig länk till ett publikt ärendeformulär. Länken ger aldrig inloggning eller åtkomst till befintliga ärenden.
+A company support card provides a QR code and persistent link to a public ticket form. It never grants sign-in or access to existing tickets.
 
-## Förutsättningar
+## Prerequisites
 
-- Kör alla väntande databasmigrationer innan funktionen används, särskilt `Version20261114190000`.
-- Installera GD med JPEG, PNG och FreeType i både webb-PHP och schemaläggare.
-- Ange en kanonisk publik basadress i `DRIFTPUNKT_PUBLIC_BASE_URL`, normalt med HTTPS. En tom adress tillåter appstart men inte giltig kortexport.
-- Bevara `APP_SECRET` vid varje uppgradering. Kortens krypterade länkar och andra sparade hemligheter är beroende av installationens nycklar.
+- Apply pending migrations before use, particularly `Version20261114190000`.
+- Install GD with JPEG, PNG and FreeType in web PHP and scheduler runtimes.
+- Set canonical `DRIFTPUNKT_PUBLIC_BASE_URL`, normally HTTPS. An empty address allows application startup but not valid card export.
+- Preserve `APP_SECRET` on every upgrade. Encrypted card links and other stored secrets depend on installation keys.
 
-## Behörighet och hantering
+## Permissions and management
 
-Admin tilldelar uttrycklig supportkortsrätt till aktiva kundanvändare i det aktuella företaget. Vanlig ärendeläsrätt eller läsrätt till underbolag ger inte automatiskt denna rätt.
+An administrator explicitly grants card management to active customer users in the card's company. Ordinary ticket access or subsidiary read access does not automatically confer this permission.
 
-Behöriga användare kan uppdatera kortets text, kontaktuppgifter och valfria logotyp, förhandsvisa senast sparade innehåll samt exportera PDF eller SVG. JPEG/PNG-logotyper valideras och återkodas; godtyckliga externa bilder eller SVG-uppladdningar accepteras inte.
+Authorized users can update instructions/contact details and an optional logo, preview saved content, and export PDF/SVG. JPEG/PNG logos are validated and re-encoded; arbitrary external images and uploaded SVG are not accepted.
 
-Att spara text behåller länken. **Rotera** ersätter länken och gör gamla utskrifter ogiltiga. **Spärra** stänger den befintliga länken. Företagsavaktivering spärrar kortet permanent; efter återaktivering krävs uttrycklig rotation och nya utskrifter. Återaktivering återställer inte gamla användargrants automatiskt.
+Saving text preserves the link. **Rotate** replaces it and invalidates old printed cards. **Revoke** disables it. Company deactivation permanently revokes the card; reactivation requires explicit rotation and reprinting. Old user grants are not automatically restored by reactivation.
 
-## Publik anmälan och granskning
+## Public submission and review
 
-Kända aktiva kunder i rätt företag kan följa det vanliga skapandeflödet. Okända eller avvikande kontakter går till intern koordinatorgranskning. Ogranskade utkast är inte kundsynliga, tilldelas inte och startar inte SLA eller teknikeraviseringar. Inga konton eller e-postalias skapas automatiskt genom QR-länken.
+Known active customers in the correct company use normal submission. Unknown or mismatched contacts require internal coordinator review. Pending drafts are not customer-visible, assigned or given SLA/technician notifications. A QR link never automatically creates an account or mail alias.
 
-## Backup och loggar
+## Backups and logs
 
-Säkerhetskopiera databas, `APP_SECRET`, privata miljöfiler och `var/support_cards/logos` tillsammans. Nedladdade PDF/SVG-kort innehåller länken och hanteras enligt verksamhetens sekretess- och backuprutin.
+Back up database, `APP_SECRET`, private environment and `var/support_cards/logos` together. Downloaded PDF/SVG cards contain the bearer link and need appropriate confidentiality/backup handling.
 
-Maskera `/supportkort/<token>` i samtliga accessloggar, även befintliga HTTPS-vhostar och externa proxyer. Projektets Apache-exempel och applikationsloggmaskering ersätter inte kontrollen av den egna driftsmiljön. Publicera aldrig en verklig kortlänk i ärenden, dokumentation eller skärmbilder.
+Mask `/supportkort/<token>` in every access log, including existing HTTPS hosts and external proxies. Apache examples and application-log masking do not replace verification of your deployment. Never publish a real card link in documentation, screenshots or public issues.
