@@ -1,0 +1,55 @@
+name: Prepare GitHub Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exported version to release (for example 1.0.133)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prepare-public-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'K3NT4/Driftpunkt'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify exported packages and prepare release notes
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          for kind in install upgrade; do
+            package="driftpunkt-${kind}-${VERSION}.zip"
+            test -f "packages/$package"
+            test -f "packages/$package.sha256"
+            (cd packages && sha256sum --strict --check "$package.sha256")
+          done
+          awk '/^## Latest Release Notes$/ { copying=1; next } copying && /^## / { exit } copying { print }' README.md > "$RUNNER_TEMP/release-notes.md"
+          grep -Fx "### Driftpunkt $VERSION" "$RUNNER_TEMP/release-notes.md"
+      - name: Create a draft release with packages and checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "v$VERSION" \
+            --draft --target "$GITHUB_SHA" --title "Driftpunkt $VERSION" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            "packages/driftpunkt-install-$VERSION.zip" \
+            "packages/driftpunkt-install-$VERSION.zip.sha256" \
+            "packages/driftpunkt-upgrade-$VERSION.zip" \
+            "packages/driftpunkt-upgrade-$VERSION.zip.sha256"

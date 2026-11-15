@@ -102,3 +102,4 @@ It does not grant permission to test installations operated by other users or or
 Copyright © 2026 Kenta Mattsson. All rights reserved.
 
 Driftpunkt is distributed under the Driftpunkt Free Use License.
+

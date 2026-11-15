@@ -7,8 +7,29 @@ Driftpunkt is a support and operations platform for handling tickets, customer c
 This public repository distributes release archives, documentation, and selected screenshots. The archives include application code and dependencies needed to run Driftpunkt; private Git history, internal planning documents, live environment files, and runtime customer data are not exported.
 
 The screenshots may show the Swedish interface. Language and branding can be changed after installation through the running application and its environment-specific configuration.
+The gallery shows Driftpunkt 2.0 with synthetic demonstration accounts and tickets; it contains no live customer data.
+
+**Stable release: 2.0.0** · [Download releases](https://github.com/K3NT4/Driftpunkt/releases/latest) · [Install](INSTALL.md) · [Upgrade](docs/upgrade_to_2_0_0.md)
+
+Before upgrading to 2.0, follow the [live-server upgrade checklist (Swedish)](docs/upgrade_to_2_0_0.md), including backups, Docker prerequisites and enabling the personal classic/modern layout choice for technicians and ticket coordinators.
+
+For a new installation, start with [INSTALL.md (Swedish)](INSTALL.md): Debian 13 and NAS instructions with explicit fresh-database protection and hidden administrator password input.
 
 ## Recent Improvements
+
+- Driftpunkt 2.0 redesigns the public website and all role portals with responsive navigation, clearer queues, visible company labels, accessible controls and working personal themes.
+- Customers get clearer search, status, conversation and attachment views; private customers can create tickets without belonging to a company.
+- Public pages retain installation branding and can follow the device theme. Administrators can disable system-theme following and subtle seasonal decorations.
+- Super administrators can enable a modern/classic presentation choice for technicians and ticket coordinators. Customer accounts use the modern portal with personal colour themes.
+- Basic text tools are visible, advanced tools are collapsed, and the toolbar can be hidden without losing a draft.
+- Company support cards add revocable QR links and PDF/SVG export. Read-only stable-release notices never install an update automatically.
+- Debian 13 and NAS installation helpers provide explicit fresh-database protection. Upgrade packages preserve installation data, mail configuration and private environment files; keep all encryption keys.
+- Update completion uses a fresh process after cache replacement. See the upgrade checklist before updating an installation using an older runner.
+
+Release acceptance excludes real email delivery, production HTTPS and full backup restoration. Verify these in your intended environment before production use.
+
+<details>
+<summary>Earlier 1.x improvements</summary>
 
 - Release 1.0.133 adds customer inventory management, coordinator ownership, EML/MSG reading, PDF and inline image previews, winmail.dat extraction, attachment recovery forwarding, linked tickets from attached emails, clearer ticket intake and review screens, duplicate suggestions, and explicit group-wide read access to private subsidiary tickets. It also updates ten affected Symfony components to 8.1.11 for security fixes published on November 4, 2026. Three database migrations are required:
   - Customer search from the portal overview also covers accessible company and subsidiary tickets. Selected customer users can manage the company computer list; customer removal archives the computer and keeps its history.
@@ -39,6 +60,8 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 - Password reset and translation output escaping, attachment extensions, and database backup and restore error handling have been improved.
 - Technicians and coordinators can add personal signatures to customer emails and send a separate copy to their own account address.
 
+</details>
+
 ## Screenshots
 
 | Public homepage | Public status |
@@ -49,6 +72,10 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 | --- | --- |
 | ![Driftpunkt contact page](assets/screenshots/contact-page.png) | ![Driftpunkt maintenance mode](assets/screenshots/maintenance-mode.png) |
 
+| Customer portal | Ticket conversation |
+| --- | --- |
+| ![Driftpunkt customer portal](assets/screenshots/customer-portal.png) | ![Driftpunkt customer ticket](assets/screenshots/customer-ticket.png) |
+
 | Technician overview | Technician ticket queue |
 | --- | --- |
 | ![Driftpunkt technician overview](assets/screenshots/technician-overview.png) | ![Driftpunkt technician ticket queue](assets/screenshots/technician-tickets.png) |
@@ -56,6 +83,13 @@ The screenshots may show the Swedish interface. Language and branding can be cha
 | Ticket coordinator | Admin dashboard |
 | --- | --- |
 | ![Driftpunkt ticket coordinator](assets/screenshots/coordinator-portal.png) | ![Driftpunkt admin dashboard](assets/screenshots/admin-dashboard.png) |
+
+<details>
+<summary>Mobile view</summary>
+
+<img src="assets/screenshots/customer-mobile.png" alt="Driftpunkt customer portal on mobile" width="320">
+
+</details>
 
 ## What Driftpunkt Includes
 
@@ -159,77 +193,56 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `1.0.133`.
-- Fresh installation package: `packages/driftpunkt-install-1.0.133.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-1.0.133.zip`
+- Current exported release: `2.0.0`.
+- Fresh installation package: `packages/driftpunkt-install-2.0.0.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-2.0.0.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
-- Public README assets exported here: 15.
+- Public README assets exported here: 17.
 
 ## Latest Release Notes
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 1.0.133
+### Driftpunkt 2.0.0
 
-### New and improved
+Stable release, 2026-11-15.
 
-### Customer portal and permissions
+### Highlights
 
-- Searching from the customer portal overview now also covers the accessible tickets of the company and its subsidiaries when the company ticket view is enabled.
-- Admins and super admins can let selected customer users manage the company computer list. Those users can add, edit, and comment on computers in their own company. Removing a computer as a customer archives it: the row and its change history are kept, but the computer is hidden from regular lists and exports. New management permissions are off until explicitly assigned. Activation, CSV import, and permanent deletion of whole lists remain super admin tasks.
-- Super admins can give a selected customer user on a parent company separate read access to all customer-visible tickets in the whole subsidiary tree, including private and closed tickets, several levels down. New subsidiaries in the same branch are covered automatically. Internal tickets, internal notes, internal attachments, and other company groups are never included. The assignment grants read access only: it does not extend the right to comment, give feedback, reopen, or create tickets on subsidiaries, and email replies follow the same write rules as the portal. Changes are audit logged with the company, the administrator, and the assigned user IDs before and after.
+- A redesigned, responsive public website and customer, technician, coordinator and administration portals, with clearer navigation, accessible controls and light, dark and high-contrast themes.
+- Customers can find and follow tickets more easily. Company labels are visible in internal queues, and private customers can submit tickets without a company association.
+- Existing installation branding is preserved across public pages. Public system-theme following and subtle seasonal decorations can be disabled in administration.
+- Technicians and ticket coordinators can choose modern or classic presentation when the super administrator enables the layout setting. Customer accounts use the modern portal with personal colour themes.
+- Basic text-formatting controls are visible, advanced controls are collapsed, and users can hide or show the toolbar without losing their text.
+- Company support cards provide revocable QR links and PDF/SVG export. Unknown or mismatched contacts require internal review before assignment or customer visibility.
+- Internal reports, attachment readers, inventory and reports have clearer presentation. Stable-release notices are read-only and never download or install updates automatically.
+- Simplified Debian 13 and NAS installation instructions, runtime checks and protected fresh-install helpers.
+- Update completion now registers pending health confirmation in a fresh process after the cache replacement, avoiding stale container/ORM references.
 
-### Ticket coordinators
+### Operations
 
-- Ticket coordinators can be responsible for tickets and can choose to take over when they write customer-visible comments. Internal notes never change the assignment. Follow-up notifications link to the coordinator view.
-- Before approving an incoming mail review, admins and coordinators see a summary that follows the form choices. A selected customer combined with a different selected company is rejected on the server, without activation or customer email.
+- Migrations required: yes. Run all outstanding migrations, including `Version20261114120000` and `Version20261114190000` where not already applied. Do not run a fresh installation or fixtures against existing data.
+- Cache refresh required: yes. Composer and production cache warmup use a separate 512 MB budget. Use the included lock file, not `composer update` on the live server.
+- Service restart required: yes. Restart long-running workers and verify that web and scheduler use the same version and PHP extensions.
+- Use the cumulative **upgrade** archive for existing installations. Existing mail accounts, customer data and runtime files belong to the installation, not the release archive. Preserve `.env.local`, `APP_SECRET`, separate mail/MFA encryption keys, attachment storage and uploaded branding. Never replace them with example values.
+- Back up code, database, environment, keys and persistent files together before upgrading. Pause mail intake and business jobs during schema changes and resume only after verification.
+- Requires supported 64-bit PHP 8.4.27+ in the 8.4 series or 8.5.12+ in the 8.5 series, MariaDB, and the documented extensions. **GD with JPEG/PNG/FreeType must exist in both web and scheduler runtimes**; a ZIP update cannot install a PHP extension.
+- Follow `docs/upgrade_to_2_0_0.md` for deployment-specific steps. Image-based NAS installations must rebuild and recreate both application and scheduler; a code change inside one container does not update its image.
+- The classic/modern staff layout choice is off by default. Super administrators enable it under Settings by searching for “Portalens layout”. Stored personal choices are retained when the switch is disabled.
+- Support cards require an explicit canonical `DRIFTPUNKT_PUBLIC_BASE_URL`. Company deactivation permanently revokes existing card links; reactivation requires explicit rotation and replacement of printed cards.
+- Existing HTTP and HTTPS virtual hosts/proxies must mask support-card bearer tokens in access logs. Application log masking does not replace proxy log configuration.
+- An update already executing the older runner must not be assumed to load the fixed runner mid-process. Follow the recovery checklist if code was applied but pending confirmation was not recorded.
 
-### Email and attachments
+### Verification
 
-- Technicians and coordinators can read EML and Outlook MSG attachments, open nested emails, and download their attachments.
-- PDF files can be previewed, and pasted inline (CID) images are shown in the conversation without loading external tracking images.
-- Regular files inside `winmail.dat` are extracted on import and can also be downloaded from a separate viewer. The original container is kept, and file type and size rules also apply to extracted files. Damaged containers or embedded objects that cannot be extracted as regular files are reported for manual handling.
-- Attachment errors show the file name and reason. The original email is forwarded to the configured coordinator address or to explicitly selected internal triage recipients, with visible delivery status, retry, and mail loop protection.
-- An attached email can become a separate linked ticket after the customer, company, and content have been checked. The new ticket is internal by default, the original email is saved as an attachment, the tickets are linked, no customer email is sent, and a double click does not create two tickets.
-
-### Internal ticket view
-
-- Technicians and coordinators see the same intake panel on the ticket page: sender, receiving mailbox, current company, the saved reason why a reply was linked to the ticket (ticket number in the subject, ticket number in the body, or an unambiguous subject within the company), and up to 25 received emails. The panel is never shown to customers.
-- Attachment warnings are collected near the top of the ticket.
-- Possible duplicates are suggested among the company's active tickets, limited to tickets the technician can already read. Up to three suggestions are shown, based on normalized subjects. No AI service or external transfer of ticket data is used, and tickets are never merged automatically.
-- The conversation comes before the reply box, with distinct markings for internal notes and customer-visible comments. Attachments are shown as compact file rows with lazy-loaded thumbnails for images. Work tools are in the sidebar on wide screens, with a suggested next step.
-- The reply box shows what the selected comment type means and lists the planned email recipients for customer replies. The notification log remains the record of actual deliveries.
-
-### Security and operations
-
-- Ten affected Symfony components are updated to 8.1.11 for security fixes published on November 4, 2026: Config, Filesystem, FrameworkBundle, HttpClient, HttpFoundation, HttpKernel, Routing, SecurityHttp, Validator, and YAML. `composer audit` reports no remaining known vulnerabilities in the locked production dependencies. See for example [Symfony's fix for the HEAD access control check](https://symfony.com/cve-2026-118514) and [the Routing fix that requires a cleared cache](https://symfony.com/cve-2026-118516).
-- Cache warmup during the Docker build and after updates gets a separate 512 MB memory budget. The web server's PHP memory limit is unchanged.
-- New production dependencies for the email reader are included in the packages and locked in `composer.lock`.
-
-### Database and operations
-
-- Database migration required from 1.0.132: yes. Apply `Version20261105120000`, `Version20261105130000`, and `Version20261105140000` through the normal update flow.
-- Cache refresh required: yes.
-- PHP/OPcache and long-running worker restart or reload recommended: yes.
-- Back up the database, application files, private environment configuration, runtime files, and uploaded branding before upgrading. Keep the existing `APP_SECRET` and use maintenance mode.
-- Production dependencies are included in the packages. Do not run `composer update` when upgrading. For source installations, use `composer install --no-dev --optimize-autoloader` with the included lock file.
-- The PHP requirement is unchanged: 8.4.27+ within 8.4 or 8.5.12+ within 8.5, on 64-bit PHP. Check the CLI, the web server's PHP, and background jobs separately. Docker/NAS installations need to rebuild the image and recreate both the app and scheduler containers.
-- No new permission is assigned automatically. Group-wide read access is assigned by a super admin on the parent company; computer list management is assigned separately.
-- Real Outlook emails, customer mailboxes, SMTP delivery, and the server's mail size limits need to be verified in the target environment.
-
-### Post-update verification
-
-- Confirm that the admin area shows version `1.0.133`, that the update job has completed, and that no database migrations are pending.
-- Verify customer, coordinator, and technician sign-in, and searching across company and subsidiary tickets.
-- Assign computer list management to a test account and check create, edit, and archive with preserved history. Confirm that an account without the assignment is denied.
-- Check coordinator assignment on customer replies and that internal notes keep the existing assignee.
-- Try EML, MSG, a nested email, PDF, a CID image, and `winmail.dat`. Confirm that unauthorized accounts cannot open the attachments.
-- Trigger an attachment error and check the warning, the forwarded original email to the right triage recipient, retry, and the notification log.
-- Create a separate ticket from an attached email in test data. Check the company, customer, internal default visibility, and the link to the original ticket.
-- Check the intake panel, duplicate suggestions, comment types, and planned recipients. No duplicate should be merged automatically.
-- Assign group-wide read access to a test account on a parent company. Check private tickets on child and grandchild companies, confirm that internal tickets and other company groups are denied, and verify that removing the assignment removes the read access.
-- Check logs and scheduled jobs, and leave maintenance mode when the checks have passed.
+- Automated baseline plus explicit affected/new-file reruns: **1,238 tests and 28,859 assertions**, with no failures or skips in the combined results. This was not a second full-suite run.
+- Additional release-focused checks: **45 tests / 1,236 assertions**, including upgrade preservation of synthetic mail settings and encrypted tokens, package building and public export. These targeted checks overlap the baseline and are not added to it as distinct tests.
+- Real isolated Debian test installation, synthetic role accounts/tickets, private-customer creation, company boundaries, internal-note secrecy, search, saved themes and CSRF rejection were verified.
+- Chromium checks covered 20 authenticated views at 1440, 900 and 390 px, editor interactions and login-field/autofill contrast. Synthetic demonstrations contain no real customer data.
+- Cache replacement and fresh-process confirmation were additionally verified against a separate MariaDB instance with external networking disabled.
+- The release owner accepted this stable release with **real email delivery, production HTTPS and full backup restoration explicitly unverified**. Each operator must verify those items in the intended environment; this release is not a certificate of production configuration.
+- After upgrading, verify login/MFA, private and company customer submission, staff queues and replies, company labels, personal/public themes, preview images and version metadata before disabling maintenance.
 
 ## What This Repository Contains
 
@@ -241,7 +254,7 @@ These notes are copied from the packaged release metadata for the current export
 ## Current Runtime Requirements
 
 - PHP `~8.4.27 || ~8.5.12`: 8.4.27 or later within 8.4, or 8.5.12 or later within 8.5. PHP 8.5.11 does not meet these requirements.
-- PHP extensions: `ctype`, `curl`, `iconv`, `intl`, `mbstring`, `openssl`, `pdo`, `pdo_mysql`, `xml`, and `zip`; `opcache` is recommended.
+- PHP extensions: `ctype`, `curl`, `fileinfo`, `gd` (JPEG/PNG/FreeType), `iconv`, `intl`, `mbstring`, `openssl`, `pdo`, `pdo_mysql`, `xml`, and `zip`; `opcache` is recommended.
 - MariaDB 10.11 or later, Composer 2 for deployment and platform checks, and a web server with its document root set to `htdocs/`.
 - Production must use `APP_ENV=prod` and `APP_DEBUG=0`. The archives contain production `vendor/` dependencies without development bundles or PHPUnit.
 
@@ -271,7 +284,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-1.0.133.zip.sha256
+sha256sum -c driftpunkt-install-2.0.0.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -304,10 +317,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-1.0.133.zip` and `driftpunkt-install-1.0.133.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-2.0.0.zip` and `driftpunkt-install-2.0.0.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.133.zip.sha256
+sha256sum -c driftpunkt-install-2.0.0.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -315,9 +328,9 @@ sha256sum -c driftpunkt-install-1.0.133.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-1.0.133.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-2.0.0.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.133/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-2.0.0/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -376,10 +389,10 @@ Attachment ZIP archiving is configured under **Administration → Settings → T
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-1.0.133.zip` and `driftpunkt-install-1.0.133.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-2.0.0.zip` and `driftpunkt-install-2.0.0.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-1.0.133.zip.sha256
+sha256sum -c driftpunkt-install-2.0.0.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -387,8 +400,8 @@ sha256sum -c driftpunkt-install-1.0.133.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-1.0.133.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-1.0.133/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-2.0.0.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-2.0.0/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -569,9 +582,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-2.0.0.zip`
 - `packages/driftpunkt-upgrade-1.0.133.zip`
 - `packages/driftpunkt-upgrade-1.0.132.zip`
-- `packages/driftpunkt-upgrade-1.0.131.zip`
 
 ## Notes
 
@@ -579,6 +592,11 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 - Driftpunkt release packages prefer `htdocs/` as document root. If the full package must live directly in a fixed `/htdocs` web root, verify that `.htaccess` blocks `config/`, `src/`, `vendor/`, and `var/` before production use.
 - Review `PUBLIC_EXPORT_MANIFEST.md` after every export before committing to the public repository.
 - If checksum verification fails, do not install the package. Rebuild and export the release from the private repository.
+
+## GitHub Releases
+
+Maintainers can run Actions → Prepare GitHub Release after exporting and pushing this repository. Enter the exported version, such as `1.0.133`.
+The workflow verifies both package checksums and the release-note version, then creates a draft release with the installation package, upgrade package, checksums, and release notes. Review and publish the draft from GitHub Releases.
 
 ## License
 

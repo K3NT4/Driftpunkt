@@ -123,4 +123,5 @@ Nothing in this license restricts rights that cannot lawfully be excluded, inclu
 
 Official repository: https://github.com/K3NT4/Driftpunkt
 
-Copyright © 2026 [Copyright Holder]. All rights reserved.
+Copyright © 2026 Kenta Mattsson. All rights reserved.
+

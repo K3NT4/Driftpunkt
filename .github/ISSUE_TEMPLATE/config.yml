@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability privately
+    url: https://github.com/K3NT4/Driftpunkt/security/policy
+    about: Follow the security policy and contact the maintainer privately. Do not disclose vulnerabilities in public issues.
