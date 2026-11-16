@@ -12,13 +12,22 @@ This public repository distributes release archives, documentation, and selected
 The screenshots may show the Swedish interface. Language and branding can be changed after installation through the running application and its environment-specific configuration.
 The gallery shows Driftpunkt 2.0 with synthetic demonstration accounts and tickets; it contains no live customer data.
 
-**Stable release: 2.0.0** · [Download releases](https://github.com/K3NT4/Driftpunkt/releases/latest) · [Install](INSTALL.md) · [Upgrade](docs/upgrade_to_2_0_0.md)
+**Stable release: 2.0.1** · [Download releases](https://github.com/K3NT4/Driftpunkt/releases/latest) · [Install](INSTALL.md) · [Upgrade](docs/upgrade_to_2_0_0.md)
 
 Before upgrading to 2.0, follow the [live-server upgrade checklist (English)](docs/upgrade_to_2_0_0.md), including backups, Docker prerequisites and enabling the personal classic/modern layout choice for technicians and ticket coordinators.
 
 For a new installation, start with [INSTALL.md (English)](INSTALL.md): Debian 13 and NAS instructions with explicit fresh-database protection and hidden administrator password input.
 
-## Recent Improvements
+## New in 2.0.1
+
+- Create data-only JSON panels with an example, schema, validation and preview in Swedish, English or Norwegian. Import inactive, explicitly activate, switch versions, roll back, disable or delete inactive versions.
+- Place panels on the public homepage, customer overview or technician dashboard, including modern and classic technician layouts. Customer panels are shared across companies.
+- Executable PHP/Twig ZIP addons are retired. JSON panels run no code, fetch no URLs on the server and receive no database or API access.
+- Extended news editing and telephone support are native switches under Features. SupportDesk and its AnyDesk/TeamViewer shortcuts are removed; historical data is retained.
+- Update execution preloads console error and termination listeners before cache replacement. Follow the upgrade guide when starting from an older updater.
+- See [the addon guide](docs/addons.md) and [the 2.0.1 upgrade checklist](docs/upgrade_to_2_0_1.md).
+
+## Earlier 2.0 Improvements
 
 - Driftpunkt 2.0 redesigns the public website and all role portals with responsive navigation, clearer queues, visible company labels, accessible controls and working personal themes.
 - Customers get clearer search, status, conversation and attachment views; private customers can create tickets without belonging to a company.
@@ -29,7 +38,7 @@ For a new installation, start with [INSTALL.md (English)](INSTALL.md): Debian 13
 - Debian 13 and NAS installation helpers provide explicit fresh-database protection. Upgrade packages preserve installation data, mail configuration and private environment files; keep all encryption keys.
 - Update completion uses a fresh process after cache replacement. See the upgrade checklist before updating an installation using an older runner.
 
-Release acceptance excludes real email delivery, production HTTPS and full backup restoration. Verify these in your intended environment before production use.
+Validation includes isolated SQL/file restoration and HTTP/CLI checks on a separate deployment. Real email delivery, production HTTPS, load and full visual acceptance remain environment-specific checks.
 
 <details>
 <summary>Earlier 1.x improvements</summary>
@@ -105,8 +114,8 @@ Release acceptance excludes real email delivery, production HTTPS and full backu
 - Admin tools for identity, companies, company hierarchies, teams, mail, ticket categories, intake templates, routing, SLA policies, public content, reports, logs, background jobs, settings, updates, and maintenance mode, with identity work split into focused user, customer, team, appearance, and triage sections.
 - Mail ingestion through spool or mailbox polling, incoming mail review, correction drafts, mailbox routing, outgoing profiles, ticket notification emails, and technician/customer links back to the related ticket.
 - Knowledge base and news management with public, customer, technician, and admin-facing workflows, optional technician contributions, smart tips, FAQ-style content, and status communication.
-- Operational tooling for read-only ticket API access, monthly company reports, database jobs, backups, restore/optimize tasks, migration runs, code update staging, package application, addon package registration, log export, and controlled cleanup.
-- Localization and personalization for Swedish, English, and Norwegian UI text, personal default language in technician, coordinator, admin, and super admin workflows, global default/selectable language governance, customer portal themes, optional lightweight seasonal appearance, branding assets, MFA settings, remote support shortcuts, and internal portal theme templates.
+- Operational tooling for read-only ticket API access, monthly company reports, database jobs, backups, restore/optimize tasks, migration runs, code update staging, package application, declarative addon management, log export, and controlled cleanup.
+- Localization and personalization for Swedish, English, and Norwegian UI text, personal default language in technician, coordinator, admin, and super admin workflows, global default/selectable language governance, customer portal themes, optional lightweight seasonal appearance, branding assets, MFA settings, declarative panels, and internal portal theme templates.
 - Release packages with bundled dependencies, metadata, release notes, post-update guidance, and SHA-256 checksums.
 
 ## Profiles and What They Can Do
@@ -151,7 +160,7 @@ Visible features depend on enabled settings, company access, and role permission
 - See all tickets or only permitted tickets depending on the technician access setting.
 - Use knowledge base and news contribution workflows when enabled.
 - Report bugs, improvements or feature requests, and missing customers to super administrators from the technician menu.
-- Use technician inventory views, remote support shortcuts, secure login/MFA with configurable trusted devices (14 days by default), personal default language, and selectable portal theme templates, including the burgundy Bordeaux theme.
+- Use technician inventory views, dashboard panels, secure login/MFA with configurable trusted devices (14 days by default), personal default language, and selectable portal theme templates, including the burgundy Bordeaux theme.
 
 ### Ticket Coordinator
 
@@ -169,7 +178,7 @@ Visible features depend on enabled settings, company access, and role permission
 ### Admin
 
 - Manage regular operational administration: tickets, companies, users that are not privileged beyond their permission level, teams, categories, routing rules, intake templates, SLA policies, and support settings.
-- Configure customer portal features, company hierarchy visibility, ticket attachments, feedback, monthly company reports, MFA policy, remote support tools, public ticket intake, and customer self-registration.
+- Configure customer portal features, company hierarchy visibility, ticket attachments, feedback, monthly company reports, MFA policy, public ticket intake, and customer self-registration.
 - Choose which customer users may read or manage each company computer list, and configure triage recipients for forwarded original emails when attachments fail.
 - Manage public content such as homepage settings, contact information, news, status messaging, knowledge base settings, translation languages, selectable language settings, UI translation overrides, privacy policy, terms, and cookie policy.
 - Manage mail servers, support inboxes, outgoing mail profiles, incoming mail review, correction drafts, and mailbox-based ticket creation.
@@ -184,8 +193,8 @@ Visible features depend on enabled settings, company access, and role permission
 - Grant selected customer users on a parent company audit-logged, read-only access to all customer-visible tickets in the whole subsidiary tree.
 - Review internal reports from technicians and ticket coordinators, update their status, and leave reporter-visible feedback.
 - Reset or disable MFA for locked-out users without exposing their MFA secret or enrollment QR code; recovery actions are audit logged.
-- Manage destructive or infrastructure-sensitive actions such as database backup/download/restore/optimize, migration execution, code update staging/application, post-update tasks, job retry/purge, log export/cleanup, test ticket purge, branding, support branding, and addon package lifecycle.
-- Configure global maintenance mode, timezone, default language, selectable languages, optional seasonal appearance for the public homepage and customer portal, system status monitor settings, public ticket form controls, privileged mail tests, knowledge base controls, remote support download URLs, and secure update flows.
+- Manage destructive or infrastructure-sensitive actions such as database backup/download/restore/optimize, migration execution, code update staging/application, post-update tasks, job retry/purge, log export/cleanup, test ticket purge, branding, support branding, and declarative addon lifecycle.
+- Configure global maintenance mode, timezone, default language, selectable languages, optional seasonal appearance for the public homepage and customer portal, system status monitor settings, public ticket form controls, privileged mail tests, knowledge base controls, declarative addon panels, native feature switches, and secure update flows.
 
 ### System and Automation
 
@@ -196,9 +205,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `2.0.0`.
-- Fresh installation package: `packages/driftpunkt-install-2.0.0.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-2.0.0.zip`
+- Current exported release: `2.0.1`.
+- Fresh installation package: `packages/driftpunkt-install-2.0.1.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-2.0.1.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 20.
@@ -207,51 +216,54 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 2.0.0
+### Driftpunkt 2.0.1
 
-Stable release, 2026-11-15.
+### Custom addons
 
-### Highlights
+- Create text-and-link panels with a small `addon.json`, a downloadable example and a JSON schema; no PHP or application source changes are needed.
+- Super administrators can validate, preview and import a version, then explicitly activate it. Preview and validation do not save or activate content.
+- Place panels on the public homepage, customer overview or technician dashboard. Technician panels work in modern and classic layouts. Customer panels are shared across customer accounts, including different companies.
+- Importing a new version preserves the active version. Switch between retained versions, disable a panel or remove an inactive version.
+- Admin diagnostics explain invalid manifests, broken activation state and inaccessible storage. Invalid panels are omitted from normal rendering.
+- Management, preview and errors support Swedish, English and Norwegian. Author-written content remains as supplied.
+- `app:addon:create` creates an example without overwriting an existing file. `app:addon:validate` checks a file without importing it.
 
-- A redesigned, responsive public website and customer, technician, coordinator and administration portals, with clearer navigation, accessible controls and light, dark and high-contrast themes.
-- Customers can find and follow tickets more easily. Company labels are visible in internal queues, and private customers can submit tickets without a company association.
-- Existing installation branding is preserved across public pages. Public system-theme following and subtle seasonal decorations can be disabled in administration.
-- Technicians and ticket coordinators can choose modern or classic presentation when the super administrator enables the layout setting. Customer accounts use the modern portal with personal colour themes.
-- Basic text-formatting controls are visible, advanced controls are collapsed, and users can hide or show the toolbar without losing their text.
-- Company support cards provide revocable QR links and PDF/SVG export. Unknown or mismatched contacts require internal review before assignment or customer visibility.
-- Internal reports, attachment readers, inventory and reports have clearer presentation. Stable-release notices are read-only and never download or install updates automatically.
-- Simplified Debian 13 and NAS installation instructions, runtime checks and protected fresh-install helpers.
-- Update completion now registers pending health confirmation in a fresh process after the cache replacement, avoiding stale container/ORM references.
+### Built-in features and removals
 
-### Operations
+- Extended news editing, previously News Editor Plus, and telephone support are built-in switches under **Features**. Disabling them retains content, preferences and history.
+- Migration `Version20261116120000` preserves the legacy news-editor choice and existing native feature preferences. Telephone support defaults to enabled.
+- SupportDesk, its AnyDesk/TeamViewer shortcuts and its settings panel are removed. Historical database values and release records are retained. The old settings URL redirects to Features.
+- Existing company support cards, revocable QR links and PDF/SVG exports are preserved.
 
-- Migrations required: yes. Run all outstanding migrations, including `Version20261114120000` and `Version20261114190000` where not already applied. Do not run a fresh installation or fixtures against existing data.
-- Cache refresh required: yes. Composer and production cache warmup use a separate 512 MB budget. Use the included lock file, not `composer update` on the live server.
-- Service restart required: yes. Restart long-running workers and verify that web and scheduler use the same version and PHP extensions.
-- Use the cumulative **upgrade** archive for existing installations. Existing mail accounts, customer data and runtime files belong to the installation, not the release archive. Preserve `.env.local`, `APP_SECRET`, separate mail/MFA encryption keys, attachment storage and uploaded branding. Never replace them with example values.
-- Back up code, database, environment, keys and persistent files together before upgrading. Pause mail intake and business jobs during schema changes and resume only after verification.
-- Requires supported 64-bit PHP 8.4.27+ in the 8.4 series or 8.5.12+ in the 8.5 series, MariaDB, and the documented extensions. **GD with JPEG/PNG/FreeType must exist in both web and scheduler runtimes**; a ZIP update cannot install a PHP extension.
-- Follow `docs/upgrade_to_2_0_0.md` for deployment-specific steps. Image-based NAS installations must rebuild and recreate both application and scheduler; a code change inside one container does not update its image.
-- The classic/modern staff layout choice is off by default. Super administrators enable it under Settings by searching for “Portalens layout”. Stored personal choices are retained when the switch is disabled.
-- Support cards require an explicit canonical `DRIFTPUNKT_PUBLIC_BASE_URL`. Company deactivation permanently revokes existing card links; reactivation requires explicit rotation and replacement of printed cards.
-- Existing HTTP and HTTPS virtual hosts/proxies must mask support-card bearer tokens in access logs. Application log masking does not replace proxy log configuration.
-- An update already executing the older runner must not be assumed to load the fixed runner mid-process. Follow the recovery checklist if code was applied but pending confirmation was not recorded.
+### Addon compatibility and security boundaries
 
-### Verification
+- The executable ZIP addon model is retired. Old package files no longer register PHP classes, services, routes or Twig templates in the application process. Old executable packages cannot be imported or activated.
+- Schema version 1 accepts bounded JSON data only: at most 32 KiB and eight links, strict field/type checks, internal paths or permitted HTTPS URLs, and escaped text.
+- Addons do not execute PHP, JavaScript, Twig or SQL, load custom files, fetch links on the server or receive database/API access.
+- Import, activation and deletion require super-admin authorization and CSRF protection. New versions require an explicit activation choice.
 
-- Automated baseline plus explicit affected/new-file reruns: **1,238 tests and 28,859 assertions**, with no failures or skips in the combined results. This was not a second full-suite run.
-- Additional release-focused checks: **45 tests / 1,239 assertions**, including upgrade preservation of synthetic mail settings and encrypted tokens, package building and public export. These targeted checks overlap the baseline and are not added to it as distinct tests.
-- Real isolated Debian test installation, synthetic role accounts/tickets, private-customer creation, company boundaries, internal-note secrecy, search, saved themes and CSRF rejection were verified.
-- Chromium checks covered 20 authenticated views at 1440, 900 and 390 px, editor interactions and login-field/autofill contrast. Synthetic demonstrations contain no real customer data.
-- Cache replacement and fresh-process confirmation were additionally verified against a separate MariaDB instance with external networking disabled.
-- The release owner accepted this stable release with **real email delivery, production HTTPS and full backup restoration explicitly unverified**. Each operator must verify those items in the intended environment; this release is not a certificate of production configuration.
-- After upgrading, verify login/MFA, private and company customer submission, staff queues and replies, company labels, personal/public themes, preview images and version metadata before disabling maintenance.
+### Updates and operations
+
+- The update command resolves console error and termination listeners before cache replacement, avoiding the reproduced missing-container-file error when that new command later exits an update.
+- A process started from an older 2.0.0 installation still uses its older command implementation. Read the final update status and check a fresh process before retrying an update.
+- Back up `var/declarative_addons/` with the installation and keep it writable by the application user, outside the webroot and without symlinks.
+- Preserve the database, uploads, branding, private environment files and encryption keys. Use the upgrade archive for an existing installation.
+
+### Validation
+
+- Ordinary PHP 8.4.27 suite: 1,289 tests, 29,047 assertions, zero errors/failures; one PDF text-extraction check skipped because its external tool was unavailable. Visual snapshots are excluded from this suite.
+- NAS upgrade confirmed; a separate Debian/MariaDB deployment exercised the actual web update, role access, addon lifecycle, three preview languages, both internal layouts, native switches and isolated database/file restoration.
+- Defensive addon review found no confirmed security findings within its reviewed scope. This is not a guarantee about every installation or the whole application.
+- Real email delivery, production HTTPS, load behaviour and complete visual acceptance remain environment-specific checks.
+
+See the [addon guide](docs/addons.md) and [2.0.1 upgrade checklist](docs/upgrade_to_2_0_1.md).
 
 ## What This Repository Contains
 
 - `packages/`: install and upgrade zip files.
 - `packages/*.sha256`: checksum files for package verification.
 - `assets/`: logo and screenshots used by this README.
+- [Custom addons](docs/addons.md), [JSON schema](docs/addon.schema.json), [example](docs/examples/addon.json) and [2.0.1 upgrade](docs/upgrade_to_2_0_1.md).
 - `PUBLIC_EXPORT_MANIFEST.md`: export summary with package versions and checksums.
 
 ## Current Runtime Requirements
@@ -287,7 +299,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-2.0.0.zip.sha256
+sha256sum -c driftpunkt-install-2.0.1.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -320,10 +332,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-2.0.0.zip` and `driftpunkt-install-2.0.0.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-2.0.1.zip` and `driftpunkt-install-2.0.1.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-2.0.0.zip.sha256
+sha256sum -c driftpunkt-install-2.0.1.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -331,9 +343,9 @@ sha256sum -c driftpunkt-install-2.0.0.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-2.0.0.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-2.0.1.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-2.0.0/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-2.0.1/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -392,10 +404,10 @@ Attachment ZIP archiving is configured under **Administration → Settings → T
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-2.0.0.zip` and `driftpunkt-install-2.0.0.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-2.0.1.zip` and `driftpunkt-install-2.0.1.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-2.0.0.zip.sha256
+sha256sum -c driftpunkt-install-2.0.1.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -403,8 +415,8 @@ sha256sum -c driftpunkt-install-2.0.0.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-2.0.0.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-2.0.0/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-2.0.1.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-2.0.1/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -585,9 +597,9 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-2.0.1.zip`
 - `packages/driftpunkt-upgrade-2.0.0.zip`
 - `packages/driftpunkt-upgrade-1.0.133.zip`
-- `packages/driftpunkt-upgrade-1.0.132.zip`
 
 ## Notes
 

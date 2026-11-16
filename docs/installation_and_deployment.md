@@ -2,6 +2,8 @@
 
 For a new release-package installation, start with [INSTALL.md](../INSTALL.md). Never initialize a fresh database over existing data.
 
+For an existing installation, use the [2.0.1 upgrade checklist](upgrade_to_2_0_1.md). Back up `var/declarative_addons/` with uploads, private environment files and encryption keys. See [custom addons](addons.md) for the supported JSON format; executable ZIP addons and SupportDesk are retired.
+
 ## Prerequisites
 
 - PHP 8.4.27 or later within 8.4, or PHP 8.5.12 or later within 8.5; Composer 2; MariaDB 10.11 or later.

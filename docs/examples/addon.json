@@ -1,0 +1,14 @@
+{
+    "schema_version": 1,
+    "slug": "mina-supportlankar",
+    "version": "1.0.0",
+    "name": "Mina supportlänkar",
+    "description": "Här hittar du guider och kontaktvägar.",
+    "placement": "homepage",
+    "links": [
+        {
+            "label": "Kontakta supporten",
+            "url": "/kontakt"
+        }
+    ]
+}

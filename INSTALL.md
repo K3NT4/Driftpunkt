@@ -2,7 +2,9 @@
 
 This guide is for a **new installation** from the installation archive. Unpack the ZIP and enter the directory containing `composer.json`, `Dockerfile` and `deploy/`. Keep hidden files, especially `.dockerignore`. No real user accounts or demo tickets are created automatically.
 
-Already running Driftpunkt with existing data? Follow the [upgrade guide](docs/upgrade_to_2_0_0.md), not a fresh installation or `app:install:fresh`.
+Already running Driftpunkt with existing data? Follow the [2.0.1 upgrade guide](docs/upgrade_to_2_0_1.md), not a fresh installation or `app:install:fresh`.
+
+After installation, see [custom addons](docs/addons.md) for data-only panels and **Features** for the built-in news-editor and telephone-support switches.
 
 ## NAS with Docker / Container Manager
 
