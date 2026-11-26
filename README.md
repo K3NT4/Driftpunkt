@@ -12,29 +12,24 @@ This public repository distributes release archives, documentation, and selected
 The screenshots may show the Swedish interface. Language and branding can be changed after installation through the running application and its environment-specific configuration.
 The gallery shows Driftpunkt 2.0 with synthetic demonstration accounts and tickets; it contains no live customer data.
 
-**Stable release: 2.0.2** · [Download releases](https://github.com/K3NT4/Driftpunkt/releases/latest) · [Install](INSTALL.md) · [Upgrade](docs/upgrade_to_2_0_1.md)
+**Stable release: 2.0.3** · [Download releases](https://github.com/K3NT4/Driftpunkt/releases/latest) · [Install](INSTALL.md) · [Upgrade](docs/upgrade_to_2_0_1.md)
 
 Before upgrading to 2.0, follow the [live-server upgrade checklist (English)](docs/upgrade_to_2_0_0.md), including backups, Docker prerequisites and enabling the personal classic/modern layout choice for technicians and ticket coordinators.
 
 For a new installation, start with [INSTALL.md (English)](INSTALL.md): Debian 13 and NAS instructions with explicit fresh-database protection and hidden administrator password input.
 
-## New in 2.0.2
+## New in 2.0.3
 
-- Technicians can choose whether **Team latest** is shown below **My tickets** on their dashboard (shown by default).
-- Technicians can limit the menu counts next to **Overview** and **Tickets** to tickets assigned to them instead of the whole team (off by default).
-- Both choices are personal, work in the modern and classic technician layouts and do not affect ticket coordinators. No database migrations; follow [the 2.0.1 upgrade checklist](docs/upgrade_to_2_0_1.md).
-
-## New in 2.0.1
-
-- Create data-only JSON panels with an example, schema, validation and preview in Swedish, English or Norwegian. Import inactive, explicitly activate, switch versions, roll back, disable or delete inactive versions.
-- Place panels on the public homepage, customer overview or technician dashboard, including modern and classic technician layouts. Customer panels are shared across companies.
-- Executable PHP/Twig ZIP addons are retired. JSON panels run no code, fetch no URLs on the server and receive no database or API access.
-- Extended news editing and telephone support are native switches under Features. SupportDesk and its AnyDesk/TeamViewer shortcuts are removed; historical data is retained.
-- Update execution preloads console error and termination listeners before cache replacement. Follow the upgrade guide when starting from an older updater.
-- See [the addon guide](docs/addons.md) and [the 2.0.1 upgrade checklist](docs/upgrade_to_2_0_1.md).
+- Technicians and ticket coordinators can choose seasonal portal themes: Spring, Summer, Autumn, Winter, or Season, which switches automatically through the year.
+- A personal seasonal decoration can be turned on in **Settings**. It shows Christmas and New Year around the holidays and the current season the rest of the year (off by default).
+- Technicians can choose which page opens after sign-in (Overview, My tickets or, for coordinators, the coordinator queue) and hide the key figure cards. Ticket coordinators can choose which selection the queue opens on.
+- **Reset to standard** restores the start page, queue and lists while keeping theme and language. All new choices default to the previous behaviour.
+- Super administrators can let the public seasonal appearance follow both seasons and holidays automatically. No database migrations; follow [the 2.0.1 upgrade checklist](docs/upgrade_to_2_0_1.md).
 
 ## Earlier 2.0 Improvements
 
+- 2.0.2 lets technicians hide **Team latest** on their dashboard and limit the Overview and Tickets menu counts to their own tickets.
+- 2.0.1 adds data-only JSON panels for the homepage, customer overview and technician dashboard with validation, preview and versioning; see [the addon guide](docs/addons.md). Executable PHP/Twig ZIP addons and SupportDesk shortcuts are retired; historical data is retained.
 - Driftpunkt 2.0 redesigns the public website and all role portals with responsive navigation, clearer queues, visible company labels, accessible controls and working personal themes.
 - Customers get clearer search, status, conversation and attachment views; private customers can create tickets without belonging to a company.
 - Public pages retain installation branding and can follow the device theme. Administrators can disable system-theme following and subtle seasonal decorations.
@@ -45,40 +40,6 @@ For a new installation, start with [INSTALL.md (English)](INSTALL.md): Debian 13
 - Update completion uses a fresh process after cache replacement. See the upgrade checklist before updating an installation using an older runner.
 
 Validation includes isolated SQL/file restoration and HTTP/CLI checks on a separate deployment. Real email delivery, production HTTPS, load and full visual acceptance remain environment-specific checks.
-
-<details>
-<summary>Earlier 1.x improvements</summary>
-
-- Release 1.0.133 adds customer inventory management, coordinator ownership, EML/MSG reading, PDF and inline image previews, winmail.dat extraction, attachment recovery forwarding, linked tickets from attached emails, clearer ticket intake and review screens, duplicate suggestions, and explicit group-wide read access to private subsidiary tickets. It also updates ten affected Symfony components to 8.1.11 for security fixes published on November 4, 2026. Three database migrations are required:
-  - Customer search from the portal overview also covers accessible company and subsidiary tickets. Selected customer users can manage the company computer list; customer removal archives the computer and keeps its history.
-  - A super admin can give a selected customer user on a parent company read access to all customer-visible tickets in the whole subsidiary tree, including private and closed tickets. Internal tickets, internal notes, and other company groups stay hidden, and the assignment does not grant any write access.
-  - Ticket coordinators can own tickets and take over when writing customer-visible comments; internal notes never change the assignment.
-  - Technicians and coordinators can read EML and Outlook MSG attachments including nested emails, preview PDFs, see pasted inline images without loading external tracking images, and download regular files extracted from `winmail.dat`.
-  - Attachment errors show file name and reason and forward the original email to the coordinator or selected triage recipients, with status, retry, and loop protection. An attached email can become a separate linked ticket, internal by default and without customer email.
-  - The internal ticket view shows an intake panel with sender, mailbox, and the saved reason a reply was linked, collected attachment warnings, up to three duplicate suggestions within existing read access (never merged automatically), compact file rows, and the planned email recipients for customer replies.
-  - Mail review shows a summary before approval and rejects a customer combined with a different company on the server. Cache warmup during Docker builds and updates gets a separate 512 MB memory budget.
-- Release 1.0.132 lets customers choose language at the top of the customer portal, remembers the choice on the account, and translates the customer pages into English and Norwegian.
-- Release 1.0.131 adds an optional contact phone number on tickets, clearer priority marking for technicians and ticket coordinators, more formatting options in the comment editor, and protection against spreadsheet formulas in portal CSV exports. It also updates `symfony/mime` to 8.1.10 for CVE-2026-45070 and includes a database migration.
-- Release 1.0.130 improves the customer portal company ticket view with per-company summaries, subsidiary totals, a searchable company filter, remembered filters, and CSV export. Replies from known customers that cannot be linked to a ticket now create regular tickets, ticket coordinators are notified for every pending mail review, and line breaks in comments are preserved.
-- Release 1.0.129 lets customers, technicians, and ticket coordinators attach several files at once with a clearer file picker, always allows ZIP attachments up to 1 MB, and shows the original email to ticket coordinators.
-- Release 1.0.128 updates 56 existing Composer packages, including core Symfony components to 8.1.9, while keeping Symfony in the 8.1 series. No packages were added or removed from the lockfile.
-- PHP must be updated separately to 8.4.27 or later within 8.4, or 8.5.12 or later within 8.5, before applying the new application archive. The Debian installer and Docker build check the required patch level for each PHP series.
-- Ticket coordinators can close active and resolved tickets, including unassigned tickets, with a required resolution. Administrative closing sets status Closed, records the closing time, and sends no customer email.
-- Saved resolutions remain visible in a separate read-only panel after closing. Repeating a close request preserves an already closed ticket's resolution and closing time.
-- Ticket coordinators can change priority without changing status, resolution, assignments, or the SLA policy.
-- Closing and priority changes require coordinator permissions and CSRF protection, record the acting user and before-and-after values in ticket history, and preserve read-only merged source tickets.
-- Forwarded messages and forwarded delivery failures keep their forwarded content in the ticket, while the customer's own signature is still removed.
-- Technicians can read the complete original email below the ticket description and download it as an `.eml` file.
-- Auto-replies and bounces no longer create tickets, machine-sent alerts never receive confirmations, and confirmations are rate-limited per sender to prevent mail loops.
-- Company badges show the company name and icon without a redundant label.
-- New review drafts from unknown mail senders notify the configured triage recipients and link to the matching draft in the coordinator queue. Delivery failures are logged.
-- Company email domains route unknown senders arriving at a parent inbox to the correct subsidiary. Automatic registration remains off by default; when enabled, it creates contacts on the matched company.
-- Customer access to internal comment attachments is blocked, and email replies follow the same access rules as the portal.
-- Login and MFA have account-based attempt limits, while public forms have additional IP-based limits.
-- Password reset and translation output escaping, attachment extensions, and database backup and restore error handling have been improved.
-- Technicians and coordinators can add personal signatures to customer emails and send a separate copy to their own account address.
-
-</details>
 
 ## Screenshots
 
@@ -159,7 +120,7 @@ Visible features depend on enabled settings, company access, and role permission
 
 - Work from a technician overview built around assigned tickets, team tickets, queue health, recent activity, and notifications, with SLA cards and controls shown only when SLA is enabled and actively used.
 - Open separate personal queues for tickets owned as the primary technician and tickets assigned as a supporting technician, each with a direct sidebar link and count.
-- Hide the team's latest tickets on the dashboard and limit the Overview and Tickets menu counts to tickets assigned to them.
+- Hide the team's latest tickets or the key figure cards on the dashboard, limit the Overview and Tickets menu counts to tickets assigned to them, choose which page opens after sign-in, and reset these choices to standard in one step.
 - Create tickets, take over tickets, assign work, update status, priority, impact, request type, routing, optional SLA fields, checklist progress, and internal work notes.
 - Reply to customers, add internal comments, use ticket attachments when enabled, and follow links from technician notification emails back to the related ticket.
 - See an intake panel with sender, receiving mailbox, mail linking reason, and attachment warnings, get duplicate suggestions limited to tickets they can already read, and see the planned email recipients before replying.
@@ -167,7 +128,7 @@ Visible features depend on enabled settings, company access, and role permission
 - See all tickets or only permitted tickets depending on the technician access setting.
 - Use knowledge base and news contribution workflows when enabled.
 - Report bugs, improvements or feature requests, and missing customers to super administrators from the technician menu.
-- Use technician inventory views, dashboard panels, secure login/MFA with configurable trusted devices (14 days by default), personal default language, and selectable portal theme templates, including the burgundy Bordeaux theme.
+- Use technician inventory views, dashboard panels, secure login/MFA with configurable trusted devices (14 days by default), personal default language, selectable portal theme templates including seasonal themes that can follow the time of year, and an optional seasonal decoration.
 
 ### Ticket Coordinator
 
@@ -181,6 +142,7 @@ Visible features depend on enabled settings, company access, and role permission
 - Follow an expanded coordinator guide for assignment, priority changes, tickets in progress, closing, comment visibility, reopening, and reporting, and submit internal reports from the same portal.
 - View company data plus computer and printer inventory when data exists and access is available.
 - Save a personal default language so the coordinator portal opens in the preferred language on the next login.
+- Choose which queue selection opens first, such as unassigned tickets or tickets that need attention, and use the same portal and seasonal themes as technicians.
 
 ### Admin
 
@@ -212,9 +174,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `2.0.2`.
-- Fresh installation package: `packages/driftpunkt-install-2.0.2.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-2.0.2.zip`
+- Current exported release: `2.0.3`.
+- Fresh installation package: `packages/driftpunkt-install-2.0.3.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-2.0.3.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 20.
@@ -223,18 +185,25 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 2.0.2
+### Driftpunkt 2.0.3
 
-### Technician dashboard
+### Seasonal themes
 
-- Technicians can choose whether **Team latest** is shown below **My tickets** on their dashboard. The section stays visible by default; hiding it keeps **My tickets** unchanged.
-- Technicians can choose to show only tickets assigned to them in the menu counts next to **Overview** and **Tickets**, instead of the whole team's open tickets. The setting is off by default, and the counts in the expanded ticket submenu are unchanged.
-- Both choices are personal, saved with the technician's other dashboard preferences under **Settings**, and work in the modern and classic technician layouts. Ticket coordinator menus are not affected.
+- Technicians and ticket coordinators can choose the seasonal portal themes **Spring**, **Summer**, **Autumn** and **Winter**, or **Season**, which switches between them automatically through the year.
+- A personal **Seasonal decoration** under **Settings** shows Christmas and New Year around the holidays and the current season the rest of the year. It is off by default and does not change the colour theme.
+- Super administrators can set the seasonal appearance for the homepage and customer portal to **Automatic by season and holidays**, so Christmas and New Year are shown without changing the mode by hand.
+
+### Your working day
+
+- Technicians can choose which page opens after sign-in: **Overview**, **My tickets** or, for ticket coordinators, the **coordinator queue**.
+- Technicians can hide the key figure cards at the top of the dashboard.
+- Ticket coordinators can choose which selection the queue opens on: unassigned, needs attention, open or assigned tickets. A link with an explicit selection always wins.
+- **Reset to standard** restores the start page, queue and list choices while keeping theme, seasonal decoration and language.
 
 ### Upgrading
 
-- 2.0.2 contains no database migrations. Use the upgrade archive and follow the [2.0.1 upgrade checklist](docs/upgrade_to_2_0_1.md); the same backup and update steps apply.
-- Existing technicians keep their current dashboard and menu counts until they change the new settings.
+- 2.0.3 contains no database migrations. Use the upgrade archive and follow the [2.0.1 upgrade checklist](docs/upgrade_to_2_0_1.md); the same backup and update steps apply.
+- Existing users keep today's start page, queue and dashboard until they change the new settings.
 
 ## What This Repository Contains
 
@@ -277,7 +246,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-2.0.2.zip.sha256
+sha256sum -c driftpunkt-install-2.0.3.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -310,10 +279,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-2.0.2.zip` and `driftpunkt-install-2.0.2.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-2.0.3.zip` and `driftpunkt-install-2.0.3.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-2.0.2.zip.sha256
+sha256sum -c driftpunkt-install-2.0.3.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -321,9 +290,9 @@ sha256sum -c driftpunkt-install-2.0.2.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-2.0.2.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-2.0.3.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-2.0.2/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-2.0.3/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -382,10 +351,10 @@ Attachment ZIP archiving is configured under **Administration → Settings → T
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-2.0.2.zip` and `driftpunkt-install-2.0.2.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-2.0.3.zip` and `driftpunkt-install-2.0.3.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-2.0.2.zip.sha256
+sha256sum -c driftpunkt-install-2.0.3.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -393,8 +362,8 @@ sha256sum -c driftpunkt-install-2.0.2.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-2.0.2.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-2.0.2/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-2.0.3.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-2.0.3/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -451,19 +420,6 @@ Automatically registered contacts receive no portal invitation. Login, login lin
 
 Enable this first on a test inbox. For multiple application servers, configure a shared `LOCK_DSN`; with default file locking, web and scheduler must share `var/lock`. The archives include `docs/automatic-mail-customer-registration.md` with setup, migration, and troubleshooting instructions.
 
-## Recovering from the 1.0.120 Cache Error
-
-If migrations succeeded but the apply log reports `Refresh prod-cache` and `Directory not empty`, run this inside the PHP container as the application user. It clears and warms the production cache:
-
-```bash
-cd /var/www/html
-php bin/console cache:clear --env=prod --no-debug --no-interaction
-```
-
-On a regular server, use the actual application directory. Expect an `[OK]` result, then check login, ticket views, and mail processing. Manual recovery does not rewrite a historical failed apply log.
-
-Version 1.0.121 uses this command in required and manual post-update tasks. An apply process started with older code may still run the old cache step once; if that happens, repeat the recovery command. There is no new migration beyond 1.0.120, and a completed migration is not repeated.
-
 ## Upgrade an existing installation
 
 1. Use the newest cumulative `driftpunkt-upgrade-*.zip` package first. It contains the full current codebase and is the normal path even when the installed site is several releases behind.
@@ -479,105 +435,17 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 4. Update and verify the PHP engine for both web and background jobs before applying the ZIP. Keep `APP_ENV=prod` and `APP_DEBUG=0`, then apply the package through the Driftpunkt admin update flow when available, or unpack it according to your deployment procedure. Preserve the existing environment and `APP_SECRET`; do not run `composer update` on the server.
 5. Confirm that the web server document root points to `htdocs/`, or that the package root `.htaccess` is active when the whole package lives in a fixed `/htdocs` directory.
 6. Run database migrations, cache refresh, service reloads, and any other post-update steps listed in the package metadata and release notes.
-7. For version 1.0.21 or later, also verify Admin -> Identity links to the dedicated company page and Admin -> Companies paginates company groups correctly.
-8. Older upgrade packages are kept as fallback and history, not as required intermediate steps.
-9. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
-10. Verify `systemctl --failed`, mail polling, and the attachment-archive service log after its first scheduled run.
+7. Older upgrade packages are kept as fallback and history, not as required intermediate steps.
+8. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
+9. Verify `systemctl --failed`, mail polling, and the attachment-archive service log after its first scheduled run.
 
-### Upgrading from 1.0.132 to 1.0.133
-
-- Back up the database, application files, private environment, runtime files, and uploaded branding. Keep the existing `APP_SECRET` and use a maintenance window.
-- Verify SHA-256 and apply `driftpunkt-upgrade-1.0.133.zip` through the normal update flow. Production dependencies are included. Do not run `composer update`.
-- Apply `Version20261105120000`, `Version20261105130000`, and `Version20261105140000`, refresh the production cache, and reload PHP/OPcache and workers. The supported PHP versions remain 8.4.27+ within 8.4 or 8.5.12+ within 8.5, on a 64-bit runtime.
-- Confirm version 1.0.133, a completed update job, all pending migrations applied, working customer and staff sign-in, subsidiary access boundaries, inventory permissions, attachment previews, and incoming and outgoing email. Verify real Outlook mail and SMTP in the target environment.
-
-### Upgrading from 1.0.131 to 1.0.132
-
-- Back up the database, application, private environment, runtime files, and uploaded branding before the maintenance window. Keep the existing `APP_SECRET`.
-- Verify the matching SHA-256 file and use the normal admin update flow with `driftpunkt-upgrade-1.0.132.zip`. The PHP requirements from 1.0.128 are unchanged. No database migration is required.
-- Confirm version 1.0.132 and a completed update job, then sign in as a customer, choose another language in the top bar, and confirm that the customer pages use it and that the choice remains after signing in again.
-
-### Upgrading from 1.0.130 to 1.0.131
-
-- Back up the database, application, private environment, runtime files, and uploaded branding before the maintenance window. Keep the existing `APP_SECRET`.
-- Verify the matching SHA-256 file and use the normal admin update flow with `driftpunkt-upgrade-1.0.131.zip`. The PHP requirements from 1.0.128 are unchanged; keep `APP_ENV=prod` and `APP_DEBUG=0` and do not run `composer update`.
-- This release includes the database migration `Version20261030120000`, which adds the nullable column `tickets.contact_phone`. Let the normal update flow complete all post-update steps, apply the migration, and refresh the production cache, then restart PHP/OPcache.
-- Confirm version 1.0.131 and a completed update job, then create a customer ticket with a phone number and confirm that it appears as a phone link for the technician. Confirm that a critical ticket is marked in the technician and coordinator lists.
-
-### Upgrading from 1.0.128 or 1.0.129 to 1.0.130
-
-- Back up the database, application, private environment, runtime files, and uploaded branding before the maintenance window. Keep the existing `APP_SECRET`.
-- Verify the matching SHA-256 file and use the normal admin update flow with `driftpunkt-upgrade-1.0.130.zip`. The package is cumulative and can be applied directly to 1.0.128. The PHP requirements from 1.0.128 are unchanged; keep `APP_ENV=prod` and `APP_DEBUG=0` and do not run `composer update`.
-- No new database migration is required from 1.0.128 or 1.0.129. Let the normal update flow complete all post-update steps and refresh the production cache, then restart PHP/OPcache. Upgrades from older versions must still apply their migrations.
-- Confirm version 1.0.130 and a completed update job, then open the company ticket view as a customer, select a company, and export the filtered list as CSV. Send a customer reply with the ticket reference and confirm that it is added to the existing ticket.
-
-### Upgrading from 1.0.128 to 1.0.129
-
-- Back up the database, application, private environment, runtime files, and uploaded branding before the maintenance window. Keep the existing `APP_SECRET`.
-- Verify the matching SHA-256 file and use the normal admin update flow with `driftpunkt-upgrade-1.0.129.zip`. The PHP requirements from 1.0.128 are unchanged; keep `APP_ENV=prod` and `APP_DEBUG=0` and do not run `composer update`.
-- No new database migration is required from 1.0.128. Let the normal update flow complete all post-update steps and refresh the production cache, then restart PHP/OPcache. Upgrades from older versions must still apply their migrations.
-- Confirm version 1.0.129 and a completed update job, then attach several files to a test comment and confirm that a ZIP file over 1 MB is rejected.
-
-### Upgrading from 1.0.127 to 1.0.128
-
-- Back up the database, application, private environment, runtime files, and uploaded branding before the maintenance window. Keep the existing `APP_SECRET`.
-- Update and verify PHP before applying `driftpunkt-upgrade-1.0.128.zip`: PHP 8.4 requires at least 8.4.27 and PHP 8.5 requires at least 8.5.12. Verify web PHP separately from CLI, restart FPM or Apache/mod_php and long-running workers, and check cron/systemd plus `PHP_CLI_BINARY`.
-- Verify the matching SHA-256 file and use the normal admin update flow. The ZIP includes production vendor dependencies; keep `APP_ENV=prod` and `APP_DEBUG=0`, preserve the existing environment, and do not run `composer update`.
-- No new database migration is required from 1.0.127. Let the normal update flow complete all post-update steps and refresh the production cache, then restart PHP/OPcache and long-running workers. Upgrades from older versions must still apply their existing migrations.
-- Confirm version 1.0.128 and a completed update job, then verify login/MFA, tickets, attachments, translated pages and icons, mail processing, and scheduled jobs. Review application and web-server logs before ending maintenance mode and restoring public access.
-- If application rollback is needed, retain the patched PHP engine. Do not restore a vulnerable PHP image or replace the installation secret.
-
-For Docker/NAS, rebuild from the 1.0.133 release source and recreate both services; applying an application ZIP does not update the container runtime. This causes a short interruption:
-
-```bash
-docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env build --pull app &&
-  docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env up -d --force-recreate app scheduler
-docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env exec -T app php -v
-docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env exec -T scheduler php -v
-docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env exec -T app composer check-platform-reqs --no-dev
-docker compose -f deploy/nas/compose.yaml --env-file deploy/nas/.env ps
-```
-
-Abort if the build or PHP checks fail. Preserve database/runtime volumes and the environment file. Follow the packaged `docs/installation_and_deployment.md` for actual web-PHP verification and the explicit AMD64-only base-image option if the multiarchitecture manifest is unavailable; use a patched image for the actual server architecture.
-
-### Upgrading from 1.0.126 to 1.0.127
-
-- Use the latest `driftpunkt-upgrade-1.0.127.zip` and its matching checksum.
-- No new database migration is required from 1.0.126. Let the normal update flow complete its post-update steps, refresh the production cache, then reload PHP/OPcache.
-- Sign in as a ticket coordinator, change a ticket priority, and confirm that status and assignments remain unchanged.
-- Close an active or resolved ticket with a resolution. Confirm status Closed, the saved resolution, the closing time, and the audit entry. Administrative closing sends no customer email.
-- Confirm that merged source tickets remain read-only and that reopening a closed ticket still requires an internal reason.
-
-### Upgrading from 1.0.125 to 1.0.126
-
-- Use the latest `driftpunkt-upgrade-1.0.126.zip` and its matching checksum.
-- Migration `Version20261008120000` is required. It adds `original_body`, `raw_message_path` and `automatic_kind` to `incoming_mails`; let the update flow run migrations and refresh the production cache, then reload PHP/OPcache.
-- Raw messages are stored under `var/incoming_mail_attachments/<id>/original.eml`. Include that directory in file backups.
-- Verify the displayed version, a forwarded message keeping its forwarded content, the original email view and `.eml` download, and that an out-of-office reply is logged as ignored without creating a ticket.
-
-### Upgrading from 1.0.124 to 1.0.125
-
-- Use the latest `driftpunkt-upgrade-1.0.125.zip` and its matching checksum.
-- Migration `Version20261001120000` is required. It adds `companies.email_domains`; let the update flow run migrations and refresh the production cache, then reload PHP/OPcache.
-- Verify the displayed version, a completed update job, company-domain routing, and customer access to customer-visible attachments.
-- Send a test message from an unknown sender to an inbox requiring review. Confirm that the triage notification arrives through the production mail server and opens the correct draft after coordinator login.
-- Existing drafts are not notified retroactively, and failed notifications are not retried automatically. Check `unknown_sender_review_created` in the notification log when delivery is missing.
-
-### Interrupted 1.0.45 Migration
-
-Version `1.0.46` and later fix the 1.0.45 customer report migration error `Call to undefined method Doctrine\DBAL\Schema\Table::changeColumn()`. If an upgrade stopped on that error, apply the latest `driftpunkt-upgrade-<version>.zip` and rerun the migration step after the fixed files are in place:
-
-```bash
-php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --all-or-nothing --env=prod
-```
-
-The failed 1.0.45 run stops before Doctrine records the migration as completed, so the patched 1.0.46 migration can normally run again without manual database edits. Always confirm that a fresh database backup exists before resuming an interrupted production upgrade.
+Installations still on 1.x must follow the [live-server upgrade checklist for 2.0](docs/upgrade_to_2_0_0.md) first. Between 2.0 releases, follow [the 2.0.1 upgrade checklist](docs/upgrade_to_2_0_1.md); 2.0.2 and 2.0.3 add no database migrations.
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-2.0.3.zip`
 - `packages/driftpunkt-upgrade-2.0.2.zip`
 - `packages/driftpunkt-upgrade-2.0.1.zip`
-- `packages/driftpunkt-upgrade-2.0.0.zip`
 
 ## Notes
 
@@ -588,7 +456,7 @@ The failed 1.0.45 run stops before Doctrine records the migration as completed, 
 
 ## GitHub Releases
 
-Maintainers can run Actions → Prepare GitHub Release after exporting and pushing this repository. Enter the exported version, such as `1.0.133`.
+Maintainers can run Actions → Prepare GitHub Release after exporting and pushing this repository. Enter the exported version, such as `2.0.3`.
 The workflow verifies both package checksums and the release-note version, then creates a draft release with the installation package, upgrade package, checksums, and release notes. Review and publish the draft from GitHub Releases.
 
 ## License
