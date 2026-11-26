@@ -12,22 +12,20 @@ This public repository distributes release archives, documentation, and selected
 The screenshots may show the Swedish interface. Language and branding can be changed after installation through the running application and its environment-specific configuration.
 The gallery shows Driftpunkt 2.0 with synthetic demonstration accounts and tickets; it contains no live customer data.
 
-**Stable release: 2.0.3** · [Download releases](https://github.com/K3NT4/Driftpunkt/releases/latest) · [Install](INSTALL.md) · [Upgrade](docs/upgrade_to_2_0_1.md)
+**Stable release: 2.0.4** · [Download releases](https://github.com/K3NT4/Driftpunkt/releases/latest) · [Install](INSTALL.md) · [Upgrade](docs/upgrade_to_2_0_1.md)
 
 Before upgrading to 2.0, follow the [live-server upgrade checklist (English)](docs/upgrade_to_2_0_0.md), including backups, Docker prerequisites and enabling the personal classic/modern layout choice for technicians and ticket coordinators.
 
 For a new installation, start with [INSTALL.md (English)](INSTALL.md): Debian 13 and NAS instructions with explicit fresh-database protection and hidden administrator password input.
 
-## Tested changes for 2.0.4
+## New in 2.0.4
 
 - Coordinator queue Open buttons keep readable text colours across all portal themes.
 - The coordinator guide now covers queue work, unknown senders, phone tickets, ticket merging and personal settings in Swedish, English and Norwegian.
 - A separate technician guide covers daily ticket work, customer conversations, attachments, follow-up and settings in the same three languages.
-- Technicians and ticket coordinators can mark their guide as read and choose to hide it from the menu. Settings always provides a direct link and lets them show it again. Preferences belong to the account and work in both layouts.
-- No new database migrations. The existing [upgrade checklist](docs/upgrade_to_2_0_1.md) applies.
+- Technicians and ticket coordinators can mark their guide as read and hide it from the menu. Settings always provides a direct link and lets them show it again. Preferences belong to the account and work in both layouts.
+- No new database migrations. Follow [the upgrade checklist](docs/upgrade_to_2_0_1.md).
 - Validation: 87 functional tests (2326 assertions), related service and layout checks, and maintainer acceptance testing of the 2.0.4 package passed.
-
-The 2.0.4 packages have been built and tested locally. Public downloads remain on 2.0.3 until the 2.0.4 packages and GitHub release are published.
 
 ## New in 2.0.3
 
@@ -185,9 +183,9 @@ Visible features depend on enabled settings, company access, and role permission
 
 ## Packages
 
-- Current exported release: `2.0.3`.
-- Fresh installation package: `packages/driftpunkt-install-2.0.3.zip`
-- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-2.0.3.zip`
+- Current exported release: `2.0.4`.
+- Fresh installation package: `packages/driftpunkt-install-2.0.4.zip`
+- Newest cumulative upgrade package: `packages/driftpunkt-upgrade-2.0.4.zip`
 - Older upgrade packages are kept as fallback and history, up to the latest 3 upgrade builds available during export.
 - SHA-256 checksum files are generated beside every package.
 - Public README assets exported here: 20.
@@ -196,25 +194,24 @@ Visible features depend on enabled settings, company access, and role permission
 
 These notes are copied from the packaged release metadata for the current exported version.
 
-### Driftpunkt 2.0.3
+### Driftpunkt 2.0.4
 
-### Seasonal themes
+### Coordinator queue
 
-- Technicians and ticket coordinators can choose the seasonal portal themes **Spring**, **Summer**, **Autumn** and **Winter**, or **Season**, which switches between them automatically through the year.
-- A personal **Seasonal decoration** under **Settings** shows Christmas and New Year around the holidays and the current season the rest of the year. It is off by default and does not change the colour theme.
-- Super administrators can set the seasonal appearance for the homepage and customer portal to **Automatic by season and holidays**, so Christmas and New Year are shown without changing the mode by hand.
+- Open buttons keep their button text colour instead of inheriting the queue link colour. This restores readable contrast across portal themes.
 
-### Your working day
+### Role guides
 
-- Technicians can choose which page opens after sign-in: **Overview**, **My tickets** or, for ticket coordinators, the **coordinator queue**.
-- Technicians can hide the key figure cards at the top of the dashboard.
-- Ticket coordinators can choose which selection the queue opens on: unassigned, needs attention, open or assigned tickets. A link with an explicit selection always wins.
-- **Reset to standard** restores the start page, queue and list choices while keeping theme, seasonal decoration and language.
+- The coordinator guide now explains queue work, unknown senders (Other customers), phone tickets, merging duplicates and personal settings.
+- A separate technician guide explains daily ticket work, customer replies and internal notes, attachments, follow-up, knowledge support and personal settings.
+- Both guides are available in Swedish, English and Norwegian and work in classic and modern layouts.
+- Technicians and ticket coordinators can mark their guide as read and choose to hide it from the menu. Hiding requires the read acknowledgement. Settings keeps a direct link to the guide and lets the user show it in the menu again.
+- Guide choices are stored per account and role. They do not change other users’ menus or access permissions.
 
 ### Upgrading
 
-- 2.0.3 contains no database migrations. Use the upgrade archive and follow the [2.0.1 upgrade checklist](docs/upgrade_to_2_0_1.md); the same backup and update steps apply.
-- Existing users keep today's start page, queue and dashboard until they change the new settings.
+- No new database migrations. Use the upgrade archive and follow the [2.0.1 upgrade checklist](docs/upgrade_to_2_0_1.md).
+- Guides remain visible until the user explicitly marks them as read and chooses to hide them.
 
 ## What This Repository Contains
 
@@ -257,7 +254,7 @@ Use the install package for a new server, NAS, or clean application directory.
 
 ```bash
 cd packages
-sha256sum -c driftpunkt-install-2.0.3.zip.sha256
+sha256sum -c driftpunkt-install-2.0.4.zip.sha256
 ```
 
 3. Create a clean application directory on the target server or NAS.
@@ -290,10 +287,10 @@ sudo apt-get update
 sudo apt-get install -y unzip
 ```
 
-2. Download or copy `driftpunkt-install-2.0.3.zip` and `driftpunkt-install-2.0.3.zip.sha256` to the server, then verify the package:
+2. Download or copy `driftpunkt-install-2.0.4.zip` and `driftpunkt-install-2.0.4.zip.sha256` to the server, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-2.0.3.zip.sha256
+sha256sum -c driftpunkt-install-2.0.4.zip.sha256
 ```
 
 3. Unpack the release into `/var/www/driftpunkt`:
@@ -301,9 +298,9 @@ sha256sum -c driftpunkt-install-2.0.3.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install
-unzip driftpunkt-install-2.0.3.zip -d /tmp/driftpunkt-install
+unzip driftpunkt-install-2.0.4.zip -d /tmp/driftpunkt-install
 sudo mkdir -p /var/www/driftpunkt
-sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-2.0.3/. /var/www/driftpunkt/
+sudo cp -a /tmp/driftpunkt-install/driftpunkt-install-2.0.4/. /var/www/driftpunkt/
 cd /var/www/driftpunkt
 ```
 
@@ -362,10 +359,10 @@ Attachment ZIP archiving is configured under **Administration → Settings → T
 
 This flow uses the Docker Compose stack included inside the install package. Adjust `/volume1/docker/driftpunkt` to the application path used by your NAS.
 
-1. Copy `driftpunkt-install-2.0.3.zip` and `driftpunkt-install-2.0.3.zip.sha256` to the NAS, then verify the package:
+1. Copy `driftpunkt-install-2.0.4.zip` and `driftpunkt-install-2.0.4.zip.sha256` to the NAS, then verify the package:
 
 ```bash
-sha256sum -c driftpunkt-install-2.0.3.zip.sha256
+sha256sum -c driftpunkt-install-2.0.4.zip.sha256
 ```
 
 2. Unpack the release into a persistent NAS folder:
@@ -373,8 +370,8 @@ sha256sum -c driftpunkt-install-2.0.3.zip.sha256
 ```bash
 rm -rf /tmp/driftpunkt-install
 mkdir -p /tmp/driftpunkt-install /volume1/docker/driftpunkt
-unzip driftpunkt-install-2.0.3.zip -d /tmp/driftpunkt-install
-cp -a /tmp/driftpunkt-install/driftpunkt-install-2.0.3/. /volume1/docker/driftpunkt/
+unzip driftpunkt-install-2.0.4.zip -d /tmp/driftpunkt-install
+cp -a /tmp/driftpunkt-install/driftpunkt-install-2.0.4/. /volume1/docker/driftpunkt/
 cd /volume1/docker/driftpunkt
 ```
 
@@ -450,13 +447,13 @@ sha256sum -c driftpunkt-upgrade-<version>.zip.sha256
 8. Verify login, ticket creation, customer/technician portals, status page, and background jobs before leaving maintenance mode.
 9. Verify `systemctl --failed`, mail polling, and the attachment-archive service log after its first scheduled run.
 
-Installations still on 1.x must follow the [live-server upgrade checklist for 2.0](docs/upgrade_to_2_0_0.md) first. Between 2.0 releases, follow [the 2.0.1 upgrade checklist](docs/upgrade_to_2_0_1.md); 2.0.2 and 2.0.3 add no database migrations.
+Installations still on 1.x must follow the [live-server upgrade checklist for 2.0](docs/upgrade_to_2_0_0.md) first. Between 2.0 releases, follow [the 2.0.1 upgrade checklist](docs/upgrade_to_2_0_1.md); 2.0.2, 2.0.3 and 2.0.4 add no database migrations.
 
 ## Available upgrade packages
 
+- `packages/driftpunkt-upgrade-2.0.4.zip`
 - `packages/driftpunkt-upgrade-2.0.3.zip`
 - `packages/driftpunkt-upgrade-2.0.2.zip`
-- `packages/driftpunkt-upgrade-2.0.1.zip`
 
 ## Notes
 
@@ -467,7 +464,7 @@ Installations still on 1.x must follow the [live-server upgrade checklist for 2.
 
 ## GitHub Releases
 
-Maintainers can run Actions → Prepare GitHub Release after exporting and pushing this repository. Enter the exported version, such as `2.0.3`.
+Maintainers can run Actions → Prepare GitHub Release after exporting and pushing this repository. Enter the exported version, such as `2.0.4`.
 The workflow verifies both package checksums and the release-note version, then creates a draft release with the installation package, upgrade package, checksums, and release notes. Review and publish the draft from GitHub Releases.
 
 ## License
