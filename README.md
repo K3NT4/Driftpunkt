@@ -18,6 +18,17 @@ Before upgrading to 2.0, follow the [live-server upgrade checklist (English)](do
 
 For a new installation, start with [INSTALL.md (English)](INSTALL.md): Debian 13 and NAS instructions with explicit fresh-database protection and hidden administrator password input.
 
+## Tested changes for 2.0.4
+
+- Coordinator queue Open buttons keep readable text colours across all portal themes.
+- The coordinator guide now covers queue work, unknown senders, phone tickets, ticket merging and personal settings in Swedish, English and Norwegian.
+- A separate technician guide covers daily ticket work, customer conversations, attachments, follow-up and settings in the same three languages.
+- Technicians and ticket coordinators can mark their guide as read and choose to hide it from the menu. Settings always provides a direct link and lets them show it again. Preferences belong to the account and work in both layouts.
+- No new database migrations. The existing [upgrade checklist](docs/upgrade_to_2_0_1.md) applies.
+- Validation: 87 functional tests (2326 assertions), related service and layout checks, and maintainer acceptance testing of the 2.0.4 package passed.
+
+The 2.0.4 packages have been built and tested locally. Public downloads remain on 2.0.3 until the 2.0.4 packages and GitHub release are published.
+
 ## New in 2.0.3
 
 - Technicians and ticket coordinators can choose seasonal portal themes: Spring, Summer, Autumn, Winter, or Season, which switches automatically through the year.
